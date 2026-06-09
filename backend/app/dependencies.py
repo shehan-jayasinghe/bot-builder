@@ -4,11 +4,16 @@ from typing import Any
 from fastapi import Depends
 
 from app.core.engine.dialogue import DialogueEngine
+from app.core.pipeline.chat_pipeline import ChatPipeline
 from app.core.services.assistant_loader import AssistantLoader
 
 
 def get_assistant_loader() -> AssistantLoader:
     return AssistantLoader()
+
+
+def get_chat_pipeline() -> ChatPipeline:
+    return ChatPipeline()
 
 
 def get_dialogue_engine_factory(

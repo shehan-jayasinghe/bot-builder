@@ -9,9 +9,17 @@ class ChatRequest(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ChatButton(BaseModel):
+    title: str
+    payload: str
+
+
 class ChatMessage(BaseModel):
     recipient_id: str
-    text: str
+    text: str | None = None
+    buttons: list[ChatButton] | None = None
+
+    # TODO: quick_replies, custom cards, images (match preview UI)
 
 
 class ChatResponse(BaseModel):

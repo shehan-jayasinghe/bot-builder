@@ -28,6 +28,22 @@ class DialogueEngine:
         self._tracker = tracker
         self._flow_manager = flow_manager
 
+    @property
+    def sender_id(self) -> str:
+        return self._sender_id
+
+    @property
+    def message(self) -> str:
+        return self._message
+
+    @property
+    def assistant(self) -> DialogueAssistant:
+        return self._assistant
+
+    @property
+    def tracker(self) -> Tracker:
+        return self._tracker
+
     @classmethod
     async def from_channel(
         cls,

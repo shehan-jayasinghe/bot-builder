@@ -2,14 +2,24 @@
 
 FastAPI service for chat inference via AWS Bedrock.
 
-## Learning order
+## Learning order (chat flow)
 
 1. `app/api/v1/chat.py` — HTTP entry point
-2. `app/core/engine/dialogue.py` — orchestrator
-3. `app/core/services/assistant_loader.py` — load bot config
-4. `app/core/engine/tracker.py` — session + history
-5. `app/core/engine/flow_manager.py` — inference logic
-6. `app/ai/llm.py` — AWS Bedrock calls
+2. `app/core/pipeline/chat_pipeline.py` — guardrails → RAG → skills → engine
+3. `app/core/engine/dialogue.py` — orchestrator
+4. `app/core/services/assistant_loader.py` — load bot config (stub)
+5. `app/core/engine/tracker.py` — session + history (stub)
+6. `app/core/engine/flow_manager.py` — LLM inference
+7. `app/ai/llm.py` — AWS Bedrock
+
+## Pipeline stubs (implement later)
+
+| Module | File | Trace event |
+|--------|------|-------------|
+| Guardrails | `core/guardrails/runner.py` | `guardrail_complete` |
+| RAG | `core/rag/retriever.py` | `rag_complete` |
+| Skills | `core/skills/router.py` | `tool_start` |
+| Trace | `core/observability/trace.py` | all events |
 
 ## Run locally
 

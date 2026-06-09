@@ -1,10 +1,10 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
 
 from fastapi import APIRouter, Depends
 
 from app.core.engine.dialogue import DialogueEngine
-from app.dependencies import get_dialogue_engine_factory
+from app.core.pipeline.chat_pipeline import ChatPipeline
+from app.dependencies import get_chat_pipeline, get_dialogue_engine_factory
 from app.schemas.chat import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -15,6 +15,7 @@ async def chat_webhook(
     webhook_id: str,
     body: ChatRequest,
     engine_factory: Callable[..., Awaitable[DialogueEngine]] = Depends(get_dialogue_engine_factory),
+    chat_pipeline: ChatPipeline = Depends(get_chat_pipeline),
 ) -> ChatResponse:
     """
     Main chat endpoint — entry point for the inference flow.
@@ -22,7 +23,7 @@ async def chat_webhook(
     Flow:
       1. Validate request (Pydantic)
       2. Build DialogueEngine
-      3. Run engine
+      3. ChatPipeline (guardrails → RAG → skills → engine)
       4. Return JSON replies
     """
     # TODO: add auth (API token / service token)
@@ -34,5 +35,5 @@ async def chat_webhook(
         message=body.message,
         metadata=body.metadata,
     )
-    messages = await engine.run()
+    messages = await chat_pipeline.run(engine)
     return ChatResponse(messages=messages)
