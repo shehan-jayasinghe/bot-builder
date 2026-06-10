@@ -2,14 +2,32 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from fastapi import Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.engine.dialogue import DialogueEngine
 from app.core.pipeline.chat_pipeline import ChatPipeline
 from app.core.services.assistant_loader import AssistantLoader
+from app.db.mongo import get_motor_db
+from app.db.repositories.agent_repository import AgentRepository
+from app.db.repositories.channel_repository import ChannelRepository
 
 
-def get_assistant_loader() -> AssistantLoader:
-    return AssistantLoader()
+def get_channel_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> ChannelRepository:
+    return ChannelRepository(db=db)
+
+
+def get_agent_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> AgentRepository:
+    return AgentRepository(db=db)
+
+
+def get_assistant_loader(
+    channel_repository: ChannelRepository = Depends(get_channel_repository),
+    agent_repository: AgentRepository = Depends(get_agent_repository),
+) -> AssistantLoader:
+    return AssistantLoader(
+        channel_repository=channel_repository,
+        agent_repository=agent_repository,
+    )
 
 
 def get_chat_pipeline() -> ChatPipeline:
