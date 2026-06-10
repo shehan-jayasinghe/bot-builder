@@ -2,9 +2,9 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import APIRouter, Depends
 
-from app.core.engine.dialogue import DialogueEngine
-from app.core.pipeline.chat_pipeline import ChatPipeline
-from app.dependencies import get_chat_pipeline, get_dialogue_engine_factory
+from app.domain.engine.dialogue import DialogueEngine
+from app.domain.pipeline.chat_pipeline import ChatPipeline
+from app.di import get_chat_pipeline, get_dialogue_engine_factory
 from app.schemas.chat import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/chat", tags=["Chat"])

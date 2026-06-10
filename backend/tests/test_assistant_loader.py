@@ -1,7 +1,7 @@
 from bson import ObjectId
 
-from app.core.models.assistant import LLMConfig
-from app.core.services.assistant_loader import AssistantLoader
+from app.domain.models.assistant import LLMConfig
+from app.services.assistant_loader import AssistantLoader
 
 
 def test_to_dialogue_assistant_maps_mongo_document() -> None:

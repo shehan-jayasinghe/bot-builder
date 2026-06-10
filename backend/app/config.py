@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     mongo_uri: str = "mongodb://localhost:27017"
     mongo_db: str = "bot_builder"
 
+    redis_url: str = "redis://localhost:6379/0"
+    redis_session_ttl: int = 3600
+    tracker_collection: str = "trackers"
+
     aws_region: str = "us-east-1"
     bedrock_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 

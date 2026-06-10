@@ -6,7 +6,14 @@ Conversational AI platform backend for ShoutOUT (FastAPI + AWS Bedrock + MongoDB
 
 ```text
 bot-builder/
-├── backend/          # FastAPI + dialogue engine
+├── backend/
+│   └── app/
+│       ├── api/v1/           # handlers
+│       ├── di/               # dependency injection
+│       ├── services/         # application services
+│       ├── domain/           # models, engine, pipeline
+│       ├── infrastructure/   # db (mongo/redis/repos), ai
+│       └── schemas/
 ├── docker-compose.yml
 └── README.md
 ```
