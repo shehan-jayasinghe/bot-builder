@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+# Bot Builder — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React admin UI for the Bot Builder platform.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cp .env.example .env
+# Add your Clerk publishable key from https://dashboard.clerk.com
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Clerk dashboard
+
+- Sign-in URL: `/sign-in`
+- After sign-in URL: `/`
+- Allowed origins: `http://localhost:5173`
+
+## Structure
+
+```text
+src/
+├── auth/              # ProtectedRoute
+├── components/layout/ # Sidebar, Header
+├── config/            # env
+├── constants/         # navigation
+├── layouts/           # AppShell
+├── pages/             # One folder per section (stubs for now)
+└── routes/            # Route definitions
+```
+
+## Pages (placeholders)
+
+| Route | Page |
+|-------|------|
+| `/` | Home (workflow canvas shell) |
+| `/agent` | Agent |
+| `/workflows` | Workflows |
+| `/data-sources` | Data Sources |
+| `/channels` | Channels |
+| `/conversations` | Conversations |
+| `/analytics` | Analytics |
+| `/schedulers` | Schedulers |
+| `/settings` | Settings |
