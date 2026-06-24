@@ -9,6 +9,7 @@ from app.api.v1.router import api_v1_router
 from app.config import settings
 from app.infrastructure.db.mongo import connect_mongo, disconnect_mongo
 from app.infrastructure.db.redis import connect_redis, disconnect_redis
+from app.shared.exceptions.agent import AgentNotFoundError
 from app.shared.exceptions.auth import (
     AuthError,
     ClerkUserCreationError,
@@ -71,6 +72,11 @@ async def unauthorized_handler(_request: Request, exc: UnauthorizedError) -> JSO
 
 @app.exception_handler(UserNotFoundError)
 async def user_not_found_handler(_request: Request, exc: UserNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(AgentNotFoundError)
+async def agent_not_found_handler(_request: Request, exc: AgentNotFoundError) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 

@@ -2,14 +2,16 @@ import { NavLink } from "react-router-dom";
 
 import { MAIN_NAV } from "../../constants/navigation";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { NavIcon } from "../ui/NavIcon";
 
 type SidebarNavItemProps = {
   label: string;
   path: string;
+  icon?: string;
   nested?: boolean;
 };
 
-function SidebarNavItem({ label, path, nested = false }: SidebarNavItemProps) {
+function SidebarNavItem({ label, path, icon, nested = false }: SidebarNavItemProps) {
   return (
     <NavLink
       to={path}
@@ -20,7 +22,8 @@ function SidebarNavItem({ label, path, nested = false }: SidebarNavItemProps) {
           .join(" ")
       }
     >
-      {label}
+      {icon ? <NavIcon name={icon} className="sidebar-nav__icon" /> : null}
+      <span>{label}</span>
     </NavLink>
   );
 }
@@ -50,7 +53,7 @@ export function Sidebar() {
 
             return (
               <div key={item.path} className="sidebar-nav__group">
-                <SidebarNavItem label={item.label} path={item.path} />
+                <SidebarNavItem label={item.label} path={item.path} icon={item.icon} />
                 {isWorkflows && (
                   <div className="sidebar-nav__children">
                     <button type="button" className="sidebar-nav__create">
