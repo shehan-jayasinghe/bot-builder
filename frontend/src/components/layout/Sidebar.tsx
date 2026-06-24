@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 
 import { MAIN_NAV } from "../../constants/navigation";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 type SidebarNavItemProps = {
   label: string;
@@ -25,6 +26,11 @@ function SidebarNavItem({ label, path, nested = false }: SidebarNavItemProps) {
 }
 
 export function Sidebar() {
+  const { data } = useCurrentUser();
+  const user = data?.user;
+  const organization = data?.organization;
+  const avatarLetter = user?.first_name?.charAt(0)?.toUpperCase() ?? "?";
+
   return (
     <aside className="sidebar">
       <div className="sidebar__top">
@@ -32,7 +38,7 @@ export function Sidebar() {
           <span className="sidebar__brand-icon" aria-hidden="true">
             ◉
           </span>
-          <span className="sidebar__brand-name">abc bank</span>
+          <span className="sidebar__brand-name">{organization?.name ?? "Organization"}</span>
           <span className="sidebar__brand-chevron" aria-hidden="true">
             ▾
           </span>
@@ -64,11 +70,11 @@ export function Sidebar() {
       <div className="sidebar__footer">
         <div className="sidebar__user">
           <span className="sidebar__user-avatar" aria-hidden="true">
-            A
+            {avatarLetter}
           </span>
           <div>
-            <div className="sidebar__user-name">Amanda</div>
-            <div className="sidebar__user-email">amanda@example.com</div>
+            <div className="sidebar__user-name">{user?.full_name ?? "User"}</div>
+            <div className="sidebar__user-email">{user?.email ?? ""}</div>
           </div>
         </div>
       </div>

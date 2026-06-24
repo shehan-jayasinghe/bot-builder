@@ -54,3 +54,9 @@ def get_motor_db() -> AsyncIOMotorDatabase:
     if _motor_db is None:
         raise RuntimeError("MongoDB is not connected. Did the app lifespan run?")
     return _motor_db
+
+
+def get_motor_client() -> AsyncIOMotorClient:
+    if _motor_client is None:
+        raise RuntimeError("MongoDB is not connected. Did the app lifespan run?")
+    return _motor_client

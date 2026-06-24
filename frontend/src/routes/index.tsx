@@ -1,9 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "../auth/ProtectedRoute";
+import { PublicAuthRoute } from "../auth/PublicAuthRoute";
 import { AppShell } from "../layouts/AppShell";
 import { AgentPage } from "../pages/agent/AgentPage";
 import { SignInPage } from "../pages/auth/SignInPage";
+import { SignUpPage } from "../pages/auth/SignUpPage";
+import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage";
 import { ChannelsPage } from "../pages/channels/ChannelsPage";
 import { ConversationsPage } from "../pages/conversations/ConversationsPage";
@@ -16,7 +19,12 @@ import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/sign-in" element={<SignInPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+      <Route element={<PublicAuthRoute />}>
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
+      </Route>
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>

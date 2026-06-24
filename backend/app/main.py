@@ -1,12 +1,24 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_v1_router
 from app.config import settings
 from app.infrastructure.db.mongo import connect_mongo, disconnect_mongo
 from app.infrastructure.db.redis import connect_redis, disconnect_redis
+from app.shared.exceptions.auth import (
+    AuthError,
+    ClerkUserCreationError,
+    EmailAlreadyExistsError,
+    OrganizationNotFoundError,
+    RegistrationFailedError,
+    UnauthorizedError,
+    UserDisabledError,
+    UserNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,5 +54,54 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(UnauthorizedError)
+async def unauthorized_handler(_request: Request, exc: UnauthorizedError) -> JSONResponse:
+    return JSONResponse(status_code=401, content={"detail": str(exc)})
+
+
+@app.exception_handler(UserNotFoundError)
+async def user_not_found_handler(_request: Request, exc: UserNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(UserDisabledError)
+async def user_disabled_handler(_request: Request, exc: UserDisabledError) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+@app.exception_handler(OrganizationNotFoundError)
+async def organization_not_found_handler(_request: Request, exc: OrganizationNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(EmailAlreadyExistsError)
+async def email_already_exists_handler(_request: Request, exc: EmailAlreadyExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ClerkUserCreationError)
+async def clerk_user_creation_handler(_request: Request, exc: ClerkUserCreationError) -> JSONResponse:
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
+
+
+@app.exception_handler(RegistrationFailedError)
+async def registration_failed_handler(_request: Request, exc: RegistrationFailedError) -> JSONResponse:
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(AuthError)
+async def auth_error_handler(_request: Request, exc: AuthError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
 
 app.include_router(api_v1_router, prefix="/api/v1")

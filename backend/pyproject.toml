@@ -16,10 +16,12 @@ redis = "^5.2.0"
 boto3 = "^1.35.0"
 langchain-aws = "^0.2.0"
 langchain-core = "^0.3.0"
+httpx = "^0.28.0"
+email-validator = "^2.2.0"
+pyjwt = { extras = ["crypto"], version = "^2.10.0" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
-httpx = "^0.28.0"
 
 [build-system]
 requires = ["poetry-core"]
