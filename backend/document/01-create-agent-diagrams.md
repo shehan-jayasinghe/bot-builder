@@ -1,4 +1,6 @@
-# Create Agent — `POST /api/v1/agents` (auth phase)
+# Create Agent — `POST /api/v1/agents`
+
+# Auth phase
 
 ## Flow
 
@@ -36,6 +38,7 @@ flowchart TB
 | Flow step | What happens | Open file |
 |-----------|--------------|-----------|
 | API route | `POST /api/v1/agents` handler | [agents.py](../app/api/v1/agents.py) |
+| Router | Mount agents routes under `/api/v1` | [router.py](../app/api/v1/router.py) |
 | Depends | Inject `CurrentUser` | [auth.py](../app/di/auth.py) |
 | Read Bearer token | Parse `Authorization` header | [clerk_authenticator.py](../app/infrastructure/auth/clerk_authenticator.py) |
 | Verify JWT | Clerk JWKS signature check | [clerk_jwt.py](../app/infrastructure/auth/clerk_jwt.py) |
@@ -121,7 +124,7 @@ flowchart TB
 
 ---
 
-# Create Agent — logic phase (after auth)
+# Logic phase (after auth)
 
 Runs after `CurrentUser` is attached. Frontend sends **name**, **industry**, **description**, optional **agent_type** and **guardrails**.
 
@@ -182,18 +185,24 @@ flowchart TB
     DB --> RES[201 — CreateAgentResponse]
 ```
 
-## Navigate to files (not created yet)
+## Navigate to logic files
 
 | Flow step | What happens | Open file |
 |-----------|--------------|-----------|
-| API route | Receives body after auth | [agents.py](../app/api/v1/agents.py) |
 | Request validation | Pydantic `CreateAgentRequest` | [agent.py](../app/schemas/agent.py) |
-| Service | Orchestrates create draft | [agent_service.py](../app/services/agent_service.py) |
-| DI | Inject service | [agents.py](../app/di/agents.py) |
-| Industry constants | Responsibilities, default guardrails, personality, tone | [agent_defaults.py](../app/domain/constants/agent_defaults.py) |
-| Prompt build | LangChain `ChatPromptTemplate` | [prompt_builder.py](../app/infrastructure/ai/prompt_builder.py) |
-| Bedrock defaults | Model id + region from `.env` | [config.py](../app/config.py) |
+| 422 Validation error | Invalid body fields / enums | [agent.py](../app/schemas/agent.py) |
+| Depends — service | Inject `AgentService` | [agents.py](../app/di/agents.py) |
+| Service | Orchestrate `create_draft()` | [agent_service.py](../app/services/agent_service.py) |
+| Industry constants | `INDUSTRY_RESPONSIBILITIES` | [agent_defaults.py](../app/domain/constants/agent_defaults.py) |
+| Merge guardrails | `DEFAULT_GUARDRAILS` + request overrides | [agent_defaults.py](../app/domain/constants/agent_defaults.py) |
+| Personality / tone | `DEFAULT_PERSONALITY`, `DEFAULT_TONE` | [agent_defaults.py](../app/domain/constants/agent_defaults.py) |
+| Prompt build | LangChain `ChatPromptTemplate` → `system_prompt` | [prompt_builder.py](../app/infrastructure/ai/prompt_builder.py) |
+| Bedrock defaults | `bedrock_model_id`, `aws_region` from `.env` | [config.py](../app/config.py) |
+| LLM defaults in code | `temperature`, `max_output_tokens` | [agent_service.py](../app/services/agent_service.py) |
+| Repository DI | `get_agent_repository()` | [repositories.py](../app/di/repositories.py) |
 | Save agent | Insert into `agents` collection | [agent_repository.py](../app/infrastructure/db/repositories/mongo/agent_repository.py) |
+| Response schema | `CreateAgentResponse` (`201`) | [agent.py](../app/schemas/agent.py) |
+| Empty skills / workflows | `skill_ids: []`, `workflow_ids: []` at create | [agent_service.py](../app/services/agent_service.py) |
 
 ## Request body (frontend)
 
@@ -329,10 +338,10 @@ flowchart TB
 
 ## What is NOT in this phase
 
-| Item | Status |
-|------|--------|
-| Tools / skills | empty `[]` |
-| Workflows | empty `[]` |
-| Webhook / publish | `status: draft` only |
-| Website crawl / RAG | not started |
-| Bedrock invoke at create time | prompt built locally only |
+| Item | Status | Open file |
+|------|--------|-----------|
+| Tools / skills | empty `skill_ids: []` | [agent_service.py](../app/services/agent_service.py) |
+| Workflows | empty `workflow_ids: []` | [agent_service.py](../app/services/agent_service.py) |
+| Webhook / publish | `status: draft` only | [agent_repository.py](../app/infrastructure/db/repositories/mongo/agent_repository.py) |
+| Website crawl / RAG | not started | — |
+| Bedrock invoke at create time | prompt built locally only | [prompt_builder.py](../app/infrastructure/ai/prompt_builder.py) |
