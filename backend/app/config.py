@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     mongo_db: str = "bot_builder"
 
     redis_url: str = "redis://localhost:6379/0"
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/2"
     redis_session_ttl: int = 3600
     tracker_collection: str = "trackers"
 
@@ -25,6 +27,24 @@ class Settings(BaseSettings):
 
     users_collection: str = "users"
     organizations_collection: str = "organizations"
+    knowledgebases_collection: str = "knowledgebases"
+    job_logs_collection: str = "job_logs"
+
+    s3_bucket: str = "bot-builder-kb"
+    kb_chunks_collection: str = "kb_chunks"
+
+    bedrock_embed_model_id: str = "amazon.titan-embed-text-v2:0"
+    bedrock_embed_dimensions: int = 1024
+
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
+
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "changeme"
+    neo4j_database: str = "neo4j"
+
+    tfidf_index_dir: str = "data/tfidf_indexes"
 
     @property
     def cors_origin_list(self) -> list[str]:

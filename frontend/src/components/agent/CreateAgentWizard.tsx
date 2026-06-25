@@ -1,10 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { createAgent } from "../../api/agents";
+import { createKnowledgebase } from "../../api/knowledgebases";
 import { AGENT_TYPES, INDUSTRIES, SAMPLE_QUESTIONS } from "../../constants/agents";
+import { CRAWL_DEPTH_OPTIONS, SOURCE_TYPES, STORAGE_TYPES } from "../../constants/knowledgebase";
 import type { AgentType, Industry } from "../../types/agent";
+import type { SourceType, StorageType } from "../../types/knowledgebase";
 import { WizardLayout } from "./WizardLayout";
 
 const BUILD_STEPS = [
@@ -23,14 +26,35 @@ type FormState = {
   name: string;
   industry: Industry | "";
   agentType: AgentType | "";
+  storageType: StorageType | "";
+  sourceType: SourceType | "";
   websiteUrl: string;
+  crawlDepth: number;
+  documentFile: File | null;
 };
 
 function getApiError(error: unknown): string {
   if (error && typeof error === "object" && "response" in error) {
-    return (error as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? "Request failed.";
+    const detail = (error as { response?: { data?: { detail?: string | { msg?: string }[] } } }).response?.data?.detail;
+    if (typeof detail === "string") {
+      return detail;
+    }
+    if (Array.isArray(detail) && detail[0]?.msg) {
+      return detail[0].msg;
+    }
+    return "Request failed.";
   }
   return "Request failed.";
+}
+
+function isConfigureValid(form: FormState): boolean {
+  if (!form.storageType || !form.sourceType) {
+    return false;
+  }
+  if (form.sourceType === "website") {
+    return form.websiteUrl.trim().length > 0;
+  }
+  return form.documentFile !== null;
 }
 
 export function CreateAgentWizard() {
@@ -42,30 +66,22 @@ export function CreateAgentWizard() {
     name: "",
     industry: "",
     agentType: "",
+    storageType: "",
+    sourceType: "website",
     websiteUrl: "",
+    crawlDepth: 2,
+    documentFile: null,
   });
   const [buildProgress, setBuildProgress] = useState(0);
   const [activeBuildStep, setActiveBuildStep] = useState(0);
   const [createdAgentId, setCreatedAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isBuilding, setIsBuilding] = useState(false);
 
   const selectedType = useMemo(
     () => AGENT_TYPES.find((item) => item.value === form.agentType),
     [form.agentType],
   );
-
-  const createMutation = useMutation({
-    mutationFn: createAgent,
-    onSuccess: async (agent) => {
-      await queryClient.invalidateQueries({ queryKey: ["agents"] });
-      setCreatedAgentId(agent.id);
-      runBuildAnimation();
-    },
-    onError: (err) => {
-      setError(getApiError(err));
-      setStep("configure");
-    },
-  });
 
   function runBuildAnimation() {
     setStep("building");
@@ -85,19 +101,44 @@ export function CreateAgentWizard() {
     }, 80);
   }
 
-  function handleBuild() {
-    if (!form.name || !form.industry || !form.agentType) {
+  async function handleBuild() {
+    if (!form.name || !form.industry || !form.agentType || !isConfigureValid(form)) {
       return;
     }
 
     setError(null);
+    setIsBuilding(true);
+
     const typeOption = AGENT_TYPES.find((item) => item.value === form.agentType);
-    createMutation.mutate({
-      name: form.name,
-      industry: form.industry,
-      agent_type: form.agentType,
-      description: typeOption?.description,
-    });
+
+    try {
+      const agent = await createAgent({
+        name: form.name,
+        industry: form.industry,
+        agent_type: form.agentType,
+        description: typeOption?.description,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["agents"] });
+      setCreatedAgentId(agent.id);
+
+      await createKnowledgebase({
+        name: `${form.name} knowledge base`,
+        description: typeOption?.description,
+        storage_type: form.storageType as StorageType,
+        source_type: form.sourceType as SourceType,
+        agent_id: agent.id,
+        website_url: form.sourceType === "website" ? form.websiteUrl.trim() : undefined,
+        crawl_depth: form.sourceType === "website" ? form.crawlDepth : undefined,
+        file: form.sourceType === "file" ? form.documentFile : undefined,
+      });
+
+      runBuildAnimation();
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setIsBuilding(false);
+    }
   }
 
   if (step === "basics") {
@@ -201,7 +242,7 @@ export function CreateAgentWizard() {
         stepLabel="Configure"
         eyebrow={selectedType?.label.toUpperCase()}
         title="Here's what your agent will do."
-        subtitle="We'll configure your agent based on your selection."
+        subtitle="Choose a knowledge base type and connect your content."
         footer={
           <>
             <button type="button" className="btn" onClick={() => setStep("type")}>
@@ -210,10 +251,10 @@ export function CreateAgentWizard() {
             <button
               type="button"
               className="btn btn--primary"
-              disabled={createMutation.isPending}
-              onClick={handleBuild}
+              disabled={isBuilding || !isConfigureValid(form)}
+              onClick={() => void handleBuild()}
             >
-              Build my agent ✨
+              {isBuilding ? "Building…" : "Build my agent ✨"}
             </button>
           </>
         }
@@ -231,15 +272,96 @@ export function CreateAgentWizard() {
             </ul>
           </div>
 
-          <label className="agent-form__field">
-            <span>YOUR WEBSITE *</span>
-            <input
-              value={form.websiteUrl}
-              onChange={(e) => setForm((current) => ({ ...current, websiteUrl: e.target.value }))}
-              placeholder="https://www.yourcompany.com"
-            />
-            <small>We&apos;ll use your website to train your agent with relevant information about your business.</small>
-          </label>
+          <div className="agent-form__section">
+            <span className="agent-form__label">KNOWLEDGE BASE TYPE *</span>
+            <div className="kb-storage-grid">
+              {STORAGE_TYPES.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`kb-storage-card ${form.storageType === option.value ? "kb-storage-card--selected" : ""}`}
+                  onClick={() => setForm((current) => ({ ...current, storageType: option.value }))}
+                >
+                  <span className="kb-storage-card__icon">{option.icon}</span>
+                  <strong>{option.label}</strong>
+                  <p>{option.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="agent-form__section">
+            <span className="agent-form__label">CONTENT SOURCE *</span>
+            <div className="kb-source-toggle">
+              {SOURCE_TYPES.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`kb-source-toggle__btn ${form.sourceType === option.value ? "kb-source-toggle__btn--active" : ""}`}
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      sourceType: option.value,
+                      websiteUrl: option.value === "website" ? current.websiteUrl : "",
+                      documentFile: option.value === "file" ? current.documentFile : null,
+                    }))
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <small>
+              {SOURCE_TYPES.find((item) => item.value === form.sourceType)?.description}
+            </small>
+          </div>
+
+          {form.sourceType === "website" ? (
+            <>
+              <label className="agent-form__field">
+                <span>WEBSITE URL *</span>
+                <input
+                  type="url"
+                  value={form.websiteUrl}
+                  onChange={(e) => setForm((current) => ({ ...current, websiteUrl: e.target.value }))}
+                  placeholder="https://www.yourcompany.com/help"
+                />
+                <small>We&apos;ll crawl this site and index pages for your agent.</small>
+              </label>
+              <label className="agent-form__field">
+                <span>CRAWL DEPTH *</span>
+                <select
+                  value={form.crawlDepth}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, crawlDepth: Number(e.target.value) }))
+                  }
+                >
+                  {CRAWL_DEPTH_OPTIONS.map((depth) => (
+                    <option key={depth} value={depth}>
+                      {depth} {depth === 1 ? "level" : "levels"}
+                    </option>
+                  ))}
+                </select>
+                <small>How many link levels to follow from the starting URL.</small>
+              </label>
+            </>
+          ) : (
+            <label className="agent-form__field">
+              <span>DOCUMENT *</span>
+              <input
+                type="file"
+                accept=".pdf,.docx,.txt,.md,.csv"
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    documentFile: e.target.files?.[0] ?? null,
+                  }))
+                }
+              />
+              <small>Upload PDF, DOCX, or TXT. Max size depends on your server limits.</small>
+              {form.documentFile ? <small>Selected: {form.documentFile.name}</small> : null}
+            </label>
+          )}
 
           {error ? <p className="agent-form__error">{error}</p> : null}
         </div>
@@ -258,7 +380,7 @@ export function CreateAgentWizard() {
         title={isExtracting ? "Extracting website content." : "Building your agent."}
         subtitle={
           isExtracting
-            ? "Crawling and indexing your website. This may take a few minutes."
+            ? "Crawling and indexing your content. This may take a few minutes."
             : "This usually takes under 10 seconds."
         }
       >
@@ -284,8 +406,11 @@ export function CreateAgentWizard() {
                   <span>{isDone ? "✓" : isActive ? "◌" : "○"}</span>
                   <div>
                     <strong>{label}</strong>
-                    {isActive && label === "Extracting website content" && form.websiteUrl ? (
+                    {isActive && label === "Extracting website content" && form.sourceType === "website" && form.websiteUrl ? (
                       <small>Crawling and indexing pages from {form.websiteUrl}</small>
+                    ) : null}
+                    {isActive && label === "Extracting website content" && form.sourceType === "file" && form.documentFile ? (
+                      <small>Processing document {form.documentFile.name}</small>
                     ) : null}
                     {isActive && label === "Connecting to Agent" ? <small>Going live worldwide</small> : null}
                   </div>

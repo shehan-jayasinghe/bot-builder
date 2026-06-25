@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.di.agents import get_agent_service
 from app.di.auth import get_current_user
+from app.di.knowledgebases import get_knowledgebase_service
 from app.domain.models.current_user import CurrentUser
 from app.schemas.agent import (
     AgentStatus,
@@ -12,7 +13,9 @@ from app.schemas.agent import (
     GetAgentResponse,
     ListAgentsResponse,
 )
+from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
 from app.services.agent_service import AgentService
+from app.services.knowledgebase_service import KnowledgebaseService
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
@@ -38,6 +41,20 @@ async def create_agent(
     service: AgentService = Depends(get_agent_service),
 ) -> CreateAgentResponse:
     return await service.create_draft(current_user=current_user, request=body)
+
+
+@router.get("/{agent_id}/knowledgebases", response_model=ListKnowledgebasesResponse)
+async def list_agent_knowledgebases(
+    agent_id: AgentIdPath,
+    status: KnowledgebaseStatus | None = Query(default=None),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: KnowledgebaseService = Depends(get_knowledgebase_service),
+) -> ListKnowledgebasesResponse:
+    return await service.list_by_agent(
+        current_user=current_user,
+        agent_id=agent_id,
+        status=status.value if status else None,
+    )
 
 
 @router.get("/{agent_id}", response_model=GetAgentResponse)

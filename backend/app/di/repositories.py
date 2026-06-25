@@ -5,6 +5,8 @@ from app.infrastructure.db.mongo import get_motor_db
 from app.infrastructure.db.redis import get_redis
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.infrastructure.db.repositories.mongo.channel_repository import ChannelRepository
+from app.infrastructure.db.repositories.mongo.job_log_repository import JobLogRepository
+from app.infrastructure.db.repositories.mongo.knowledgebase_repository import KnowledgebaseRepository
 from app.infrastructure.db.repositories.mongo.organization_repository import OrganizationRepository
 from app.infrastructure.db.repositories.mongo.tracker_repository import TrackerRepository
 from app.infrastructure.db.repositories.mongo.user_repository import UserRepository
@@ -33,3 +35,11 @@ def get_user_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> Use
 
 def get_organization_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> OrganizationRepository:
     return OrganizationRepository(db=db)
+
+
+def get_knowledgebase_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> KnowledgebaseRepository:
+    return KnowledgebaseRepository(db=db)
+
+
+def get_job_log_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> JobLogRepository:
+    return JobLogRepository(db=db)

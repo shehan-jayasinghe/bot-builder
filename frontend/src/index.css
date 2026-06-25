@@ -777,6 +777,70 @@ button {
   color: #6941c6;
 }
 
+.agent-status--pending,
+.agent-status--extracting,
+.agent-status--chunking,
+.agent-status--indexing {
+  background: #fff6ed;
+  color: #b54708;
+}
+
+.agent-status--ready {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.agent-status--failed {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.agent-kb-panel__loading {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.agent-kb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-kb-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.agent-kb-list__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-kb-list__main strong {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-kb-list__meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: lowercase;
+}
+
 .agent-card__status {
   font-size: 11px;
   text-transform: uppercase;
@@ -992,6 +1056,127 @@ button {
 .agent-capability-list__check {
   color: var(--accent);
   font-weight: 700;
+}
+
+.kb-storage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kb-storage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.kb-storage-card--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.kb-storage-card__icon {
+  font-size: 22px;
+}
+
+.kb-storage-card strong {
+  font-size: 14px;
+}
+
+.kb-storage-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.kb-source-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.kb-source-toggle__btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.kb-source-toggle__btn--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .kb-storage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kb-storage-grid--compact {
+  grid-template-columns: 1fr;
+}
+
+.agent-form--compact {
+  gap: 14px;
+}
+
+.agent-form--compact .agent-form__field small {
+  margin-top: 4px;
+}
+
+.agent-kb-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agent-kb-form__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.agent-kb-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-kb-summary__icon {
+  font-size: 28px;
+}
+
+.agent-kb-summary__name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.agent-meta-list--compact {
+  gap: 8px;
+}
+
+.agent-meta-list--compact div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
 }
 
 .agent-build__progress-row {
@@ -1356,6 +1541,8 @@ button {
   background: transparent;
   color: var(--text-muted);
   font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .agent-detail__empty-panel {

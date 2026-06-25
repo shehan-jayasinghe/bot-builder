@@ -2,6 +2,9 @@ import logging
 import os
 from typing import Any
 
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,15 +20,8 @@ class QdrantConnector:
     def url(self) -> str:
         return self._url
 
-    def _get_client(self) -> Any:
+    def _get_client(self) -> QdrantClient:
         if self._client is None:
-            try:
-                from qdrant_client import QdrantClient
-            except ImportError as exc:
-                raise ImportError(
-                    "qdrant-client is required. Install with: poetry add qdrant-client"
-                ) from exc
-
             kwargs: dict[str, Any] = {"url": self._url}
             if self._api_key:
                 kwargs["api_key"] = self._api_key
@@ -47,8 +43,6 @@ class QdrantConnector:
         vector_size: int,
         distance: str = "Cosine",
     ) -> None:
-        from qdrant_client.http.models import Distance, VectorParams
-
         distance_map = {
             "Cosine": Distance.COSINE,
             "Euclid": Distance.EUCLID,

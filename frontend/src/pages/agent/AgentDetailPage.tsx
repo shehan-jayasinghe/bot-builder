@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { getAgent } from "../../api/agents";
+import { AgentKnowledgeBasePanel } from "../../components/agent/AgentKnowledgeBasePanel";
 import { AGENT_DETAIL_TABS } from "../../constants/navigation";
 import { getAgentTypeOption, getIndustryLabel } from "../../constants/agents";
 import { NavIcon } from "../../components/ui/NavIcon";
@@ -156,6 +157,8 @@ export function AgentDetailPage() {
               </button>
             </div>
           </section>
+
+          <AgentKnowledgeBasePanel agentId={agent.id} />
 
           <section className="agent-panel">
             <div className="agent-panel__header">
