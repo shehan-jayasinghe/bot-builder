@@ -53,3 +53,47 @@ def test_parse_http_config() -> None:
         },
     )
     assert parsed["base_url"] == "https://api.example.com"
+
+
+def test_parse_http_config_oauth2_client_credentials() -> None:
+    parsed = parse_connector_config(
+        ConnectorType.HTTP,
+        {
+            "base_url": "https://api.example.com",
+            "auth_type": "oauth2_client_credentials",
+            "token_url": "https://auth.example.com/token",
+            "client_id": "app-client",
+            "client_secret": "super-secret",
+            "grant_type": "client_credentials",
+            "scope": "read write",
+        },
+    )
+    assert parsed["auth_type"] == "oauth2_client_credentials"
+    assert parsed["token_url"] == "https://auth.example.com/token"
+    assert parsed["client_id"] == "app-client"
+
+
+def test_parse_http_config_oauth2_requires_secret_fields() -> None:
+    with pytest.raises(ValueError):
+        parse_connector_config(
+            ConnectorType.HTTP,
+            {
+                "base_url": "https://api.example.com",
+                "auth_type": "oauth2_client_credentials",
+                "token_url": "https://auth.example.com/token",
+                "client_id": "app-client",
+            },
+        )
+
+
+def test_mask_connector_config_oauth2() -> None:
+    config = {
+        "base_url": "https://api.example.com",
+        "auth_type": "oauth2_client_credentials",
+        "token_url": "https://auth.example.com/token",
+        "client_id": "app-client",
+        "client_secret": "super-secret",
+    }
+    masked = mask_connector_config("http", config)
+    assert masked["client_secret"] == "***"
+    assert masked["client_id"] == "app-client"

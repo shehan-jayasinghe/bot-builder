@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { getAgent } from "../../api/agents";
 import { AgentKnowledgeBasePanel } from "../../components/agent/AgentKnowledgeBasePanel";
+import { AgentToolsPanel } from "../../components/agent/AgentToolsPanel";
 import { AGENT_DETAIL_TABS } from "../../constants/navigation";
 import { getAgentTypeOption, getIndustryLabel } from "../../constants/agents";
 import { NavIcon } from "../../components/ui/NavIcon";
@@ -139,24 +140,7 @@ export function AgentDetailPage() {
         </div>
 
         <aside className="agent-detail__aside">
-          <section className="agent-panel">
-            <div className="agent-panel__header agent-panel__header--row">
-              <h2>Tools</h2>
-              <button type="button" className="agent-detail__link-btn">
-                + Add
-              </button>
-            </div>
-            <div className="agent-detail__empty-panel">
-              <div className="agent-detail__empty-icon" aria-hidden>
-                🔧
-              </div>
-              <p>No tools connected yet.</p>
-              <span>Add APIs, CRMs, or custom actions to extend your agent.</span>
-              <button type="button" className="btn btn--ghost">
-                Add tool
-              </button>
-            </div>
-          </section>
+          <AgentToolsPanel agentId={agent.id} />
 
           <AgentKnowledgeBasePanel agentId={agent.id} />
 

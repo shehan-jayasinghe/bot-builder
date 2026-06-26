@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-_SECRET_KEYS = frozenset({"auth_token", "auth_password", "uri"})
+_SECRET_KEYS = frozenset({"auth_token", "auth_password", "client_secret", "uri"})
 
 
 def mask_mongo_uri(uri: str) -> str:

@@ -17,9 +17,10 @@ class ConnectorStatus(StrEnum):
 
 class HttpAuthType(StrEnum):
     NONE = "none"
-    BEARER = "bearer"
-    BASIC = "basic"
+    OAUTH2_CLIENT_CREDENTIALS = "oauth2_client_credentials"
     API_KEY = "api_key"
+    BASIC = "basic"
+    BEARER = "bearer"
 
 
 class MongoConnectorConfig(BaseModel):
@@ -30,6 +31,11 @@ class MongoConnectorConfig(BaseModel):
 class HttpConnectorConfig(BaseModel):
     base_url: str = Field(min_length=1)
     auth_type: HttpAuthType = HttpAuthType.NONE
+    token_url: str | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+    grant_type: str | None = Field(default="client_credentials")
+    scope: str | None = None
     auth_token: str | None = None
     auth_username: str | None = None
     auth_password: str | None = None
@@ -38,6 +44,12 @@ class HttpConnectorConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_auth_fields(self) -> "HttpConnectorConfig":
+        if self.auth_type == HttpAuthType.OAUTH2_CLIENT_CREDENTIALS:
+            if not self.token_url or not self.client_id or not self.client_secret:
+                raise ValueError(
+                    "token_url, client_id, and client_secret are required when "
+                    "auth_type is oauth2_client_credentials"
+                )
         if self.auth_type == HttpAuthType.BEARER and not self.auth_token:
             raise ValueError("auth_token is required when auth_type is bearer")
         if self.auth_type == HttpAuthType.API_KEY and not self.auth_token:

@@ -4,6 +4,7 @@ import { ProtectedRoute } from "../auth/ProtectedRoute";
 import { PublicAuthRoute } from "../auth/PublicAuthRoute";
 import { AppShell } from "../layouts/AppShell";
 import { AddKnowledgeBasePage } from "../pages/agent/AddKnowledgeBasePage";
+import { AddToolPage } from "../pages/agent/AddToolPage";
 import { AgentPage } from "../pages/agent/AgentPage";
 import { AgentDetailPage } from "../pages/agent/AgentDetailPage";
 import { CreateAgentPage } from "../pages/agent/CreateAgentPage";
@@ -35,6 +36,7 @@ export function AppRoutes() {
           <Route path="agent" element={<AgentPage />} />
           <Route path="agent/new" element={<CreateAgentPage />} />
           <Route path="agent/:agentId/knowledgebases/new" element={<AddKnowledgeBasePage />} />
+          <Route path="agent/:agentId/tools/new" element={<AddToolPage />} />
           <Route path="agent/:agentId" element={<AgentDetailPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="data-sources" element={<DataSourcesPage />} />

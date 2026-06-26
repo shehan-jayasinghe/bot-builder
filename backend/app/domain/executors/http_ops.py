@@ -4,6 +4,7 @@ import httpx
 
 from app.domain.executors.context import ExecutorContext
 from app.domain.executors.errors import ConnectorConfigError
+from app.domain.executors.http_token_provider import fetch_oauth2_client_credentials_token
 from app.domain.executors.template import resolve_templates
 
 _DEFAULT_TIMEOUT = 30.0
@@ -33,10 +34,31 @@ def _build_auth(config: dict[str, Any]) -> httpx.Auth | None:
     return None
 
 
-def _build_headers(connector_config: dict[str, Any], tool_headers: dict[str, Any] | None) -> dict[str, str]:
+async def _build_request_auth(
+    connector_config: dict[str, Any],
+) -> tuple[httpx.Auth | None, dict[str, str]]:
+    auth_type = (connector_config.get("auth_type") or "none").lower()
+    extra_headers: dict[str, str] = {}
+
+    if auth_type == "oauth2_client_credentials":
+        token = await fetch_oauth2_client_credentials_token(connector_config)
+        extra_headers["Authorization"] = f"Bearer {token}"
+        return None, extra_headers
+
+    return _build_auth(connector_config), extra_headers
+
+
+def _build_headers(
+    connector_config: dict[str, Any],
+    tool_headers: dict[str, Any] | None,
+    *,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, str]:
     headers: dict[str, str] = {}
     default_headers = connector_config.get("default_headers") or {}
     headers.update({str(k): str(v) for k, v in default_headers.items()})
+    if extra_headers:
+        headers.update(extra_headers)
     if tool_headers:
         headers.update({str(k): str(v) for k, v in tool_headers.items()})
 
@@ -58,11 +80,10 @@ async def http_request(ctx: ExecutorContext) -> Any:
     path = str(config["path"]).lstrip("/")
     url = f"{base_url}/{path}"
     method = str(config["method"]).upper()
-    headers = _build_headers(connector_config, config.get("headers"))
+    auth, auth_headers = await _build_request_auth(connector_config)
+    headers = _build_headers(connector_config, config.get("headers"), extra_headers=auth_headers)
     query = config.get("query")
     body = config.get("body")
-
-    auth = _build_auth(connector_config)
 
     async with httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT, auth=auth) as client:
         response = await client.request(

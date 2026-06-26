@@ -4,7 +4,7 @@ from typing import Any
 import httpx
 
 from app.domain.executors.mongo_ops import org_mongo_db
-from app.domain.executors.http_ops import _build_auth, _build_headers
+from app.domain.executors.http_ops import _build_request_auth, _build_headers
 from app.schemas.connector import ConnectorType
 from app.shared.exceptions.connector import ConnectionTestFailedError
 
@@ -22,8 +22,8 @@ async def test_connector_connection(connector_type: str, config: dict[str, Any])
 
         if connector_type == ConnectorType.HTTP:
             base_url = str(config["base_url"]).rstrip("/")
-            auth = _build_auth(config)
-            headers = _build_headers(config, None)
+            auth, auth_headers = await _build_request_auth(config)
+            headers = _build_headers(config, None, extra_headers=auth_headers)
             async with httpx.AsyncClient(timeout=_PING_TIMEOUT, auth=auth) as client:
                 response = await client.get(base_url, headers=headers)
             if response.status_code >= 500:

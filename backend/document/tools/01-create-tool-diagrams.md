@@ -34,6 +34,77 @@ Connector docs: [../connectors/01-create-connector-diagrams.md](../connectors/01
 
 ---
 
+# Launch MVP — end-to-end (UI wizard)
+
+Route: `/agent/{agent_id}/tools/new` — 4 steps.
+
+| Step | UI | API |
+|------|-----|-----|
+| 1 | Pick connection type (`mongo` or `http`) | `GET /api/v1/connector-types` |
+| 2 | Configure connector + **Test connection** | `POST /api/v1/connectors` with `test_connection: true` |
+| 3 | Pick executor + operation config | `GET /api/v1/executors` |
+| 4 | Tool name, description, review | `POST /api/v1/agents/{agent_id}/tools` |
+
+After create, tools list on agent detail: `GET /api/v1/agents/{agent_id}/tools`.
+
+### Example A — MongoDB find customer
+
+**Connector** (`type: mongo`):
+
+```json
+{ "uri": "mongodb+srv://...", "database": "loyalty_db" }
+```
+
+**Tool** (`executor: mongo_find_one`):
+
+```json
+{
+  "name": "get_customer_by_id",
+  "description": "Look up a customer by ID when the user asks about loyalty or account details.",
+  "executor": "mongo_find_one",
+  "connector_id": "<mongo-connector-id>",
+  "config": {
+    "collection": "customers",
+    "filter": { "customer_id": "{{customer_id}}" },
+    "projection": ["name", "tier", "loyalty_points"]
+  }
+}
+```
+
+### Example B — REST API with Keycloak OAuth2
+
+**Connector** (`type: http`, `auth_type: oauth2_client_credentials`):
+
+```json
+{
+  "base_url": "https://api.loyalty.example.com",
+  "auth_type": "oauth2_client_credentials",
+  "token_url": "https://idp.loyalty.example.com/auth/realms/shoutout-loyalty-system/protocol/openid-connect/token",
+  "client_id": "my-app-client",
+  "client_secret": "...",
+  "grant_type": "client_credentials"
+}
+```
+
+**Tool** (`executor: http_request`):
+
+```json
+{
+  "name": "get_loyalty_balance",
+  "description": "Get loyalty points for a customer when they ask about rewards.",
+  "executor": "http_request",
+  "connector_id": "<http-connector-id>",
+  "config": {
+    "method": "GET",
+    "path": "/customers/{{customer_id}}/loyalty"
+  }
+}
+```
+
+Auth stays in the connector. Path and method stay in the tool.
+
+---
+
 # Flow 1 — Auth
 
 Same as connectors and knowledge bases.
@@ -292,13 +363,15 @@ Use `tool_ids` on agent (may alias existing `skill_ids` during migration).
 
 ---
 
-# Navigate to planned files
+# Navigate to implementation files
 
 | Layer | Open file |
 |-------|-----------|
-| API route | [agents.py](../../app/api/v1/agents.py) *(planned)* |
-| Schemas | [tool.py](../../app/schemas/tool.py) *(planned)* |
-| Service | [tool_service.py](../../app/services/tool_service.py) *(planned)* |
-| Repository | [tool_repository.py](../../app/infrastructure/db/repositories/mongo/tool_repository.py) *(planned)* |
-| Executor validation | [executor_catalog.py](../../app/domain/catalog/executor_catalog.py) *(planned)* |
-| Config validation | [tool_config_schemas.py](../../app/schemas/tool_config.py) *(planned)* |
+| API route | [agents.py](../../app/api/v1/agents.py) |
+| Schemas | [tool.py](../../app/schemas/tool.py) |
+| Service | [tool_service.py](../../app/services/tool_service.py) |
+| Repository | [tool_repository.py](../../app/infrastructure/db/repositories/mongo/tool_repository.py) |
+| Executor validation | [executor_catalog.py](../../app/domain/catalog/executor_catalog.py) |
+| Config validation | [tool_config.py](../../app/schemas/tool_config.py) |
+| Frontend wizard | [AddToolPage.tsx](../../../frontend/src/pages/agent/AddToolPage.tsx) |
+| Frontend tools panel | [AgentToolsPanel.tsx](../../../frontend/src/components/agent/AgentToolsPanel.tsx) |

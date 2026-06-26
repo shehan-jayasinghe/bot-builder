@@ -136,11 +136,12 @@ Sort: `created_at` descending.
 
 Tool `config` is **not** secret — connector credentials stay in `connectors` collection only.
 
-## Navigate to planned files
+## Navigate to implementation files
 
 | What | Open file |
 |------|-----------|
-| API route | [agents.py](../../app/api/v1/agents.py) *(planned)* |
-| Service | [tool_service.py](../../app/services/tool_service.py) *(planned)* |
-| Repository | [tool_repository.py](../../app/infrastructure/db/repositories/mongo/tool_repository.py) *(planned)* |
-| List schema | [tool.py](../../app/schemas/tool.py) *(planned)* |
+| API route | [agents.py](../../app/api/v1/agents.py) |
+| Service | [tool_service.py](../../app/services/tool_service.py) |
+| Repository | [tool_repository.py](../../app/infrastructure/db/repositories/mongo/tool_repository.py) |
+| List schema | [tool.py](../../app/schemas/tool.py) |
+| Frontend panel | [AgentToolsPanel.tsx](../../../frontend/src/components/agent/AgentToolsPanel.tsx) |

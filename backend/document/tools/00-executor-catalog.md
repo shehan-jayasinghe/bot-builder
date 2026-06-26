@@ -369,12 +369,13 @@ Call a REST endpoint.
 **Executor behavior:**
 
 1. Build URL: `base_url + path` (resolve `{{args}}` in path).
-2. Apply connector auth (`bearer`, `basic`, `api_key`).
+2. Apply connector auth (`oauth2_client_credentials`, `api_key`, `basic`, `bearer`).
+   - `oauth2_client_credentials`: POST `token_url` → cache `access_token` → `Authorization: Bearer …`
 3. Merge headers.
 4. `httpx` request with timeout 30s.
 5. Return `{ "status_code", "headers", "body" }` — parse JSON body when possible.
 
-**Planned implementation:** [request.py](../../app/domain/executors/http/request.py) *(planned)*
+**Implementation:** [http_ops.py](../../app/domain/executors/http_ops.py) · [http_token_provider.py](../../app/domain/executors/http_token_provider.py)
 
 ---
 

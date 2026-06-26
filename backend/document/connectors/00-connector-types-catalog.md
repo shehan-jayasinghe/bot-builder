@@ -42,11 +42,17 @@ No secrets. No org scoping — same list for all authenticated users. Optional: 
 
 ## `http`
 
+**OAuth2 client credentials (recommended for production REST APIs — Keycloak, Auth0, etc.)**
+
 ```json
 {
-  "base_url": "https://api.example.com",
-  "auth_type": "bearer",
-  "auth_token": "sk_live_...",
+  "base_url": "https://api.loyalty.example.com",
+  "auth_type": "oauth2_client_credentials",
+  "token_url": "https://idp.example.com/auth/realms/app/protocol/openid-connect/token",
+  "client_id": "my-app-client",
+  "client_secret": "...",
+  "grant_type": "client_credentials",
+  "scope": "read write",
   "default_headers": {
     "Accept": "application/json"
   }
@@ -55,13 +61,34 @@ No secrets. No org scoping — same list for all authenticated users. Optional: 
 
 | Field | Required | Notes |
 |-------|----------|-------|
-| `base_url` | yes | No trailing slash; tool config adds path |
-| `auth_type` | no | `none`, `bearer`, `basic`, `api_key` — default `none` |
-| `auth_token` | when bearer/api_key | Secret — masked in API responses |
-| `auth_username` | when basic | Secret |
+| `base_url` | yes | Target REST API — no trailing slash; tool config adds path |
+| `auth_type` | no | `none`, `oauth2_client_credentials`, `api_key`, `basic`, `bearer` — default `none` |
+| `token_url` | when oauth2 | OAuth token endpoint (separate from `base_url`) |
+| `client_id` | when oauth2 | App / client identifier |
+| `client_secret` | when oauth2 | Secret — masked in API responses; platform fetches and refreshes access tokens |
+| `grant_type` | when oauth2 | Default `client_credentials` |
+| `scope` | no | Optional OAuth scope string |
+| `auth_token` | when api_key / bearer | Secret — masked; `bearer` is dev-only static token |
+| `auth_username` | when basic | |
 | `auth_password` | when basic | Secret |
 | `api_key_header` | when api_key | e.g. `X-API-Key` |
 | `default_headers` | no | Merged into every tool HTTP call |
+
+**Static bearer (dev / internal APIs only)**
+
+```json
+{
+  "base_url": "https://api.example.com",
+  "auth_type": "bearer",
+  "auth_token": "sk_live_..."
+}
+```
+
+Platform behavior for `oauth2_client_credentials`:
+
+1. `POST token_url` with `client_id`, `client_secret`, `grant_type=client_credentials`
+2. Cache `access_token` until near expiry
+3. Attach `Authorization: Bearer <access_token>` on every `http_request` tool call
 
 ---
 
@@ -189,7 +216,16 @@ No secrets. No org scoping — same list for all authenticated users. Optional: 
       "mvp": true,
       "config_schema": {
         "base_url": { "type": "string", "required": true, "secret": false },
-        "auth_type": { "type": "enum", "values": ["none", "bearer", "basic", "api_key"], "required": false },
+        "auth_type": {
+          "type": "enum",
+          "values": ["none", "oauth2_client_credentials", "api_key", "basic", "bearer"],
+          "required": false
+        },
+        "token_url": { "type": "string", "required": false, "secret": false },
+        "client_id": { "type": "string", "required": false, "secret": false },
+        "client_secret": { "type": "string", "required": false, "secret": true },
+        "grant_type": { "type": "string", "required": false, "secret": false },
+        "scope": { "type": "string", "required": false, "secret": false },
         "auth_token": { "type": "string", "required": false, "secret": true }
       },
       "compatible_executors": ["http_request"]
@@ -216,10 +252,12 @@ When creating a **Tool**, validate that `connector.type` matches the executor fa
 
 ---
 
-# Navigate to implementation files (planned)
+# Navigate to implementation files
 
 | What | Open file |
 |------|-----------|
-| API route | [connectors.py](../../app/api/v1/connectors.py) *(planned)* |
-| Type enum | [connector_constants.py](../../app/domain/constants/connector_constants.py) *(planned)* |
-| Static catalog | [connector_type_catalog.py](../../app/domain/catalog/connector_type_catalog.py) *(planned)* |
+| API route | [connectors.py](../../app/api/v1/connectors.py) |
+| Type enum | [connector_constants.py](../../app/domain/constants/connector_constants.py) |
+| Static catalog | [connector_type_catalog.py](../../app/domain/catalog/connector_type_catalog.py) |
+| OAuth token fetch | [http_token_provider.py](../../app/domain/executors/http_token_provider.py) |
+| HTTP executor auth | [http_ops.py](../../app/domain/executors/http_ops.py) |

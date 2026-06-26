@@ -245,7 +245,26 @@ flowchart TB
 }
 ```
 
-**REST / HTTP**
+**REST / HTTP — OAuth2 client credentials (Keycloak example)**
+
+```json
+{
+  "name": "ShoutOUT Loyalty API",
+  "description": "Loyalty REST service with Keycloak auth",
+  "type": "http",
+  "config": {
+    "base_url": "https://api.loyalty.example.com",
+    "auth_type": "oauth2_client_credentials",
+    "token_url": "https://idp.loyalty.example.com/auth/realms/shoutout-loyalty-system/protocol/openid-connect/token",
+    "client_id": "my-app-client",
+    "client_secret": "...",
+    "grant_type": "client_credentials"
+  },
+  "test_connection": true
+}
+```
+
+**REST / HTTP — static bearer (dev only)**
 
 ```json
 {
@@ -280,7 +299,7 @@ flowchart TB
 | `type` | Required `config` fields |
 |--------|--------------------------|
 | `mongo` | `uri`, `database` |
-| `http` | `base_url`; `auth_type` optional (`none`, `bearer`, `basic`, `api_key`) |
+| `http` | `base_url`; `auth_type` optional (`none`, `oauth2_client_credentials`, `api_key`, `basic`, `bearer`) |
 
 ### What the client does NOT send
 
@@ -307,10 +326,11 @@ flowchart TB
     CHECK -->|true| TYPE{type?}
 
     TYPE -->|mongo| M1[Motor / pymongo — ping admin]
-    TYPE -->|http| H1[GET base_url or /health — timeout 5s]
+    TYPE -->|http| H1[Resolve auth — OAuth2 token or static auth]
+    H1 --> H2[GET base_url — timeout 5s]
 
     M1 --> OK{success?}
-    H1 --> OK
+    H2 --> OK
 
     OK -->|yes| F4
     OK -->|no| E400[400 Connection test failed]
@@ -322,7 +342,8 @@ flowchart TB
 |-----------|--------------|-----------|
 | Ping orchestration | `ConnectorService.test_connection()` | [connector_service.py](../../app/services/connector_service.py) *(planned)* |
 | Mongo ping | Connect + `ping` command | [mongo_connector_client.py](../../app/infrastructure/connectors/org/mongo_connector_client.py) *(planned)* |
-| HTTP ping | `httpx` HEAD/GET to `base_url` | [http_connector_client.py](../../app/infrastructure/connectors/org/http_connector_client.py) *(planned)* |
+| HTTP ping | Fetch OAuth2 token if needed, then `httpx` GET `base_url` | [connector_ping.py](../../app/services/connector_ping.py) |
+| OAuth token | `fetch_oauth2_client_credentials_token()` | [http_token_provider.py](../../app/domain/executors/http_token_provider.py) |
 
 ## JSON at each step
 
@@ -429,12 +450,14 @@ Authorization: Bearer <clerk_jwt>
 Content-Type: application/json
 
 {
-  "name": "Payments API",
+  "name": "ShoutOUT Loyalty API",
   "type": "http",
   "config": {
-    "base_url": "https://api.example.com",
-    "auth_type": "bearer",
-    "auth_token": "sk_live_..."
+    "base_url": "https://api.loyalty.example.com",
+    "auth_type": "oauth2_client_credentials",
+    "token_url": "https://idp.loyalty.example.com/auth/realms/shoutout-loyalty-system/protocol/openid-connect/token",
+    "client_id": "my-app-client",
+    "client_secret": "..."
   },
   "test_connection": true
 }
