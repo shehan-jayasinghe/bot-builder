@@ -20,6 +20,7 @@ from app.shared.exceptions.tool import (
     ToolNameExistsError,
     ToolNotFoundError,
 )
+from app.shared.exceptions.workflow import WorkflowLimitReachedError
 from app.shared.exceptions.auth import (
     AuthError,
     ClerkUserCreationError,
@@ -118,6 +119,11 @@ async def tool_name_exists_handler(_request: Request, exc: ToolNameExistsError) 
 @app.exception_handler(ToolConnectorTypeMismatchError)
 async def tool_validation_handler(_request: Request, exc: ToolConnectorTypeMismatchError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(WorkflowLimitReachedError)
+async def workflow_limit_reached_handler(_request: Request, exc: WorkflowLimitReachedError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.exception_handler(UserDisabledError)

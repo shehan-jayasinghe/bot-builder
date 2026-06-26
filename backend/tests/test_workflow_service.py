@@ -1,0 +1,108 @@
+import asyncio
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
+
+import pytest
+
+from app.domain.constants.workflow_constants import (
+    DEFAULT_STARTER_EDGES,
+    DEFAULT_STARTER_NODES,
+    MAX_WORKFLOWS_PER_ORGANIZATION,
+)
+from app.domain.models.current_user import CurrentUser
+from app.schemas.workflow import CreateWorkflowRequest
+from app.services.workflow_service import WorkflowService
+from app.shared.exceptions.agent import AgentNotFoundError
+from app.shared.exceptions.workflow import WorkflowLimitReachedError
+
+
+ORG_ID = "6a3b7c61d8139334274fbbfc"
+AGENT_ID = "6a3b7c61d8139334274fbbf1"
+NOW = datetime(2026, 6, 26, 10, 0, 0, tzinfo=UTC)
+
+
+def _current_user() -> CurrentUser:
+    return CurrentUser(
+        user_id="6a3b7c61d8139334274fbbfd",
+        organization_id=ORG_ID,
+        clerk_id="user_test",
+        email="test@example.com",
+        first_name="Test",
+        last_name="User",
+        user_type="root",
+        is_root=True,
+        status="active",
+        organization_name="abc bank",
+        organization_industry="financial_services",
+    )
+
+
+def test_workflow_service_create_defaults() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.count_by_organization = AsyncMock(return_value=0)
+        workflow_repo.create = AsyncMock(
+            return_value={
+                "_id": "6a3f9012d8139334274fbc00",
+                "name": "Welcome",
+                "description": None,
+                "agent_id": None,
+                "status": "draft",
+                "nodes": DEFAULT_STARTER_NODES,
+                "edges": DEFAULT_STARTER_EDGES,
+                "organization_id": ORG_ID,
+                "created_at": NOW,
+                "updated_at": NOW,
+            }
+        )
+
+        agent_repo = type("AgentRepo", (), {})()
+        agent_repo.find_by_id_for_organization = AsyncMock()
+
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+        result = await service.create(current_user=_current_user(), request=CreateWorkflowRequest())
+
+        assert result.name == "Welcome"
+        assert result.status == "draft"
+        assert result.nodes == DEFAULT_STARTER_NODES
+        workflow_repo.create.assert_awaited_once()
+        saved = workflow_repo.create.await_args.kwargs["document"]
+        assert saved["organization_id"] == ORG_ID
+        assert saved["nodes"] == DEFAULT_STARTER_NODES
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_create_validates_agent() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.count_by_organization = AsyncMock(return_value=0)
+
+        agent_repo = type("AgentRepo", (), {})()
+        agent_repo.find_by_id_for_organization = AsyncMock(return_value=None)
+
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+
+        with pytest.raises(AgentNotFoundError):
+            await service.create(
+                current_user=_current_user(),
+                request=CreateWorkflowRequest(agent_id=AGENT_ID),
+            )
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_create_enforces_limit() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.count_by_organization = AsyncMock(
+            return_value=MAX_WORKFLOWS_PER_ORGANIZATION
+        )
+
+        agent_repo = type("AgentRepo", (), {})()
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+
+        with pytest.raises(WorkflowLimitReachedError):
+            await service.create(current_user=_current_user(), request=CreateWorkflowRequest())
+
+    asyncio.run(_run())

@@ -10,6 +10,7 @@ from app.infrastructure.db.repositories.mongo.job_log_repository import JobLogRe
 from app.infrastructure.db.repositories.mongo.knowledgebase_repository import KnowledgebaseRepository
 from app.infrastructure.db.repositories.mongo.organization_repository import OrganizationRepository
 from app.infrastructure.db.repositories.mongo.tool_repository import ToolRepository
+from app.infrastructure.db.repositories.mongo.workflow_repository import WorkflowRepository
 from app.infrastructure.db.repositories.mongo.tracker_repository import TrackerRepository
 from app.infrastructure.db.repositories.mongo.user_repository import UserRepository
 from app.infrastructure.db.repositories.redis.tracker_session_store import TrackerSessionStore
@@ -53,3 +54,7 @@ def get_connector_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -
 
 def get_tool_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> ToolRepository:
     return ToolRepository(db=db)
+
+
+def get_workflow_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> WorkflowRepository:
+    return WorkflowRepository(db=db)

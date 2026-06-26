@@ -1,0 +1,84 @@
+from typing import Any
+
+from app.domain.constants.workflow_constants import (
+    DEFAULT_STARTER_EDGES,
+    DEFAULT_STARTER_NODES,
+    MAX_WORKFLOWS_PER_ORGANIZATION,
+    WORKFLOW_STATUS_DRAFT,
+)
+from app.domain.models.current_user import CurrentUser
+from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
+from app.infrastructure.db.repositories.mongo.workflow_repository import WorkflowRepository
+from app.schemas.workflow import CreateWorkflowRequest, CreateWorkflowResponse, WorkflowResponse
+from app.shared.exceptions.agent import AgentNotFoundError
+from app.shared.exceptions.workflow import WorkflowLimitReachedError
+
+
+class WorkflowService:
+    def __init__(
+        self,
+        *,
+        workflow_repository: WorkflowRepository,
+        agent_repository: AgentRepository,
+    ) -> None:
+        self._workflow_repository = workflow_repository
+        self._agent_repository = agent_repository
+
+    async def create(
+        self,
+        *,
+        current_user: CurrentUser,
+        request: CreateWorkflowRequest,
+    ) -> CreateWorkflowResponse:
+        if request.agent_id is not None:
+            agent = await self._agent_repository.find_by_id_for_organization(
+                agent_id=request.agent_id,
+                organization_id=current_user.organization_id,
+            )
+            if agent is None:
+                raise AgentNotFoundError("Agent not found")
+
+        count = await self._workflow_repository.count_by_organization(
+            organization_id=current_user.organization_id,
+        )
+        if count >= MAX_WORKFLOWS_PER_ORGANIZATION:
+            raise WorkflowLimitReachedError(
+                f"Organization workflow limit reached ({MAX_WORKFLOWS_PER_ORGANIZATION})"
+            )
+
+        nodes = (
+            [node.model_dump() for node in request.nodes]
+            if request.nodes is not None
+            else list(DEFAULT_STARTER_NODES)
+        )
+        edges = (
+            [edge.model_dump() for edge in request.edges]
+            if request.edges is not None
+            else list(DEFAULT_STARTER_EDGES)
+        )
+
+        document = {
+            "name": request.name,
+            "description": request.description,
+            "agent_id": request.agent_id,
+            "status": WORKFLOW_STATUS_DRAFT,
+            "nodes": nodes,
+            "edges": edges,
+            "organization_id": current_user.organization_id,
+        }
+        saved = await self._workflow_repository.create(document=document)
+        return self._document_to_response(saved)
+
+    def _document_to_response(self, document: dict[str, Any]) -> WorkflowResponse:
+        return WorkflowResponse(
+            id=str(document["_id"]),
+            name=str(document["name"]),
+            description=document.get("description"),
+            agent_id=document.get("agent_id"),
+            status=str(document.get("status", WORKFLOW_STATUS_DRAFT)),
+            nodes=list(document.get("nodes") or []),
+            edges=list(document.get("edges") or []),
+            organization_id=str(document["organization_id"]),
+            created_at=document["created_at"],
+            updated_at=document["updated_at"],
+        )
