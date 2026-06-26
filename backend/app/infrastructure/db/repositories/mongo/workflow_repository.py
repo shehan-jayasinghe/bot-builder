@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
+from bson import ObjectId
+from bson.errors import InvalidId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 
@@ -35,3 +37,23 @@ class WorkflowRepository:
             query["agent_id"] = agent_id
         cursor = self._collection.find(query).sort("updated_at", -1)
         return await cursor.to_list(length=None)
+
+    async def find_by_id_for_organization(
+        self,
+        *,
+        workflow_id: str,
+        organization_id: str,
+    ) -> dict[str, Any] | None:
+        object_id = self._to_object_id(workflow_id)
+        if object_id is None:
+            return None
+        return await self._collection.find_one(
+            {"_id": object_id, "organization_id": organization_id},
+        )
+
+    @staticmethod
+    def _to_object_id(workflow_id: str) -> ObjectId | None:
+        try:
+            return ObjectId(workflow_id)
+        except (InvalidId, TypeError):
+            return None

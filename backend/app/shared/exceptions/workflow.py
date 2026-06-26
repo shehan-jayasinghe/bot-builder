@@ -7,3 +7,7 @@ class WorkflowError(CoreError):
 
 class WorkflowLimitReachedError(WorkflowError):
     """Organization has reached the maximum number of workflows."""
+
+
+class WorkflowNotFoundError(WorkflowError):
+    """Workflow does not exist or is not accessible for the caller's organization."""

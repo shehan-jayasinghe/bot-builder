@@ -11,7 +11,7 @@ from app.di.workflows import get_workflow_service
 from app.schemas.workflow import CreateWorkflowRequest, ListWorkflowsResponse, WorkflowListItem, WorkflowResponse
 from app.services.workflow_service import WorkflowService
 from app.shared.exceptions.agent import AgentNotFoundError
-from app.shared.exceptions.workflow import WorkflowLimitReachedError
+from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
 
 
 ORG_ID = "6a3b7c61d8139334274fbbfc"
@@ -199,3 +199,42 @@ def test_list_workflows_endpoint_with_filters(client: TestClient) -> None:
         status="draft",
         agent_id=AGENT_ID,
     )
+
+
+def test_get_workflow_endpoint(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    mock_service.get_by_id = AsyncMock(return_value=_workflow_response())
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.get(f"/api/v1/workflows/{WORKFLOW_ID}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == WORKFLOW_ID
+    assert body["name"] == "Welcome"
+    assert len(body["nodes"]) == 2
+    assert len(body["edges"]) == 1
+    mock_service.get_by_id.assert_awaited_once()
+
+
+def test_get_workflow_endpoint_not_found(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    mock_service.get_by_id = AsyncMock(side_effect=WorkflowNotFoundError("Workflow not found"))
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.get(f"/api/v1/workflows/{WORKFLOW_ID}")
+
+    assert response.status_code == 404
+
+
+def test_get_workflow_endpoint_invalid_id(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.get("/api/v1/workflows/not-an-object-id")
+
+    assert response.status_code == 422
+    mock_service.get_by_id.assert_not_called()

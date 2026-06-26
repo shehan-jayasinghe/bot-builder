@@ -13,7 +13,7 @@ from app.domain.models.current_user import CurrentUser
 from app.schemas.workflow import CreateWorkflowRequest
 from app.services.workflow_service import WorkflowService
 from app.shared.exceptions.agent import AgentNotFoundError
-from app.shared.exceptions.workflow import WorkflowLimitReachedError
+from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
 
 
 ORG_ID = "6a3b7c61d8139334274fbbfc"
@@ -141,5 +141,51 @@ def test_workflow_service_list_by_organization() -> None:
             status=None,
             agent_id=None,
         )
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_get_by_id() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.find_by_id_for_organization = AsyncMock(
+            return_value={
+                "_id": WORKFLOW_ID,
+                "name": "Welcome",
+                "description": None,
+                "agent_id": None,
+                "status": "draft",
+                "nodes": DEFAULT_STARTER_NODES,
+                "edges": DEFAULT_STARTER_EDGES,
+                "organization_id": ORG_ID,
+                "created_at": NOW,
+                "updated_at": NOW,
+            }
+        )
+
+        agent_repo = type("AgentRepo", (), {})()
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+        result = await service.get_by_id(current_user=_current_user(), workflow_id=WORKFLOW_ID)
+
+        assert result.id == WORKFLOW_ID
+        assert result.nodes == DEFAULT_STARTER_NODES
+        workflow_repo.find_by_id_for_organization.assert_awaited_once_with(
+            workflow_id=WORKFLOW_ID,
+            organization_id=ORG_ID,
+        )
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_get_by_id_not_found() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.find_by_id_for_organization = AsyncMock(return_value=None)
+
+        agent_repo = type("AgentRepo", (), {})()
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+
+        with pytest.raises(WorkflowNotFoundError):
+            await service.get_by_id(current_user=_current_user(), workflow_id=WORKFLOW_ID)
 
     asyncio.run(_run())

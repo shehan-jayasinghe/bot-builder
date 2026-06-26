@@ -12,12 +12,13 @@ from app.infrastructure.db.repositories.mongo.workflow_repository import Workflo
 from app.schemas.workflow import (
     CreateWorkflowRequest,
     CreateWorkflowResponse,
+    GetWorkflowResponse,
     ListWorkflowsResponse,
     WorkflowListItem,
     WorkflowResponse,
 )
 from app.shared.exceptions.agent import AgentNotFoundError
-from app.shared.exceptions.workflow import WorkflowLimitReachedError
+from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
 
 
 class WorkflowService:
@@ -89,6 +90,20 @@ class WorkflowService:
         )
         items = [self._document_to_list_item(document) for document in documents]
         return ListWorkflowsResponse(items=items, total=len(items))
+
+    async def get_by_id(
+        self,
+        *,
+        current_user: CurrentUser,
+        workflow_id: str,
+    ) -> GetWorkflowResponse:
+        document = await self._workflow_repository.find_by_id_for_organization(
+            workflow_id=workflow_id,
+            organization_id=current_user.organization_id,
+        )
+        if document is None:
+            raise WorkflowNotFoundError("Workflow not found")
+        return self._document_to_response(document)
 
     def _document_to_list_item(self, document: dict[str, Any]) -> WorkflowListItem:
         nodes = document.get("nodes") or []

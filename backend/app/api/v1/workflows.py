@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.di.auth import get_current_user
 from app.di.workflows import get_workflow_service
@@ -6,6 +8,7 @@ from app.domain.models.current_user import CurrentUser
 from app.schemas.workflow import (
     CreateWorkflowRequest,
     CreateWorkflowResponse,
+    GetWorkflowResponse,
     ListWorkflowsResponse,
     WorkflowStatus,
 )
@@ -13,6 +16,7 @@ from app.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
 
+WorkflowIdPath = Annotated[str, Path(pattern=r"^[a-fA-F0-9]{24}$")]
 AgentIdQuery = Query(default=None, pattern=r"^[a-fA-F0-9]{24}$")
 
 
@@ -37,3 +41,12 @@ async def create_workflow(
     service: WorkflowService = Depends(get_workflow_service),
 ) -> CreateWorkflowResponse:
     return await service.create(current_user=current_user, request=body)
+
+
+@router.get("/{workflow_id}", response_model=GetWorkflowResponse)
+async def get_workflow(
+    workflow_id: WorkflowIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: WorkflowService = Depends(get_workflow_service),
+) -> GetWorkflowResponse:
+    return await service.get_by_id(current_user=current_user, workflow_id=workflow_id)

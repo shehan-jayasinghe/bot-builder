@@ -45,6 +45,7 @@ class WorkflowResponse(BaseModel):
 
 
 CreateWorkflowResponse = WorkflowResponse
+GetWorkflowResponse = WorkflowResponse
 
 
 class WorkflowListItem(BaseModel):

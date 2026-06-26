@@ -108,12 +108,12 @@ Load on mount: `GET /workflows/{id}` when route is `/workflows/:workflowId`.
 
 ---
 
-# Navigate to planned files
+# Navigate to implementation files
 
 | What | Open file |
 |------|-----------|
-| API route | [workflows.py](../../app/api/v1/workflows.py) *(planned)* |
-| Service | [workflow_service.py](../../app/services/workflow_service.py) *(planned)* |
-| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) *(planned)* |
-| Response schema | [workflow.py](../../app/schemas/workflow.py) *(planned)* |
+| API route | [workflows.py](../../app/api/v1/workflows.py) |
+| Service | [workflow_service.py](../../app/services/workflow_service.py) |
+| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) |
+| Response schema | [workflow.py](../../app/schemas/workflow.py) |
 | Frontend editor | [WorkflowEditorPage.tsx](../../../frontend/src/pages/workflows/WorkflowEditorPage.tsx) *(planned)* |
