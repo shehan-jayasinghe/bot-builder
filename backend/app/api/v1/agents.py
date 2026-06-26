@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from app.di.agents import get_agent_service
 from app.di.auth import get_current_user
 from app.di.knowledgebases import get_knowledgebase_service
+from app.di.tools import get_tool_service
 from app.domain.models.current_user import CurrentUser
 from app.schemas.agent import (
     AgentStatus,
@@ -14,12 +15,22 @@ from app.schemas.agent import (
     ListAgentsResponse,
 )
 from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
+from app.schemas.tool import (
+    CreateToolRequest,
+    CreateToolResponse,
+    ExecutorName,
+    GetToolResponse,
+    ListToolsResponse,
+    ToolStatus,
+)
 from app.services.agent_service import AgentService
 from app.services.knowledgebase_service import KnowledgebaseService
+from app.services.tool_service import ToolService
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
 AgentIdPath = Annotated[str, Path(pattern=r"^[a-fA-F0-9]{24}$")]
+ToolIdPath = Annotated[str, Path(pattern=r"^[a-fA-F0-9]{24}$")]
 
 
 @router.get("", response_model=ListAgentsResponse)
@@ -54,6 +65,46 @@ async def list_agent_knowledgebases(
         current_user=current_user,
         agent_id=agent_id,
         status=status.value if status else None,
+    )
+
+
+@router.post("/{agent_id}/tools", response_model=CreateToolResponse, status_code=status.HTTP_201_CREATED)
+async def create_tool(
+    agent_id: AgentIdPath,
+    body: CreateToolRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: ToolService = Depends(get_tool_service),
+) -> CreateToolResponse:
+    return await service.create(current_user=current_user, agent_id=agent_id, request=body)
+
+
+@router.get("/{agent_id}/tools", response_model=ListToolsResponse)
+async def list_agent_tools(
+    agent_id: AgentIdPath,
+    executor: ExecutorName | None = Query(default=None),
+    tool_status: ToolStatus | None = Query(default=None, alias="status"),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: ToolService = Depends(get_tool_service),
+) -> ListToolsResponse:
+    return await service.list_by_agent(
+        current_user=current_user,
+        agent_id=agent_id,
+        executor=executor.value if executor else None,
+        status=tool_status.value if tool_status else None,
+    )
+
+
+@router.get("/{agent_id}/tools/{tool_id}", response_model=GetToolResponse)
+async def get_tool(
+    agent_id: AgentIdPath,
+    tool_id: ToolIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: ToolService = Depends(get_tool_service),
+) -> GetToolResponse:
+    return await service.get_by_id(
+        current_user=current_user,
+        agent_id=agent_id,
+        tool_id=tool_id,
     )
 
 

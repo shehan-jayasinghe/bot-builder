@@ -10,6 +10,16 @@ from app.config import settings
 from app.infrastructure.db.mongo import connect_mongo, disconnect_mongo
 from app.infrastructure.db.redis import connect_redis, disconnect_redis
 from app.shared.exceptions.agent import AgentNotFoundError
+from app.shared.exceptions.connector import (
+    ConnectionTestFailedError,
+    ConnectorNameExistsError,
+    ConnectorNotFoundError,
+)
+from app.shared.exceptions.tool import (
+    ToolConnectorTypeMismatchError,
+    ToolNameExistsError,
+    ToolNotFoundError,
+)
 from app.shared.exceptions.auth import (
     AuthError,
     ClerkUserCreationError,
@@ -78,6 +88,36 @@ async def user_not_found_handler(_request: Request, exc: UserNotFoundError) -> J
 @app.exception_handler(AgentNotFoundError)
 async def agent_not_found_handler(_request: Request, exc: AgentNotFoundError) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConnectorNotFoundError)
+async def connector_not_found_handler(_request: Request, exc: ConnectorNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConnectorNameExistsError)
+async def connector_name_exists_handler(_request: Request, exc: ConnectorNameExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConnectionTestFailedError)
+async def connection_test_failed_handler(_request: Request, exc: ConnectionTestFailedError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(ToolNotFoundError)
+async def tool_not_found_handler(_request: Request, exc: ToolNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ToolNameExistsError)
+async def tool_name_exists_handler(_request: Request, exc: ToolNameExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ToolConnectorTypeMismatchError)
+async def tool_validation_handler(_request: Request, exc: ToolConnectorTypeMismatchError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.exception_handler(UserDisabledError)
