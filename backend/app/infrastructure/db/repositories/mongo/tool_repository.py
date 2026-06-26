@@ -20,6 +20,22 @@ class ToolRepository:
         document["_id"] = result.inserted_id
         return document
 
+    async def find_by_id_for_organization(
+        self,
+        *,
+        tool_id: str,
+        organization_id: str,
+    ) -> dict[str, Any] | None:
+        object_id = self._to_object_id(tool_id)
+        if object_id is None:
+            return None
+        return await self._collection.find_one(
+            {
+                "_id": object_id,
+                "organization_id": organization_id,
+            },
+        )
+
     async def find_by_id_for_agent(
         self,
         *,
@@ -71,6 +87,43 @@ class ToolRepository:
             query["status"] = status
         cursor = self._collection.find(query).sort("created_at", -1)
         return await cursor.to_list(length=None)
+
+    async def find_all_by_organization(
+        self,
+        *,
+        organization_id: str,
+        agent_id: str | None = None,
+        executor: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {"organization_id": organization_id}
+        if agent_id is not None:
+            query["agent_id"] = agent_id
+        if executor is not None:
+            query["executor"] = executor
+        if status is not None:
+            query["status"] = status
+        cursor = self._collection.find(query).sort("created_at", -1)
+        return await cursor.to_list(length=None)
+
+    async def update(
+        self,
+        *,
+        tool_id: str,
+        organization_id: str,
+        updates: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        object_id = self._to_object_id(tool_id)
+        if object_id is None:
+            return None
+
+        updates = {**updates, "updated_at": datetime.now(UTC)}
+        result = await self._collection.find_one_and_update(
+            {"_id": object_id, "organization_id": organization_id},
+            {"$set": updates},
+            return_document=True,
+        )
+        return result
 
     @staticmethod
     def _to_object_id(value: str) -> ObjectId | None:

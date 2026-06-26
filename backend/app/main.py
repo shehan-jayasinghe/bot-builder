@@ -21,6 +21,7 @@ from app.shared.exceptions.tool import (
     ToolNotFoundError,
 )
 from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
+from app.shared.exceptions.knowledgebase import KnowledgebaseNotFoundError
 from app.shared.exceptions.auth import (
     AuthError,
     ClerkUserCreationError,
@@ -128,6 +129,11 @@ async def workflow_limit_reached_handler(_request: Request, exc: WorkflowLimitRe
 
 @app.exception_handler(WorkflowNotFoundError)
 async def workflow_not_found_handler(_request: Request, exc: WorkflowNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(KnowledgebaseNotFoundError)
+async def knowledgebase_not_found_handler(_request: Request, exc: KnowledgebaseNotFoundError) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 

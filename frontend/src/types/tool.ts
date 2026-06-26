@@ -8,7 +8,7 @@ export type Tool = {
   connector_id: string;
   config: Record<string, unknown>;
   status: string;
-  agent_id: string;
+  agent_id: string | null;
   organization_id: string;
   created_at: string;
   updated_at: string;
@@ -27,4 +27,8 @@ export type CreateToolPayload = {
   executor: ExecutorName;
   connector_id: string;
   config: Record<string, unknown>;
+};
+
+export type UpdateToolPayload = {
+  agent_id?: string | null;
 };

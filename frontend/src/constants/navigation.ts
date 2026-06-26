@@ -6,7 +6,6 @@ export const MAIN_NAV: NavItem[] = [
     label: "Workflows",
     path: "/workflows",
     icon: "workflows",
-    children: [{ label: "Welcome", path: "/" }],
   },
   { label: "Data Sources", path: "/data-sources", icon: "data-sources" },
   { label: "Channels", path: "/channels", icon: "channels" },
@@ -19,7 +18,6 @@ export const MAIN_NAV: NavItem[] = [
 export const AGENT_DETAIL_TABS = [
   { label: "Agent", icon: "agent" },
   { label: "Sub Agents", icon: "sub-agents" },
-  { label: "Skills", icon: "skills" },
   { label: "Memory", icon: "memory" },
   { label: "LLM", icon: "llm" },
 ] as const;

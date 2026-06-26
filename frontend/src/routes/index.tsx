@@ -19,6 +19,7 @@ import { HomePage } from "../pages/home/HomePage";
 import { SchedulersPage } from "../pages/schedulers/SchedulersPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
+import { WorkflowEditorPage } from "../pages/workflows/WorkflowEditorPage";
 
 export function AppRoutes() {
   return (
@@ -39,6 +40,7 @@ export function AppRoutes() {
           <Route path="agent/:agentId/tools/new" element={<AddToolPage />} />
           <Route path="agent/:agentId" element={<AgentDetailPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
+          <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />
           <Route path="data-sources" element={<DataSourcesPage />} />
           <Route path="channels" element={<ChannelsPage />} />
           <Route path="conversations" element={<ConversationsPage />} />

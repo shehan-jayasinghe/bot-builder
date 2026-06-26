@@ -83,6 +83,31 @@ class ListKnowledgebasesResponse(BaseModel):
     total: int
 
 
+class UpdateKnowledgebaseRequest(BaseModel):
+    agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+
+    @model_validator(mode="after")
+    def validate_not_empty(self) -> "UpdateKnowledgebaseRequest":
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+        return self
+
+
+class UpdateKnowledgebaseResponse(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    source_type: SourceType
+    storage_type: StorageType
+    website_url: str | None = None
+    crawl_depth: int | None = None
+    agent_id: str | None = None
+    status: str
+    organization_id: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class IngestKnowledgebasePayload(BaseModel):
     knowledgebase_id: str
     job_id: str

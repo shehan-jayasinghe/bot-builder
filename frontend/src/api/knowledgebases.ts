@@ -5,6 +5,14 @@ import type {
 } from "../types/knowledgebase";
 import { api } from "./client";
 
+export async function listKnowledgebases(params?: {
+  agent_id?: string;
+  status?: string;
+}): Promise<ListKnowledgebasesResponse> {
+  const { data } = await api.get<ListKnowledgebasesResponse>("/knowledgebases", { params });
+  return data;
+}
+
 export async function listKnowledgebasesByAgent(
   agentId: string,
   status?: string,
@@ -40,6 +48,14 @@ export async function createKnowledgebase(payload: CreateKnowledgebasePayload): 
   const { data } = await api.post<Knowledgebase>("/knowledgebases", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  return data;
+}
+
+export async function updateKnowledgebase(
+  knowledgebaseId: string,
+  payload: { agent_id?: string | null },
+): Promise<Knowledgebase> {
+  const { data } = await api.patch<Knowledgebase>(`/knowledgebases/${knowledgebaseId}`, payload);
   return data;
 }
 

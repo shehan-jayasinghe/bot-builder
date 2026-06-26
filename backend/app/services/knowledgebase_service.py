@@ -24,8 +24,11 @@ from app.schemas.knowledgebase import (
     ListKnowledgebasesResponse,
     SourceType,
     StorageType,
+    UpdateKnowledgebaseRequest,
+    UpdateKnowledgebaseResponse,
 )
 from app.shared.exceptions.agent import AgentNotFoundError
+from app.shared.exceptions.knowledgebase import KnowledgebaseNotFoundError
 from app.workers.tasks.ingest import ingest_knowledgebase
 
 logger = logging.getLogger(__name__)
@@ -137,6 +140,75 @@ class KnowledgebaseService:
         items = [self._document_to_list_item(document) for document in documents]
         return ListKnowledgebasesResponse(items=items, total=len(items))
 
+    async def list_by_organization(
+        self,
+        *,
+        current_user: CurrentUser,
+        agent_id: str | None = None,
+        status: str | None = None,
+    ) -> ListKnowledgebasesResponse:
+        if agent_id is not None:
+            await self._validate_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+
+        documents = await self._knowledgebase_repository.find_all_by_organization(
+            organization_id=current_user.organization_id,
+            agent_id=agent_id,
+            status=status,
+        )
+        items = [self._document_to_list_item(document) for document in documents]
+        return ListKnowledgebasesResponse(items=items, total=len(items))
+
+    async def update(
+        self,
+        *,
+        current_user: CurrentUser,
+        knowledgebase_id: str,
+        request: UpdateKnowledgebaseRequest,
+    ) -> UpdateKnowledgebaseResponse:
+        existing = await self._knowledgebase_repository.find_by_id_for_organization(
+            knowledgebase_id=knowledgebase_id,
+            organization_id=current_user.organization_id,
+        )
+        if existing is None:
+            raise KnowledgebaseNotFoundError("Knowledge base not found")
+
+        if "agent_id" not in request.model_fields_set:
+            return self._document_to_update_response(existing)
+
+        new_agent_id = request.agent_id
+        previous_agent_id = existing.get("agent_id")
+
+        if new_agent_id is not None:
+            await self._validate_agent(
+                agent_id=new_agent_id,
+                organization_id=current_user.organization_id,
+            )
+
+        if previous_agent_id and previous_agent_id != new_agent_id:
+            await self._agent_repository.pull_knowledge_base_id(
+                agent_id=str(previous_agent_id),
+                organization_id=current_user.organization_id,
+                knowledgebase_id=knowledgebase_id,
+            )
+
+        if new_agent_id is not None and new_agent_id != previous_agent_id:
+            pushed = await self._agent_repository.push_knowledge_base_id(
+                agent_id=new_agent_id,
+                organization_id=current_user.organization_id,
+                knowledgebase_id=knowledgebase_id,
+            )
+            if not pushed:
+                raise AgentNotFoundError("Agent not found")
+
+        updated = await self._knowledgebase_repository.update(
+            knowledgebase_id=knowledgebase_id,
+            organization_id=current_user.organization_id,
+            updates={"agent_id": new_agent_id},
+        )
+        if updated is None:
+            raise KnowledgebaseNotFoundError("Knowledge base not found")
+        return self._document_to_update_response(updated)
+
     @staticmethod
     def _document_to_list_item(document: dict[str, Any]) -> KnowledgebaseListItem:
         return KnowledgebaseListItem(
@@ -151,6 +223,23 @@ class KnowledgebaseService:
             status=str(document["status"]),
             organization_id=str(document["organization_id"]),
             created_at=document["created_at"],
+        )
+
+    @staticmethod
+    def _document_to_update_response(document: dict[str, Any]) -> UpdateKnowledgebaseResponse:
+        return UpdateKnowledgebaseResponse(
+            id=str(document["_id"]),
+            name=str(document["name"]),
+            description=document.get("description"),
+            source_type=SourceType(document["source_type"]),
+            storage_type=StorageType(document["storage_type"]),
+            website_url=document.get("website_url"),
+            crawl_depth=document.get("crawl_depth"),
+            agent_id=document.get("agent_id"),
+            status=str(document["status"]),
+            organization_id=str(document["organization_id"]),
+            created_at=document["created_at"],
+            updated_at=document["updated_at"],
         )
 
     @staticmethod

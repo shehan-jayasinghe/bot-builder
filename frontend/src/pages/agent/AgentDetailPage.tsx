@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { getAgent } from "../../api/agents";
 import { AgentKnowledgeBasePanel } from "../../components/agent/AgentKnowledgeBasePanel";
 import { AgentToolsPanel } from "../../components/agent/AgentToolsPanel";
+import { AgentWorkflowsPanel } from "../../components/agent/AgentWorkflowsPanel";
 import { AGENT_DETAIL_TABS } from "../../constants/navigation";
 import { getAgentTypeOption, getIndustryLabel } from "../../constants/agents";
 import { NavIcon } from "../../components/ui/NavIcon";
@@ -141,7 +142,7 @@ export function AgentDetailPage() {
 
         <aside className="agent-detail__aside">
           <AgentToolsPanel agentId={agent.id} />
-
+          <AgentWorkflowsPanel agentId={agent.id} />
           <AgentKnowledgeBasePanel agentId={agent.id} />
 
           <section className="agent-panel">

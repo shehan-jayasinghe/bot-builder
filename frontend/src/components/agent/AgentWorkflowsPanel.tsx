@@ -1,40 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
-import { listKnowledgebases, updateKnowledgebase } from "../../api/knowledgebases";
+import { listWorkflows, updateWorkflow } from "../../api/workflows";
 import { getApiError } from "../../utils/apiError";
 import { AttachDetachButton } from "./AttachDetachButton";
 
-type AgentKnowledgeBasePanelProps = {
+type AgentWorkflowsPanelProps = {
   agentId: string;
 };
 
-export function AgentKnowledgeBasePanel({ agentId }: AgentKnowledgeBasePanelProps) {
+export function AgentWorkflowsPanel({ agentId }: AgentWorkflowsPanelProps) {
   const queryClient = useQueryClient();
-  const addPath = `/agent/${agentId}/knowledgebases/new`;
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["knowledgebases", "org"],
-    queryFn: () => listKnowledgebases(),
+    queryKey: ["workflows", "org"],
+    queryFn: () => listWorkflows(),
   });
 
   const attachMutation = useMutation({
-    mutationFn: ({ knowledgebaseId, attach }: { knowledgebaseId: string; attach: boolean }) =>
-      updateKnowledgebase(knowledgebaseId, { agent_id: attach ? agentId : null }),
+    mutationFn: ({ workflowId, attach }: { workflowId: string; attach: boolean }) =>
+      updateWorkflow(workflowId, { agent_id: attach ? agentId : null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["knowledgebases"] });
+      queryClient.invalidateQueries({ queryKey: ["workflows"] });
     },
   });
 
   const items = data?.items ?? [];
   const isEmpty = !isLoading && items.length === 0;
-  const pendingId = attachMutation.isPending ? attachMutation.variables?.knowledgebaseId : null;
+  const pendingId = attachMutation.isPending ? attachMutation.variables?.workflowId : null;
 
   return (
     <section className="agent-panel">
       <div className="agent-panel__header agent-panel__header--row">
-        <h2>Knowledge base</h2>
-        <Link to={addPath} className="agent-detail__link-btn">
+        <h2>Workflows</h2>
+        <Link to="/workflows" className="agent-detail__link-btn">
           + Add
         </Link>
       </div>
@@ -44,18 +43,18 @@ export function AgentKnowledgeBasePanel({ agentId }: AgentKnowledgeBasePanelProp
       ) : null}
 
       {isLoading ? (
-        <p className="agent-kb-panel__loading">Loading knowledge bases…</p>
+        <p className="agent-kb-panel__loading">Loading workflows…</p>
       ) : isError ? (
         <p className="agent-panel__error">{getApiError(error)}</p>
       ) : isEmpty ? (
         <div className="agent-detail__empty-panel">
           <div className="agent-detail__empty-icon" aria-hidden>
-            📚
+            ↗
           </div>
-          <p>No knowledge bases yet.</p>
-          <span>Add a knowledge base, then attach it to this agent.</span>
-          <Link to={addPath} className="btn btn--ghost">
-            Add knowledge base
+          <p>No workflows yet.</p>
+          <span>Create a workflow in the sidebar, then attach it here.</span>
+          <Link to="/workflows" className="btn btn--ghost">
+            Open workflows
           </Link>
         </div>
       ) : (
@@ -68,16 +67,15 @@ export function AgentKnowledgeBasePanel({ agentId }: AgentKnowledgeBasePanelProp
                 <div className="agent-kb-list__main">
                   <strong>{item.name}</strong>
                   <span className="agent-kb-list__meta">
-                    {item.storage_type} · {item.source_type}
+                    {item.node_count} step{item.node_count === 1 ? "" : "s"} · {item.status}
                   </span>
                 </div>
                 <div className="agent-kb-list__actions">
-                  <span className={`agent-status agent-status--${item.status}`}>{item.status}</span>
                   <AttachDetachButton
                     attached={attached}
                     disabled={pendingId === item.id}
-                    onAttach={() => attachMutation.mutate({ knowledgebaseId: item.id, attach: true })}
-                    onDetach={() => attachMutation.mutate({ knowledgebaseId: item.id, attach: false })}
+                    onAttach={() => attachMutation.mutate({ workflowId: item.id, attach: true })}
+                    onDetach={() => attachMutation.mutate({ workflowId: item.id, attach: false })}
                   />
                 </div>
               </li>

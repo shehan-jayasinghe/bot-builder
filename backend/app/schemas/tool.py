@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.domain.constants.executor_constants import ExecutorName
 
@@ -28,7 +28,7 @@ class ToolResponse(BaseModel):
     connector_id: str
     config: dict[str, Any]
     status: str
-    agent_id: str
+    agent_id: str | None = None
     organization_id: str
     created_at: datetime
     updated_at: datetime
@@ -46,7 +46,7 @@ class ToolListItem(BaseModel):
     connector_id: str
     config: dict[str, Any]
     status: str
-    agent_id: str
+    agent_id: str | None = None
     organization_id: str
     created_at: datetime
     updated_at: datetime
@@ -55,3 +55,16 @@ class ToolListItem(BaseModel):
 class ListToolsResponse(BaseModel):
     items: list[ToolListItem]
     total: int
+
+
+class UpdateToolRequest(BaseModel):
+    agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+
+    @model_validator(mode="after")
+    def validate_not_empty(self) -> "UpdateToolRequest":
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+        return self
+
+
+UpdateToolResponse = ToolResponse

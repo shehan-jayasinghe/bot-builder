@@ -16,6 +16,8 @@ from app.schemas.tool import (
     ListToolsResponse,
     ToolListItem,
     ToolResponse,
+    UpdateToolRequest,
+    UpdateToolResponse,
 )
 from app.schemas.tool_config import parse_tool_config
 from app.shared.exceptions.agent import AgentNotFoundError
@@ -111,6 +113,81 @@ class ToolService:
         items = [self._document_to_list_item(document) for document in documents]
         return ListToolsResponse(items=items, total=len(items))
 
+    async def list_by_organization(
+        self,
+        *,
+        current_user: CurrentUser,
+        agent_id: str | None = None,
+        executor: str | None = None,
+        status: str | None = None,
+    ) -> ListToolsResponse:
+        if agent_id is not None:
+            await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+
+        documents = await self._tool_repository.find_all_by_organization(
+            organization_id=current_user.organization_id,
+            agent_id=agent_id,
+            executor=executor,
+            status=status,
+        )
+        items = [self._document_to_list_item(document) for document in documents]
+        return ListToolsResponse(items=items, total=len(items))
+
+    async def update(
+        self,
+        *,
+        current_user: CurrentUser,
+        tool_id: str,
+        request: UpdateToolRequest,
+    ) -> UpdateToolResponse:
+        existing = await self._tool_repository.find_by_id_for_organization(
+            tool_id=tool_id,
+            organization_id=current_user.organization_id,
+        )
+        if existing is None:
+            raise ToolNotFoundError("Tool not found")
+
+        if "agent_id" not in request.model_fields_set:
+            return self._document_to_response(existing)
+
+        new_agent_id = request.agent_id
+        previous_agent_id = existing.get("agent_id")
+
+        if new_agent_id is not None:
+            await self._ensure_agent(agent_id=new_agent_id, organization_id=current_user.organization_id)
+            duplicate = await self._tool_repository.find_by_name_for_agent(
+                name=str(existing["name"]),
+                agent_id=new_agent_id,
+                organization_id=current_user.organization_id,
+            )
+            if duplicate is not None and str(duplicate["_id"]) != tool_id:
+                raise ToolNameExistsError("Tool name already exists for this agent")
+
+        if previous_agent_id and previous_agent_id != new_agent_id:
+            await self._agent_repository.pull_tool_id(
+                agent_id=str(previous_agent_id),
+                organization_id=current_user.organization_id,
+                tool_id=tool_id,
+            )
+
+        if new_agent_id is not None and new_agent_id != previous_agent_id:
+            pushed = await self._agent_repository.push_tool_id(
+                agent_id=new_agent_id,
+                organization_id=current_user.organization_id,
+                tool_id=tool_id,
+            )
+            if not pushed:
+                raise AgentNotFoundError("Agent not found")
+
+        updated = await self._tool_repository.update(
+            tool_id=tool_id,
+            organization_id=current_user.organization_id,
+            updates={"agent_id": new_agent_id},
+        )
+        if updated is None:
+            raise ToolNotFoundError("Tool not found")
+        return self._document_to_response(updated)
+
     async def get_by_id(
         self,
         *,
@@ -164,7 +241,7 @@ class ToolService:
             connector_id=str(document["connector_id"]),
             config=document.get("config") or {},
             status=str(document.get("status", TOOL_STATUS_ACTIVE)),
-            agent_id=str(document["agent_id"]),
+            agent_id=document.get("agent_id"),
             organization_id=str(document["organization_id"]),
             created_at=document["created_at"],
             updated_at=document["updated_at"],
