@@ -141,14 +141,14 @@ Action subtypes (palette dropdown — phase 2 runtime):
 
 ---
 
-# Navigate to planned implementation files
+# Navigate to implementation files
 
 | Layer | Open file |
 |-------|-----------|
-| API routes | [workflows.py](../../app/api/v1/workflows.py) *(planned)* |
+| API routes | [workflows.py](../../app/api/v1/workflows.py) |
 | Router mount | [router.py](../../app/api/v1/router.py) |
-| Schemas | [workflow.py](../../app/schemas/workflow.py) *(planned)* |
-| Service | [workflow_service.py](../../app/services/workflow_service.py) *(planned)* |
-| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) *(planned)* |
+| Schemas | [workflow.py](../../app/schemas/workflow.py) |
+| Service | [workflow_service.py](../../app/services/workflow_service.py) |
+| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) |
 | Frontend editor | [WorkflowEditorPage.tsx](../../../frontend/src/pages/workflows/WorkflowEditorPage.tsx) *(planned)* |
 | Frontend sidebar | [Sidebar.tsx](../../../frontend/src/components/layout/Sidebar.tsx) |
