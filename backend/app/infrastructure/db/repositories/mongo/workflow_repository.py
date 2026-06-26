@@ -4,6 +4,7 @@ from typing import Any
 from bson import ObjectId
 from bson.errors import InvalidId
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo import ReturnDocument
 
 
 class WorkflowRepository:
@@ -49,6 +50,23 @@ class WorkflowRepository:
             return None
         return await self._collection.find_one(
             {"_id": object_id, "organization_id": organization_id},
+        )
+
+    async def update(
+        self,
+        *,
+        workflow_id: str,
+        organization_id: str,
+        updates: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        object_id = self._to_object_id(workflow_id)
+        if object_id is None:
+            return None
+        updates["updated_at"] = datetime.now(UTC)
+        return await self._collection.find_one_and_update(
+            {"_id": object_id, "organization_id": organization_id},
+            {"$set": updates},
+            return_document=ReturnDocument.AFTER,
         )
 
     @staticmethod

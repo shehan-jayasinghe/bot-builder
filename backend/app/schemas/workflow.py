@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class WorkflowStatus(StrEnum):
@@ -46,6 +46,21 @@ class WorkflowResponse(BaseModel):
 
 CreateWorkflowResponse = WorkflowResponse
 GetWorkflowResponse = WorkflowResponse
+UpdateWorkflowResponse = WorkflowResponse
+
+
+class UpdateWorkflowRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+    nodes: list[WorkflowNode] | None = None
+    edges: list[WorkflowEdge] | None = None
+
+    @model_validator(mode="after")
+    def validate_not_empty(self) -> "UpdateWorkflowRequest":
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+        return self
 
 
 class WorkflowListItem(BaseModel):

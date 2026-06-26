@@ -10,6 +10,8 @@ from app.schemas.workflow import (
     CreateWorkflowResponse,
     GetWorkflowResponse,
     ListWorkflowsResponse,
+    UpdateWorkflowRequest,
+    UpdateWorkflowResponse,
     WorkflowStatus,
 )
 from app.services.workflow_service import WorkflowService
@@ -50,3 +52,17 @@ async def get_workflow(
     service: WorkflowService = Depends(get_workflow_service),
 ) -> GetWorkflowResponse:
     return await service.get_by_id(current_user=current_user, workflow_id=workflow_id)
+
+
+@router.patch("/{workflow_id}", response_model=UpdateWorkflowResponse)
+async def update_workflow(
+    workflow_id: WorkflowIdPath,
+    body: UpdateWorkflowRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: WorkflowService = Depends(get_workflow_service),
+) -> UpdateWorkflowResponse:
+    return await service.update(
+        current_user=current_user,
+        workflow_id=workflow_id,
+        request=body,
+    )

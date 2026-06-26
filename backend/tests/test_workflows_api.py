@@ -238,3 +238,59 @@ def test_get_workflow_endpoint_invalid_id(client: TestClient) -> None:
 
     assert response.status_code == 422
     mock_service.get_by_id.assert_not_called()
+
+
+def test_update_workflow_endpoint(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    updated = _workflow_response().model_copy(update={"name": "Customer onboarding"})
+    mock_service.update = AsyncMock(return_value=updated)
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.patch(
+        f"/api/v1/workflows/{WORKFLOW_ID}",
+        json={"name": "Customer onboarding"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Customer onboarding"
+    mock_service.update.assert_awaited_once()
+
+
+def test_update_workflow_endpoint_not_found(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    mock_service.update = AsyncMock(side_effect=WorkflowNotFoundError("Workflow not found"))
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.patch(
+        f"/api/v1/workflows/{WORKFLOW_ID}",
+        json={"name": "Renamed"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_workflow_endpoint_empty_body(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.patch(f"/api/v1/workflows/{WORKFLOW_ID}", json={})
+
+    assert response.status_code == 422
+    mock_service.update.assert_not_called()
+
+
+def test_update_workflow_endpoint_agent_not_found(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    mock_service.update = AsyncMock(side_effect=AgentNotFoundError("Agent not found"))
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.patch(
+        f"/api/v1/workflows/{WORKFLOW_ID}",
+        json={"agent_id": AGENT_ID},
+    )
+
+    assert response.status_code == 404

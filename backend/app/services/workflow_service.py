@@ -14,6 +14,8 @@ from app.schemas.workflow import (
     CreateWorkflowResponse,
     GetWorkflowResponse,
     ListWorkflowsResponse,
+    UpdateWorkflowRequest,
+    UpdateWorkflowResponse,
     WorkflowListItem,
     WorkflowResponse,
 )
@@ -104,6 +106,66 @@ class WorkflowService:
         if document is None:
             raise WorkflowNotFoundError("Workflow not found")
         return self._document_to_response(document)
+
+    async def update(
+        self,
+        *,
+        current_user: CurrentUser,
+        workflow_id: str,
+        request: UpdateWorkflowRequest,
+    ) -> UpdateWorkflowResponse:
+        existing = await self._workflow_repository.find_by_id_for_organization(
+            workflow_id=workflow_id,
+            organization_id=current_user.organization_id,
+        )
+        if existing is None:
+            raise WorkflowNotFoundError("Workflow not found")
+
+        await self._ensure_agent_if_needed(
+            request=request,
+            organization_id=current_user.organization_id,
+        )
+
+        updates = self._build_update_fields(request)
+        updated = await self._workflow_repository.update(
+            workflow_id=workflow_id,
+            organization_id=current_user.organization_id,
+            updates=updates,
+        )
+        if updated is None:
+            raise WorkflowNotFoundError("Workflow not found")
+        return self._document_to_response(updated)
+
+    def _build_update_fields(self, request: UpdateWorkflowRequest) -> dict[str, Any]:
+        updates: dict[str, Any] = {}
+
+        if "name" in request.model_fields_set and request.name is not None:
+            updates["name"] = request.name
+        if "description" in request.model_fields_set:
+            updates["description"] = request.description
+        if "agent_id" in request.model_fields_set:
+            updates["agent_id"] = request.agent_id
+        if "nodes" in request.model_fields_set and request.nodes is not None:
+            updates["nodes"] = [node.model_dump() for node in request.nodes]
+        if "edges" in request.model_fields_set and request.edges is not None:
+            updates["edges"] = [edge.model_dump() for edge in request.edges]
+
+        return updates
+
+    async def _ensure_agent_if_needed(
+        self,
+        *,
+        request: UpdateWorkflowRequest,
+        organization_id: str,
+    ) -> None:
+        if "agent_id" not in request.model_fields_set or request.agent_id is None:
+            return
+        agent = await self._agent_repository.find_by_id_for_organization(
+            agent_id=request.agent_id,
+            organization_id=organization_id,
+        )
+        if agent is None:
+            raise AgentNotFoundError("Agent not found")
 
     def _document_to_list_item(self, document: dict[str, Any]) -> WorkflowListItem:
         nodes = document.get("nodes") or []
