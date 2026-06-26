@@ -132,6 +132,25 @@ class AgentRepository:
         )
         return result.matched_count > 0
 
+    async def push_sub_agent_id(
+        self,
+        *,
+        agent_id: str,
+        organization_id: str,
+        sub_agent_id: str,
+    ) -> bool:
+        object_id = self._to_object_id(agent_id)
+        if object_id is None:
+            return False
+        result = await self._collection.update_one(
+            {"_id": object_id, "organization_id": organization_id},
+            {
+                "$addToSet": {"sub_agent_ids": sub_agent_id},
+                "$set": {"updated_at": datetime.now(UTC)},
+            },
+        )
+        return result.matched_count > 0
+
     @staticmethod
     def _to_object_id(agent_id: str) -> ObjectId | None:
         try:

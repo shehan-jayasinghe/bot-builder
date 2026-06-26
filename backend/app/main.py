@@ -20,6 +20,12 @@ from app.shared.exceptions.tool import (
     ToolNameExistsError,
     ToolNotFoundError,
 )
+from app.shared.exceptions.sub_agent import (
+    SubAgentInvalidCapabilityError,
+    SubAgentLimitReachedError,
+    SubAgentNameExistsError,
+    SubAgentNotFoundError,
+)
 from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
 from app.shared.exceptions.knowledgebase import KnowledgebaseNotFoundError
 from app.shared.exceptions.auth import (
@@ -135,6 +141,29 @@ async def workflow_not_found_handler(_request: Request, exc: WorkflowNotFoundErr
 @app.exception_handler(KnowledgebaseNotFoundError)
 async def knowledgebase_not_found_handler(_request: Request, exc: KnowledgebaseNotFoundError) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentNotFoundError)
+async def sub_agent_not_found_handler(_request: Request, exc: SubAgentNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentNameExistsError)
+async def sub_agent_name_exists_handler(_request: Request, exc: SubAgentNameExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentLimitReachedError)
+async def sub_agent_limit_reached_handler(_request: Request, exc: SubAgentLimitReachedError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentInvalidCapabilityError)
+async def sub_agent_invalid_capability_handler(
+    _request: Request,
+    exc: SubAgentInvalidCapabilityError,
+) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.exception_handler(UserDisabledError)

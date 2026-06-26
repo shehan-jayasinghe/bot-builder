@@ -9,6 +9,7 @@ from app.infrastructure.db.repositories.mongo.connector_repository import Connec
 from app.infrastructure.db.repositories.mongo.job_log_repository import JobLogRepository
 from app.infrastructure.db.repositories.mongo.knowledgebase_repository import KnowledgebaseRepository
 from app.infrastructure.db.repositories.mongo.organization_repository import OrganizationRepository
+from app.infrastructure.db.repositories.mongo.sub_agent_repository import SubAgentRepository
 from app.infrastructure.db.repositories.mongo.tool_repository import ToolRepository
 from app.infrastructure.db.repositories.mongo.workflow_repository import WorkflowRepository
 from app.infrastructure.db.repositories.mongo.tracker_repository import TrackerRepository
@@ -58,3 +59,7 @@ def get_tool_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> Too
 
 def get_workflow_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> WorkflowRepository:
     return WorkflowRepository(db=db)
+
+
+def get_sub_agent_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> SubAgentRepository:
+    return SubAgentRepository(db=db)

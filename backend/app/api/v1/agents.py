@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from app.di.agents import get_agent_service
 from app.di.auth import get_current_user
 from app.di.knowledgebases import get_knowledgebase_service
+from app.di.sub_agents import get_sub_agent_service
 from app.di.tools import get_tool_service
 from app.domain.models.current_user import CurrentUser
 from app.schemas.agent import (
@@ -15,6 +16,15 @@ from app.schemas.agent import (
     ListAgentsResponse,
 )
 from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
+from app.schemas.sub_agent import (
+    CreateSubAgentRequest,
+    CreateSubAgentResponse,
+    GetSubAgentResponse,
+    ListSubAgentsResponse,
+    SubAgentStatus,
+    UpdateSubAgentRequest,
+    UpdateSubAgentResponse,
+)
 from app.schemas.tool import (
     CreateToolRequest,
     CreateToolResponse,
@@ -25,12 +35,14 @@ from app.schemas.tool import (
 )
 from app.services.agent_service import AgentService
 from app.services.knowledgebase_service import KnowledgebaseService
+from app.services.sub_agent_service import SubAgentService
 from app.services.tool_service import ToolService
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
 AgentIdPath = Annotated[str, Path(pattern=r"^[a-fA-F0-9]{24}$")]
 ToolIdPath = Annotated[str, Path(pattern=r"^[a-fA-F0-9]{24}$")]
+SubAgentIdPath = Annotated[str, Path(pattern=r"^[a-fA-F0-9]{24}$")]
 
 
 @router.get("", response_model=ListAgentsResponse)
@@ -105,6 +117,64 @@ async def get_tool(
         current_user=current_user,
         agent_id=agent_id,
         tool_id=tool_id,
+    )
+
+
+@router.post(
+    "/{agent_id}/sub-agents",
+    response_model=CreateSubAgentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_sub_agent(
+    agent_id: AgentIdPath,
+    body: CreateSubAgentRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: SubAgentService = Depends(get_sub_agent_service),
+) -> CreateSubAgentResponse:
+    return await service.create(current_user=current_user, agent_id=agent_id, request=body)
+
+
+@router.get("/{agent_id}/sub-agents", response_model=ListSubAgentsResponse)
+async def list_sub_agents(
+    agent_id: AgentIdPath,
+    sub_agent_status: SubAgentStatus | None = Query(default=None, alias="status"),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: SubAgentService = Depends(get_sub_agent_service),
+) -> ListSubAgentsResponse:
+    return await service.list_by_agent(
+        current_user=current_user,
+        agent_id=agent_id,
+        status=sub_agent_status.value if sub_agent_status else None,
+    )
+
+
+@router.get("/{agent_id}/sub-agents/{sub_agent_id}", response_model=GetSubAgentResponse)
+async def get_sub_agent(
+    agent_id: AgentIdPath,
+    sub_agent_id: SubAgentIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: SubAgentService = Depends(get_sub_agent_service),
+) -> GetSubAgentResponse:
+    return await service.get_by_id(
+        current_user=current_user,
+        agent_id=agent_id,
+        sub_agent_id=sub_agent_id,
+    )
+
+
+@router.patch("/{agent_id}/sub-agents/{sub_agent_id}", response_model=UpdateSubAgentResponse)
+async def update_sub_agent(
+    agent_id: AgentIdPath,
+    sub_agent_id: SubAgentIdPath,
+    body: UpdateSubAgentRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: SubAgentService = Depends(get_sub_agent_service),
+) -> UpdateSubAgentResponse:
+    return await service.update(
+        current_user=current_user,
+        agent_id=agent_id,
+        sub_agent_id=sub_agent_id,
+        request=body,
     )
 
 

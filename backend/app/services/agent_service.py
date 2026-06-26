@@ -76,6 +76,9 @@ class AgentService:
             "created_by": current_user.user_id,
             "skill_ids": [],
             "workflow_ids": [],
+            "sub_agent_ids": [],
+            "tool_ids": [],
+            "knowledge_base_ids": [],
         }
 
         saved = await self._agent_repository.create(document=document)
