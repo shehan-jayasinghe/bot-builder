@@ -20,3 +20,18 @@ class WorkflowRepository:
 
     async def count_by_organization(self, *, organization_id: str) -> int:
         return await self._collection.count_documents({"organization_id": organization_id})
+
+    async def find_all_by_organization(
+        self,
+        *,
+        organization_id: str,
+        status: str | None = None,
+        agent_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {"organization_id": organization_id}
+        if status is not None:
+            query["status"] = status
+        if agent_id is not None:
+            query["agent_id"] = agent_id
+        cursor = self._collection.find(query).sort("updated_at", -1)
+        return await cursor.to_list(length=None)

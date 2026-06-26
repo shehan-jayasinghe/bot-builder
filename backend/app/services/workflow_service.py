@@ -9,7 +9,13 @@ from app.domain.constants.workflow_constants import (
 from app.domain.models.current_user import CurrentUser
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.infrastructure.db.repositories.mongo.workflow_repository import WorkflowRepository
-from app.schemas.workflow import CreateWorkflowRequest, CreateWorkflowResponse, WorkflowResponse
+from app.schemas.workflow import (
+    CreateWorkflowRequest,
+    CreateWorkflowResponse,
+    ListWorkflowsResponse,
+    WorkflowListItem,
+    WorkflowResponse,
+)
 from app.shared.exceptions.agent import AgentNotFoundError
 from app.shared.exceptions.workflow import WorkflowLimitReachedError
 
@@ -68,6 +74,35 @@ class WorkflowService:
         }
         saved = await self._workflow_repository.create(document=document)
         return self._document_to_response(saved)
+
+    async def list_by_organization(
+        self,
+        *,
+        current_user: CurrentUser,
+        status: str | None = None,
+        agent_id: str | None = None,
+    ) -> ListWorkflowsResponse:
+        documents = await self._workflow_repository.find_all_by_organization(
+            organization_id=current_user.organization_id,
+            status=status,
+            agent_id=agent_id,
+        )
+        items = [self._document_to_list_item(document) for document in documents]
+        return ListWorkflowsResponse(items=items, total=len(items))
+
+    def _document_to_list_item(self, document: dict[str, Any]) -> WorkflowListItem:
+        nodes = document.get("nodes") or []
+        return WorkflowListItem(
+            id=str(document["_id"]),
+            name=str(document["name"]),
+            description=document.get("description"),
+            agent_id=document.get("agent_id"),
+            status=str(document.get("status", WORKFLOW_STATUS_DRAFT)),
+            node_count=len(nodes),
+            organization_id=str(document["organization_id"]),
+            created_at=document["created_at"],
+            updated_at=document["updated_at"],
+        )
 
     def _document_to_response(self, document: dict[str, Any]) -> WorkflowResponse:
         return WorkflowResponse(

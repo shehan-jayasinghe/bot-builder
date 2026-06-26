@@ -108,12 +108,12 @@ List items omit full `nodes` / `edges` for performance — load via `GET /workfl
 
 ---
 
-# Navigate to planned files
+# Navigate to implementation files
 
 | What | Open file |
 |------|-----------|
-| API route | [workflows.py](../../app/api/v1/workflows.py) *(planned)* |
-| Service | [workflow_service.py](../../app/services/workflow_service.py) *(planned)* |
-| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) *(planned)* |
-| List schema | [workflow.py](../../app/schemas/workflow.py) *(planned)* |
+| API route | [workflows.py](../../app/api/v1/workflows.py) |
+| Service | [workflow_service.py](../../app/services/workflow_service.py) |
+| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) |
+| List schema | [workflow.py](../../app/schemas/workflow.py) |
 | Frontend sidebar | [Sidebar.tsx](../../../frontend/src/components/layout/Sidebar.tsx) |

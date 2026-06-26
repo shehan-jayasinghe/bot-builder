@@ -8,7 +8,7 @@ from app.domain.models.current_user import CurrentUser
 from app.main import app
 from app.di.auth import get_current_user
 from app.di.workflows import get_workflow_service
-from app.schemas.workflow import CreateWorkflowRequest, WorkflowResponse
+from app.schemas.workflow import CreateWorkflowRequest, ListWorkflowsResponse, WorkflowListItem, WorkflowResponse
 from app.services.workflow_service import WorkflowService
 from app.shared.exceptions.agent import AgentNotFoundError
 from app.shared.exceptions.workflow import WorkflowLimitReachedError
@@ -58,6 +58,20 @@ def _workflow_response() -> WorkflowResponse:
             },
         ],
         edges=[{"id": "edge-1", "source": "start-1", "target": "message-1"}],
+        organization_id=ORG_ID,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+
+
+def _workflow_list_item() -> WorkflowListItem:
+    return WorkflowListItem(
+        id=WORKFLOW_ID,
+        name="Welcome",
+        description=None,
+        agent_id=None,
+        status="draft",
+        node_count=2,
         organization_id=ORG_ID,
         created_at=NOW,
         updated_at=NOW,
@@ -146,3 +160,42 @@ def test_create_workflow_endpoint_invalid_agent_id(client: TestClient) -> None:
 
     assert response.status_code == 422
     mock_service.create.assert_not_called()
+
+
+def test_list_workflows_endpoint(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    mock_service.list_by_organization = AsyncMock(
+        return_value=ListWorkflowsResponse(items=[_workflow_list_item()], total=1)
+    )
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.get("/api/v1/workflows")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["name"] == "Welcome"
+    assert body["items"][0]["node_count"] == 2
+    assert "nodes" not in body["items"][0]
+    mock_service.list_by_organization.assert_awaited_once()
+
+
+def test_list_workflows_endpoint_with_filters(client: TestClient) -> None:
+    mock_service = MagicMock(spec=WorkflowService)
+    mock_service.list_by_organization = AsyncMock(
+        return_value=ListWorkflowsResponse(items=[], total=0)
+    )
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_workflow_service] = lambda: mock_service
+
+    response = client.get(
+        f"/api/v1/workflows?status=draft&agent_id={AGENT_ID}",
+    )
+
+    assert response.status_code == 200
+    mock_service.list_by_organization.assert_awaited_once_with(
+        current_user=_current_user(),
+        status="draft",
+        agent_id=AGENT_ID,
+    )

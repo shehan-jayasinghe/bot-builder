@@ -18,6 +18,7 @@ from app.shared.exceptions.workflow import WorkflowLimitReachedError
 
 ORG_ID = "6a3b7c61d8139334274fbbfc"
 AGENT_ID = "6a3b7c61d8139334274fbbf1"
+WORKFLOW_ID = "6a3f9012d8139334274fbc00"
 NOW = datetime(2026, 6, 26, 10, 0, 0, tzinfo=UTC)
 
 
@@ -104,5 +105,41 @@ def test_workflow_service_create_enforces_limit() -> None:
 
         with pytest.raises(WorkflowLimitReachedError):
             await service.create(current_user=_current_user(), request=CreateWorkflowRequest())
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_list_by_organization() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.find_all_by_organization = AsyncMock(
+            return_value=[
+                {
+                    "_id": WORKFLOW_ID,
+                    "name": "Welcome",
+                    "description": None,
+                    "agent_id": None,
+                    "status": "draft",
+                    "nodes": DEFAULT_STARTER_NODES,
+                    "edges": DEFAULT_STARTER_EDGES,
+                    "organization_id": ORG_ID,
+                    "created_at": NOW,
+                    "updated_at": NOW,
+                }
+            ]
+        )
+
+        agent_repo = type("AgentRepo", (), {})()
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+        result = await service.list_by_organization(current_user=_current_user())
+
+        assert result.total == 1
+        assert result.items[0].name == "Welcome"
+        assert result.items[0].node_count == 2
+        workflow_repo.find_all_by_organization.assert_awaited_once_with(
+            organization_id=ORG_ID,
+            status=None,
+            agent_id=None,
+        )
 
     asyncio.run(_run())

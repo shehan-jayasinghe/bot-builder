@@ -45,3 +45,20 @@ class WorkflowResponse(BaseModel):
 
 
 CreateWorkflowResponse = WorkflowResponse
+
+
+class WorkflowListItem(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    agent_id: str | None = None
+    status: str
+    node_count: int
+    organization_id: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ListWorkflowsResponse(BaseModel):
+    items: list[WorkflowListItem]
+    total: int
