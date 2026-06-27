@@ -2,7 +2,7 @@
 
 Single reference for **every REST endpoint** affected by the move to an agentic runtime:
 
-- Final prompt layers: `[1] system_prompt` (+ personality/tone at runtime) → `[2] guardrails` → `[3] capability_catalog` → `[4] rag_context` (**always-on today**; Phase C makes RAG tool-driven only)
+- Final prompt layers: `[1] system_prompt` (+ personality/tone at runtime) → `[2] guardrails` → `[3] capability_catalog` → `[4] rag_context` (tool-driven via `search_knowledge` — Phase C **Done**)
 - `routing_hint` on attachable resources → stored in `agent.capability_catalog` (not in `system_prompt`)
 
 **Related specs:**
@@ -11,6 +11,7 @@ Single reference for **every REST endpoint** affected by the move to an agentic 
 - [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 - Phase B: [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md) · [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md)
 - Phase C: [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md) · [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md)
+- Phase D: [api-migration-agentic-phase-d.md](./api-migration-agentic-phase-d.md) · [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md)
 
 **Legend**
 
@@ -195,7 +196,7 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 
 ### Not a REST API (Phase C)
 
-`search_knowledge` is an **LLM tool** inside `OrchestratorRunner`, not a new HTTP endpoint. Today layer **[4]** uses always-on `RAGRetriever` before orchestrator; Phase C replaces that with tool-driven retrieval only.
+`search_knowledge` is an **LLM tool** inside `OrchestratorRunner` and `SubAgentRunner`, not a new HTTP endpoint. Layer **[4]** is empty at turn start; retrieved chunks arrive via `search_knowledge` **ToolMessage** in the LLM loop (Phase C **Done**).
 
 **Spec:** [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md) · [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md)
 
@@ -269,7 +270,8 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 4. ~~**Runtime** — `FinalPromptBuilder` at chat (no REST change)~~ **Done**
 5. **Optional** — expose catalog on `GET /agents/{id}`; optional `PATCH capability-catalog`
 6. ~~**Phase B** — agentic workflow routing (no REST)~~ **Done** — [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md)
-7. **Phase C** — agentic RAG tool (no new REST) — [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md)
+7. ~~**Phase C** — agentic RAG tool (no new REST)~~ **Done** — [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md)
+8. **Phase D** — sticky sub-agent (no REST) — [api-migration-agentic-phase-d.md](./api-migration-agentic-phase-d.md)
 
 ---
 

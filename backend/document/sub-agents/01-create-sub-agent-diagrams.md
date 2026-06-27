@@ -1,6 +1,6 @@
 # Create Sub Agent — `POST /api/v1/agents/{agent_id}/sub-agents`
 
-**Agentic migration:** Phase A **Done** — `routing_hint` on create/PATCH → [04-update-sub-agent-diagrams.md](./04-update-sub-agent-diagrams.md). Phase B **no REST change**. Phase C **planned** — sub-agent RAG via `search_knowledge` on `SubAgentRunner` (no REST change). See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` on create/PATCH → [04-update-sub-agent-diagrams.md](./04-update-sub-agent-diagrams.md). Phase B **no REST change**. Phase C **Done** — sub-agent RAG via `search_knowledge` on `SubAgentRunner`. Phase D **planned** — sticky handover at chat (no REST change). See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 Creates a **Sub Agent** under a parent agent. Used by the **Add Sub Agent** modal on the agent detail **Sub Agents** tab.
 
@@ -252,6 +252,6 @@ Route: `/agent/{agent_id}` — **Sub Agents** tab.
 | Request schema | `CreateSubAgentRequest` in `schemas/sub_agent.py` *(planned)* |
 | Service | `SubAgentService.create()` in `services/sub_agent_service.py` *(planned)* |
 | Repository | `sub_agent_repository.py` *(planned)* |
-| Parent push | `push_sub_agent_id` in [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) *(planned)* |
+| Parent push | `push_sub_agent_id` in [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Limit constant | `MAX_SUB_AGENTS_PER_AGENT = 10` in `domain/constants/sub_agent_constants.py` *(planned)* |
 | Frontend modal | Sub Agents tab on [AgentDetailPage.tsx](../../../frontend/src/pages/agent/AgentDetailPage.tsx) *(planned)* |

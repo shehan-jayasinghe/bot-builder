@@ -1,6 +1,6 @@
 # Update Workflow — attach / detach / move — `PATCH /api/v1/workflows/{workflow_id}`
 
-**Agentic migration:** Phase A **Done** — `routing_hint` on PATCH. Phase B **Done** — `routing_hint` guides LLM workflow tool choice at chat (no REST change). Phase C **no REST change**. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` on PATCH. Phase B **Done** — `routing_hint` guides LLM workflow tool choice at chat (no REST change). Phase C **no REST change**. Phase D **planned** — workflow overrides sticky sub-agent. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 Create workflow: [01-create-workflow-diagrams.md](./01-create-workflow-diagrams.md)
 

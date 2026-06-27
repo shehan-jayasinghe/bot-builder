@@ -6,7 +6,7 @@
 
 **Goal:** Knowledge retrieval runs only when the LLM calls a `search_knowledge` tool (orchestrator and sub-agent turns) — not via always-on `RAGRetriever.retrieve()` before every turn.
 
-**Status:** **Planned** (not implemented in code yet).
+**Status:** **Done** (implemented in code).
 
 ---
 
@@ -128,11 +128,10 @@ Detail: [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase
 
 | File | Action | Status |
 |------|--------|--------|
-| `tests/test_chat_completion_service.py` | Orchestrator turn with KBs — `rag.retrieve` **not** called before graph | **Planned** |
-| `tests/test_search_knowledge_delegate.py` (new) | Tool description includes KB `routing_hint` from catalog | **Planned** |
-| `tests/test_orchestrator*.py` or chat integration | Mock LLM `search_knowledge` call → retriever invoked → tool result in turn | **Planned** |
-| `tests/test_chat_completion_service.py` | Rewrite `test_chat_completion_runs_rag_on_first_message_with_workflows` — assert no auto RAG after Phase C | **Planned** |
-| `tests/test_sub_agent_delegation_at_chat.py` | Sub-agent turn — no auto prefetch; `search_knowledge` when sub-agent has KBs | **Planned** |
+| `tests/test_chat_completion_service.py` | No auto `retrieve` when KBs attached — see `test_orchestrator_search_knowledge.py` | **Done** |
+| `tests/test_search_knowledge_delegate.py` (new) | Tool description includes KB `routing_hint` from catalog | **Done** |
+| `tests/test_orchestrator_search_knowledge.py` | `test_chat_completion_does_not_auto_retrieve_rag_with_kbs` + handler + LLM tool loop | **Done** |
+| `tests/test_sub_agent_delegation_at_chat.py` | Sub-agent — no prefetch; `search_knowledge` tool registered when KBs exist | **Done** |
 | `tests/test_rag_retriever.py` | **Keep** — retriever unit tests unchanged | **Done** |
 
 ---

@@ -26,7 +26,7 @@ app/
 
 1. `app/api/v1/chat.py` — HTTP entry point
 2. `app/di/chat.py` — wiring (repos → services → chat completion)
-3. `app/services/chat_completion_service.py` — guardrails → RAG → graph routing → orchestrator
+3. `app/services/chat_completion_service.py` — guardrails → final prompt → graph routing → orchestrator
 4. `app/domain/graph/chat_graph.py` — workflow / orchestrator routing
 5. `app/services/runtime_bundle_loader.py` — load agent capabilities from MongoDB
 6. `app/services/assistant_loader.py` — resolve channel → agent
@@ -39,7 +39,7 @@ app/
 | Module | File | Trace event |
 |--------|------|-------------|
 | Guardrails | `domain/pipeline/guardrails/runner.py` | `guardrail_complete` |
-| RAG | `domain/pipeline/rag/retriever.py` | `rag_complete` |
+| RAG | `domain/graph/search_knowledge_delegate.py` + `orchestrator.py` | `tool_start` / `tool_complete` for `search_knowledge`; `rag_skipped` when no KBs or in workflow |
 | Trace | `domain/pipeline/observability/trace.py` | all events |
 
 ## Run locally
@@ -54,4 +54,4 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 - Swagger: http://localhost:8000/docs
 - Health: http://localhost:8000/api/v1/health
-- Agentic migration (API + runtime): [document/agentic/00-overview.md](document/agentic/00-overview.md)
+- Agentic migration (API + runtime): [document/agentic/00-overview.md](document/agentic/00-overview.md) — Phases A–C **Done**, Phase D **planned**

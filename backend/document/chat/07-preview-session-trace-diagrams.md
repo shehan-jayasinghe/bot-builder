@@ -10,7 +10,7 @@ Related:
 - Agent graph: [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md)
 - Chat events: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) — Trace events table
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. Phase C **planned** — per-turn `rag_complete` removed; RAG stats on `tool_complete` for `search_knowledge`. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. Phase C **Done** — RAG stats on `tool_complete` for `search_knowledge`. Phase D **planned** — `sub_agent_continue` on sticky turns. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 **Status:** Implemented.
 
@@ -86,9 +86,9 @@ Authorization: Bearer <clerk_jwt>
           "data": {}
         },
         {
-          "type": "rag_complete",
+          "type": "rag_skipped",
           "at": "2026-06-20T21:33:36.200Z",
-          "data": { "context_length": 0 }
+          "data": {}
         },
         {
           "type": "output_message",
@@ -115,12 +115,17 @@ Authorization: Bearer <clerk_jwt>
         {
           "type": "tool_start",
           "at": "2026-06-20T21:34:17.500Z",
-          "data": { "tool": "transactions_analysis" }
+          "data": { "tool_name": "search_knowledge", "arguments": { "query": "top spendings February" } }
         },
         {
           "type": "tool_complete",
           "at": "2026-06-20T21:34:19.800Z",
-          "data": { "tool": "transactions_analysis", "ok": true }
+          "data": {
+            "tool_name": "search_knowledge",
+            "kb_ids": ["6a3f9012d8139334274fbc01"],
+            "chunk_count": 3,
+            "context_length": 420
+          }
         },
         {
           "type": "output_message",
@@ -129,9 +134,9 @@ Authorization: Bearer <clerk_jwt>
         }
       ],
       "routing_decision": {
+        "mode": "orchestrator",
         "type": "tool",
-        "name": "transactions_analysis",
-        "tool_id": "6a3f9012d8139334274fbc01"
+        "name": "search_knowledge"
       }
     }
   ]
@@ -148,14 +153,17 @@ Authorization: Bearer <clerk_jwt>
 | `guardrail_complete` | Policy check passed | **LLM Request** → `guardrail_complete` |
 | `guardrail_blocked` | Policy refusal | **LLM Request** → blocked |
 | `bundle_loaded` | RuntimeBundle ready | *(optional — dev detail)* |
-| `rag_complete` | KB retrieval done (pre-turn only — **removed in Phase C**) | **LLM Request** → `rag_complete` |
-| `tool_start` | Tool invoked | **Tool Start** → tool name |
-| `tool_complete` | Tool finished | *(nested under tool)* |
+| `rag_skipped` | No KBs on agent or turn is in active workflow | **LLM Request** → `rag_skipped` |
+| `tool_start` | Tool invoked (`search_knowledge` or executor — executor trace planned) | **Tool Start** → tool name |
+| `tool_complete` | Tool finished — for `search_knowledge` includes `kb_ids`, `chunk_count`, `context_length` | *(nested under tool)* |
 | `tool_error` | Tool failed | **Tool Start** → error state |
+| `sub_agent_start` | First delegate from orchestrator | *(feeds graph highlight)* |
+| `sub_agent_continue` | Sticky follow-up on same sub-agent (**Phase D — planned**) | *(feeds graph highlight)* |
+| `sub_agent_complete` | Sub-agent turn finished | *(nested)* |
 | `routing_decision` | Agent/workflow switch | *(feeds graph highlight)* |
 | `output_message` | Assistant reply | **Output Message** |
 
-Nested **LLM Request** rows in the UI = group `guardrail_complete` + `rag_complete` under one turn step (same timestamp bucket). **Phase C:** per-turn `rag_complete` goes away; RAG stats move to `tool_complete` for `search_knowledge`.
+Nested **LLM Request** rows in the UI = group `guardrail_complete` + `rag_skipped` (when applicable) under one turn step (same timestamp bucket). RAG retrieval stats appear on `tool_complete` when the LLM calls `search_knowledge`.
 
 ---
 

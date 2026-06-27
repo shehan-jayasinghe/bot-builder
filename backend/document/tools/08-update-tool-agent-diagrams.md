@@ -1,6 +1,6 @@
 # Update Tool — attach / detach / move — `PATCH /api/v1/tools/{tool_id}`
 
-**Agentic migration:** Phase A **Done**. Phase B **no REST change**. Phase C **no REST change**. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
+**Agentic migration:** Phase A **Done**. Phase B **no REST change**. Phase C **no REST change**. Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 Create tool: [01-create-tool-diagrams.md](./01-create-tool-diagrams.md)
 

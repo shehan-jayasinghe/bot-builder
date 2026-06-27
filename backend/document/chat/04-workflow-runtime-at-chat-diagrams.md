@@ -10,7 +10,7 @@ Workflow REST: [../workflows/01-create-workflow-diagrams.md](../workflows/01-cre
 
 **Status:** Implemented — `workflow_runner` + `ChatGraph` routing.
 
-**Agentic migration (REST):** Phase A **Done** — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). Phase B **Done** (runtime) — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
+**Agentic migration (REST):** Phase A **Done** — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). Phase B **Done** (runtime) — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md). Phase C **no REST change**. Phase D **planned** — active workflow takes priority over sticky sub-agent (no REST change). See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 ---
 

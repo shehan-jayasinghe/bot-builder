@@ -11,6 +11,7 @@ from app.domain.graph.sub_agent_delegate import (
 from app.domain.graph.turn_result import AgentTurnResult
 from app.domain.models.runtime_bundle import (
     RuntimeBundle,
+    RuntimeKnowledgeBase,
     RuntimeOrchestrator,
     RuntimeSubAgent,
     RuntimeSubAgentParameter,
@@ -90,12 +91,11 @@ def test_build_sub_agent_system_prompt_includes_delegate_args() -> None:
     prompt = build_sub_agent_system_prompt(
         sub_agent,
         delegate_args={"query": "loyalty rules"},
-        rag_context="chunk-1",
     )
 
     assert "You research things." in prompt
     assert "loyalty rules" in prompt
-    assert "chunk-1" in prompt
+    assert "Retrieved context" not in prompt
 
 
 def test_runtime_bundle_all_runtime_tools_includes_sub_agent_tools() -> None:
@@ -263,7 +263,7 @@ def test_chat_completion_resets_sub_agent_before_next_turn() -> None:
     asyncio.run(_run())
 
 
-def test_orchestrator_run_turn_handles_delegation_with_mocked_sub_runner() -> None:
+def test_orchestrator_run_turn_handles_delegation_without_rag_prefetch() -> None:
     async def _run() -> None:
         from app.domain.graph.orchestrator import OrchestratorRunner
         from app.domain.graph.turn_result import DelegationRequest
@@ -273,6 +273,14 @@ def test_orchestrator_run_turn_handles_delegation_with_mocked_sub_runner() -> No
             id=SUB_AGENT_ID,
             name="research_agent",
             instructions="Research only.",
+            knowledge_bases=[
+                RuntimeKnowledgeBase(
+                    id="kb-1",
+                    name="Research KB",
+                    storage_type="vector",
+                    status="active",
+                ),
+            ],
             status="active",
         )
         bundle = RuntimeBundle(
@@ -285,6 +293,7 @@ def test_orchestrator_run_turn_handles_delegation_with_mocked_sub_runner() -> No
             ),
         )
         tracker = Tracker(sender_id="user-1", assistant_id=str(AGENT_ID))
+        rag = AsyncMock()
 
         runner.execute_tool_turn = AsyncMock(  # type: ignore[method-assign]
             return_value=AgentTurnResult(
@@ -310,7 +319,7 @@ def test_orchestrator_run_turn_handles_delegation_with_mocked_sub_runner() -> No
                 user_message="research loyalty",
                 system_prompt="You are the orchestrator.",
                 connectors_by_id={},
-                rag=AsyncMock(),
+                rag=rag,
             )
         finally:
             runner_module.SubAgentRunner = original  # type: ignore[misc]
@@ -318,6 +327,58 @@ def test_orchestrator_run_turn_handles_delegation_with_mocked_sub_runner() -> No
         assert result.replies == ["Delegated answer"]
         assert result.routing["mode"] == "delegate"
         assert result.routing["sub_agent_id"] == SUB_AGENT_ID
+        rag.retrieve.assert_not_awaited()
         sub_runner.run_turn.assert_awaited_once()
+        sub_call = sub_runner.run_turn.await_args.kwargs
+        assert sub_call["bundle"] is bundle
+        assert sub_call["rag"] is rag
+
+    asyncio.run(_run())
+
+
+def test_sub_agent_runner_registers_search_knowledge_when_kbs_exist() -> None:
+    async def _run() -> None:
+        from app.domain.graph.sub_agent_delegate import SubAgentRunner
+
+        kb = RuntimeKnowledgeBase(
+            id="kb-1",
+            name="Research KB",
+            storage_type="vector",
+            status="active",
+        )
+        sub_agent = RuntimeSubAgent(
+            id=SUB_AGENT_ID,
+            name="research_agent",
+            instructions="Research only.",
+            knowledge_bases=[kb],
+            status="active",
+        )
+        bundle = RuntimeBundle(
+            organization_id=ORG_ID,
+            orchestrator=RuntimeOrchestrator(
+                id=str(AGENT_ID),
+                name="Bot",
+                system_prompt="Help users.",
+            ),
+        )
+        tracker = Tracker(sender_id="user-1", assistant_id=str(AGENT_ID))
+        tool_executor = AsyncMock()
+        tool_executor.execute_tool_turn.return_value = AgentTurnResult(replies=["Answer"])
+
+        runner = SubAgentRunner(tool_executor=tool_executor)
+        await runner.run_turn(
+            sub_agent=sub_agent,
+            orchestrator=bundle.orchestrator,
+            tracker=tracker,
+            delegate_args={"query": "rules"},
+            bundle=bundle,
+            connectors_by_id={},
+            rag=AsyncMock(),
+        )
+
+        call_kwargs = tool_executor.execute_tool_turn.await_args.kwargs
+        assert call_kwargs["search_knowledge_tool"] is not None
+        assert call_kwargs["search_knowledge_tool"].name == "search_knowledge"
+        assert call_kwargs["knowledge_bases"] == [kb]
 
     asyncio.run(_run())

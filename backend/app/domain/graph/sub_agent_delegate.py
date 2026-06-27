@@ -5,8 +5,9 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field, create_model
 
 from app.domain.constants.chat_constants import MAX_HISTORY_TURNS
+from app.domain.graph.search_knowledge_delegate import SEARCH_KNOWLEDGE_TOOL_NAME, build_search_knowledge_tool
 from app.domain.graph.turn_result import AgentTurnResult
-from app.domain.models.runtime_bundle import RuntimeOrchestrator, RuntimeSubAgent, RuntimeTool
+from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeOrchestrator, RuntimeSubAgent, RuntimeTool
 from app.domain.models.tracker import Tracker
 from app.infrastructure.ai.langsmith_tracing import LlmTracingContext
 
@@ -87,14 +88,11 @@ def build_sub_agent_system_prompt(
     sub_agent: RuntimeSubAgent,
     *,
     delegate_args: dict[str, Any],
-    rag_context: str | None,
 ) -> str:
     parts = [sub_agent.instructions]
     delegate_context = format_delegate_context(delegate_args)
     if delegate_context:
         parts.append(delegate_context)
-    if rag_context:
-        parts.append("## Retrieved context\n" + rag_context)
     return "\n\n".join(parts)
 
 
@@ -111,25 +109,39 @@ class SubAgentRunner:
         orchestrator: RuntimeOrchestrator,
         tracker: Tracker,
         delegate_args: dict[str, Any],
-        rag_context: str,
+        bundle: RuntimeBundle,
         connectors_by_id: dict[str, dict[str, Any]],
         tracing_context: LlmTracingContext | None = None,
+        rag: Any = None,
+        trace: Any = None,
     ) -> list[str]:
         system_prompt = build_sub_agent_system_prompt(
             sub_agent,
             delegate_args=delegate_args,
-            rag_context=rag_context or None,
         )
+        search_knowledge_tool = build_search_knowledge_tool(
+            sub_agent.knowledge_bases,
+            capability_catalog=bundle.capability_catalog,
+        )
+        scoped_tools = [
+            tool for tool in sub_agent.tools
+            if not (search_knowledge_tool is not None and tool.name == SEARCH_KNOWLEDGE_TOOL_NAME)
+        ]
         history = _cap_history(tracker.get_history())
         result = await self._tool_executor.execute_tool_turn(
             orchestrator=orchestrator,
             system_prompt=system_prompt,
             history=history,
-            tools=sub_agent.tools,
+            tools=scoped_tools,
+            search_knowledge_tool=search_knowledge_tool,
+            knowledge_bases=sub_agent.knowledge_bases,
+            organization_id=bundle.organization_id,
             delegate_tools=[],
             delegates_by_name={},
             connectors_by_id=connectors_by_id,
             tracing_context=tracing_context,
+            rag=rag,
+            trace=trace,
         )
         return result.replies
 

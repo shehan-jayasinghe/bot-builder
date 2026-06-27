@@ -64,6 +64,7 @@ class ChatGraph:
             connectors_by_id=connectors_by_id,
             tracing_context=tracing_context,
             rag=rag,
+            trace=trace,
         )
 
         if turn_result.workflow_enter is not None:

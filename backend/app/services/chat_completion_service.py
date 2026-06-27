@@ -162,31 +162,11 @@ class ChatCompletionService:
         await self._tracker_service.save_session(tracker)
 
         in_workflow = tracker.active_flow_state is not None
-        skip_rag = in_workflow
-
         kb_list = bundle.orchestrator.knowledge_bases
-        if skip_rag or not kb_list:
+        if in_workflow or not kb_list:
             await self._trace.record("rag_skipped", {})
-            rag_context = ""
-        else:
-            rag_result = await self._rag.retrieve(
-                query=sanitized_message,
-                knowledge_bases=kb_list,
-                organization_id=bundle.organization_id,
-            )
-            rag_context = rag_result.context
-            if rag_result.error and not rag_context:
-                await self._trace.record("rag_error", {"detail": rag_result.error})
-            else:
-                trace_data: dict[str, object] = {
-                    "context_length": len(rag_context),
-                    "kb_ids": rag_result.kb_ids,
-                    "chunk_count": rag_result.chunk_count,
-                    "storage_types": rag_result.storage_types,
-                }
-                if rag_result.error:
-                    trace_data["partial_error"] = rag_result.error
-                await self._trace.record("rag_complete", trace_data)
+
+        rag_context = ""
 
         guardrail_instructions = self._guardrails.build_instructions(bundle.orchestrator.guardrails)
         final_prompt = self._final_prompt_builder.build_from_bundle(

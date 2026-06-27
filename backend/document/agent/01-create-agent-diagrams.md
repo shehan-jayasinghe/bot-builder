@@ -1,5 +1,7 @@
 # Create Agent — `POST /api/v1/agents`
 
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — empty `capability_catalog` on create. Phase B–D: **no** REST change on agent create — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+
 # Auth phase
 
 ## Flow
@@ -324,6 +326,7 @@ flowchart TB
 | `routing_hint` on create | not on `CreateAgentRequest` — set when attaching tools/KBs/workflows/sub-agents | [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
 | Phase B | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) |
 | Phase C | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) |
+| Phase D | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md) |
 | Webhook / publish | `status: draft` only | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Website crawl / RAG | not started | — |
 | Bedrock invoke at create time | prompt built locally only (base layer; no personality/tone/guardrails in string) | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |

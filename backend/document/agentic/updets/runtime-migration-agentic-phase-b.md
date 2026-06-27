@@ -147,18 +147,15 @@ Workflow tool naming: `workflow_<normalized_name>` — see [workflow_delegate.py
 | File | Covers | Status |
 |------|--------|--------|
 | `tests/test_workflow_runtime_at_chat.py` | Remove auto-start tests; add LLM-routed enter | **Done** |
-| `tests/test_chat_completion_service.py` | RAG runs on first message when workflows attached | **Done** |
+| `tests/test_workflow_runtime_at_chat.py` | First message with workflows → orchestrator, `active_flow_state` null | **Done** |
+| `tests/test_workflow_runtime_at_chat.py` | Mock LLM `workflow_*` → `workflow_enter` with `orchestrator_tool` | **Done** |
 
-### Tests to remove or rewrite
+### Tests removed or rewritten (Phase B)
 
-- `test_should_auto_start_workflow_on_first_message`
-- `test_chat_graph_auto_starts_hello_workflow`
+- ~~`test_should_auto_start_workflow_on_first_message`~~ — removed
+- ~~`test_chat_graph_auto_starts_hello_workflow`~~ — removed
 
-### Tests to add
-
-- First message with workflows → orchestrator invoked, `active_flow_state` null
-- Mock LLM workflow tool call → `workflow_enter` with `orchestrator_tool`
-- `chat_completion_service` — RAG `retrieve` called on first message (when KBs exist)
+RAG on first message is covered in Phase C (`test_orchestrator_search_knowledge.py` — no auto `retrieve`).
 
 ---
 

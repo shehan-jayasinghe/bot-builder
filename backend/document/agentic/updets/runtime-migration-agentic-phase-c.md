@@ -8,7 +8,7 @@
 
 ## Implementation status
 
-**Phase C — Planned** (not implemented in code yet).
+**Phase C — Done** (implemented in code).
 
 ---
 
@@ -183,22 +183,17 @@ After Phase C:
 
 | File | Covers | Status |
 |------|--------|--------|
-| `tests/test_chat_completion_service.py` | No auto `retrieve` when KBs attached | **Planned** |
-| `tests/test_search_knowledge_delegate.py` | Tool schema + routing_hint in description | **Planned** |
-| `tests/test_sub_agent_delegation_at_chat.py` | Sub-agent — no prefetch; tool-driven RAG | **Planned** |
-| Orchestrator / chat tests | LLM calls `search_knowledge` → retriever invoked | **Planned** |
+| `tests/test_chat_completion_service.py` | No auto `retrieve` when KBs attached | **Done** |
+| `tests/test_search_knowledge_delegate.py` | Tool schema + routing_hint in description | **Done** |
+| `tests/test_sub_agent_delegation_at_chat.py` | Sub-agent — no prefetch; `search_knowledge` registered | **Done** |
+| `tests/test_orchestrator_search_knowledge.py` | Handler + LLM tool loop + name collision | **Done** |
 | `tests/test_rag_retriever.py` | Retriever behavior | **Done** (keep) |
 
-### Tests to rewrite
+### Tests removed or rewritten (Phase C)
 
-- `test_chat_completion_runs_rag_on_first_message_with_workflows` — today asserts auto RAG (Phase B); after Phase C assert **no** auto RAG
+- ~~`test_chat_completion_runs_rag_on_first_message_with_workflows`~~ — replaced by `test_chat_completion_does_not_auto_retrieve_rag_with_kbs` in `test_orchestrator_search_knowledge.py`
 
-### Tests to add
-
-- Orchestrator turn with KBs — `rag.retrieve` not called until tool handler runs
-- Sub-agent delegation — no auto `rag.retrieve` prefetch; `search_knowledge` on `SubAgentRunner` turn
-- Mock LLM `search_knowledge` call → tool result contains formatted context
-- `routing_hint` appears in `search_knowledge` tool description when catalog has KB hints
+Covered by `test_orchestrator_search_knowledge.py` and `test_sub_agent_delegation_at_chat.py`: no auto `retrieve` until tool handler; sub-agent `search_knowledge` registration; LLM tool loop; `routing_hint` in tool description.
 
 ---
 
@@ -218,6 +213,6 @@ Agents that depended on **silent always-on RAG** will answer without KB context 
 
 | Phase | Next |
 |-------|------|
-| **D** | Sticky sub-agent handover |
+| **D** | Sticky sub-agent handover | [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
 
 Master index: [../00-overview.md](../00-overview.md)

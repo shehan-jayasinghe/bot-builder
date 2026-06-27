@@ -1,10 +1,15 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
 from app.domain.constants.chat_constants import MAX_HISTORY_TURNS
 from app.domain.executors.langgraph_tools import build_langgraph_tools
+from app.domain.graph.search_knowledge_delegate import (
+    SEARCH_KNOWLEDGE_TOOL_NAME,
+    build_search_knowledge_tool,
+    execute_search_knowledge,
+)
 from app.domain.graph.sub_agent_delegate import (
     SubAgentRunner,
     build_delegate_langgraph_tools,
@@ -18,6 +23,8 @@ from app.infrastructure.ai.llm import BedrockLLM
 
 if TYPE_CHECKING:
     from app.domain.pipeline.rag.retriever import RAGRetriever
+
+TraceCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 MAX_TOOL_ITERATIONS = 5
 
@@ -35,11 +42,13 @@ class OrchestratorRunner:
         connectors_by_id: dict[str, dict[str, Any]],
         tracing_context: LlmTracingContext | None = None,
         rag: "RAGRetriever | None" = None,
+        trace: TraceCallback | None = None,
     ) -> AgentTurnResult:
         orchestrator = bundle.orchestrator
         history = _cap_history(tracker.get_history())
 
         reserved_names = {tool.name for tool in orchestrator.tools}
+        reserved_names.add(SEARCH_KNOWLEDGE_TOOL_NAME)
         delegate_tools, delegates_by_name = build_delegate_langgraph_tools(
             orchestrator.sub_agents,
             reserved_names=reserved_names,
@@ -50,11 +59,17 @@ class OrchestratorRunner:
             reserved_names=reserved_names,
             capability_catalog=bundle.capability_catalog,
         )
+        search_knowledge_tool = build_search_knowledge_tool(
+            orchestrator.knowledge_bases,
+            capability_catalog=bundle.capability_catalog,
+        )
+
         has_executor_tools = bool(orchestrator.tools)
         has_delegates = bool(delegate_tools)
         has_workflows = bool(workflow_tools)
+        has_search_knowledge = search_knowledge_tool is not None
 
-        if not has_executor_tools and not has_delegates and not has_workflows:
+        if not has_executor_tools and not has_delegates and not has_workflows and not has_search_knowledge:
             reply = await self._simple_chat(
                 orchestrator=orchestrator,
                 system_prompt=system_prompt,
@@ -68,12 +83,17 @@ class OrchestratorRunner:
             system_prompt=system_prompt,
             history=history,
             tools=orchestrator.tools,
+            search_knowledge_tool=search_knowledge_tool,
+            knowledge_bases=orchestrator.knowledge_bases,
+            organization_id=bundle.organization_id,
             delegate_tools=delegate_tools,
             delegates_by_name=delegates_by_name,
             workflow_tools=workflow_tools,
             workflows_by_name=workflows_by_name,
             connectors_by_id=connectors_by_id,
             tracing_context=tracing_context,
+            rag=rag,
+            trace=trace,
         )
         if result.workflow_enter is not None:
             return result
@@ -81,24 +101,17 @@ class OrchestratorRunner:
             return result
 
         delegation = result.delegation
-        sub_rag_context = ""
-        if rag is not None and delegation.sub_agent.knowledge_bases:
-            sub_rag_result = await rag.retrieve(
-                query=user_message,
-                knowledge_bases=delegation.sub_agent.knowledge_bases,
-                organization_id=bundle.organization_id,
-            )
-            sub_rag_context = sub_rag_result.context
-
         sub_runner = SubAgentRunner(tool_executor=self)
         replies = await sub_runner.run_turn(
             sub_agent=delegation.sub_agent,
             orchestrator=orchestrator,
             tracker=tracker,
             delegate_args=delegation.args,
-            rag_context=sub_rag_context,
+            bundle=bundle,
             connectors_by_id=connectors_by_id,
             tracing_context=tracing_context,
+            rag=rag,
+            trace=trace,
         )
         routing = {
             "mode": "delegate",
@@ -116,20 +129,28 @@ class OrchestratorRunner:
         system_prompt: str,
         history: list[dict[str, Any]],
         tools: list[RuntimeTool],
+        connectors_by_id: dict[str, dict[str, Any]],
+        search_knowledge_tool: BaseTool | None = None,
+        knowledge_bases: list | None = None,
+        organization_id: str = "",
         delegate_tools: list[BaseTool] | None = None,
         delegates_by_name: dict[str, RuntimeSubAgent] | None = None,
         workflow_tools: list[BaseTool] | None = None,
         workflows_by_name: dict[str, RuntimeWorkflow] | None = None,
-        connectors_by_id: dict[str, dict[str, Any]],
         tracing_context: LlmTracingContext | None = None,
+        rag: "RAGRetriever | None" = None,
+        trace: TraceCallback | None = None,
     ) -> AgentTurnResult:
         delegate_tools = delegate_tools or []
         delegates_by_name = delegates_by_name or {}
         workflow_tools = workflow_tools or []
         workflows_by_name = workflows_by_name or {}
+        knowledge_bases = knowledge_bases or []
 
         pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
         for tool in tools:
+            if search_knowledge_tool is not None and tool.name == SEARCH_KNOWLEDGE_TOOL_NAME:
+                continue
             connector = connectors_by_id.get(tool.connector_id)
             if connector is None:
                 continue
@@ -145,7 +166,11 @@ class OrchestratorRunner:
                 ),
             )
 
-        langgraph_tools = build_langgraph_tools(pairs) + delegate_tools + workflow_tools
+        langgraph_tools = build_langgraph_tools(pairs)
+        if search_knowledge_tool is not None:
+            langgraph_tools.append(search_knowledge_tool)
+        langgraph_tools.extend(delegate_tools)
+        langgraph_tools.extend(workflow_tools)
         if not langgraph_tools:
             reply = await self._simple_chat(
                 orchestrator=orchestrator,
@@ -207,7 +232,15 @@ class OrchestratorRunner:
                         ),
                     )
 
-                if not tool_name or tool_name not in tools_by_name:
+                if tool_name == SEARCH_KNOWLEDGE_TOOL_NAME:
+                    tool_result = await self._run_search_knowledge_tool(
+                        tool_args=tool_args,
+                        knowledge_bases=knowledge_bases,
+                        organization_id=organization_id,
+                        rag=rag,
+                        trace=trace,
+                    )
+                elif not tool_name or tool_name not in tools_by_name:
                     tool_result = f"Unknown tool: {tool_name}"
                 else:
                     tool_result = await tools_by_name[tool_name].ainvoke(tool_args)
@@ -220,6 +253,68 @@ class OrchestratorRunner:
                 )
 
         return AgentTurnResult(replies=["I couldn't complete that request. Please try again."])
+
+    @staticmethod
+    async def _run_search_knowledge_tool(
+        *,
+        tool_args: dict[str, Any],
+        knowledge_bases: list,
+        organization_id: str,
+        rag: "RAGRetriever | None",
+        trace: TraceCallback | None,
+    ) -> str:
+        query = str(tool_args.get("query") or "")
+        kb_names = tool_args.get("knowledge_base_names")
+        scoped_names = kb_names if isinstance(kb_names, list) else None
+
+        if trace is not None:
+            await trace(
+                "tool_start",
+                {
+                    "tool_name": SEARCH_KNOWLEDGE_TOOL_NAME,
+                    "arguments": tool_args,
+                },
+            )
+
+        if rag is None or not knowledge_bases:
+            result_text = "Knowledge search is not available."
+            if trace is not None:
+                await trace(
+                    "tool_complete",
+                    {
+                        "tool_name": SEARCH_KNOWLEDGE_TOOL_NAME,
+                        "context_length": 0,
+                        "kb_ids": [],
+                        "chunk_count": 0,
+                    },
+                )
+            return result_text
+
+        rag_result = await execute_search_knowledge(
+            rag=rag,
+            query=query,
+            knowledge_bases=knowledge_bases,
+            organization_id=organization_id,
+            knowledge_base_names=scoped_names,
+        )
+        if rag_result.error and not rag_result.context:
+            result_text = rag_result.error
+        else:
+            result_text = rag_result.context or "No relevant knowledge found."
+
+        if trace is not None:
+            trace_data: dict[str, object] = {
+                "tool_name": SEARCH_KNOWLEDGE_TOOL_NAME,
+                "context_length": len(rag_result.context),
+                "kb_ids": rag_result.kb_ids,
+                "chunk_count": rag_result.chunk_count,
+                "storage_types": rag_result.storage_types,
+            }
+            if rag_result.error:
+                trace_data["partial_error"] = rag_result.error
+            await trace("tool_complete", trace_data)
+
+        return result_text
 
     @staticmethod
     def _build_llm(

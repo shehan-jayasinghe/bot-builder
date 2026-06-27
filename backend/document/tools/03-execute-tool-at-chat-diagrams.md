@@ -6,7 +6,7 @@ This is **not** a REST endpoint for org users — it runs inside `ChatCompletion
 
 Executor catalog: [00-executor-catalog.md](./00-executor-catalog.md)
 
-**Agentic migration (REST):** Phase A **Done** — `routing_hint` on tools. Phase B **no REST change** (workflows only). Phase C **no REST change** (RAG at chat). See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
+**Agentic migration (REST):** Phase A **Done** — `routing_hint` on tools. Phase B **no REST change** (workflows only). Phase C **Done** (RAG at chat via `search_knowledge` tool). Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 ---
 
@@ -22,10 +22,10 @@ flowchart TB
 
     subgraph PRE["Pre-LLM steps"]
         G[GuardrailRunner]
-        R[RAGRetriever — knowledge bases]
+        P[FinalPromptBuilder — layers 1–3 only]
     end
 
-    PIPE --> G --> R --> LOAD
+    PIPE --> G --> P --> LOAD
 
     subgraph LOAD["Load tools"]
         L1[Resolve agent from webhook]
@@ -47,8 +47,7 @@ flowchart TB
         E1 --> E2 --> E3 --> E4
     end
 
-    EXEC --> TRACE[TraceCollector — tool_start, tool_complete]
-    TRACE --> LLM2[Bedrock — final reply with tool result]
+    EXEC --> LLM2[Bedrock — final reply with tool result]
     LLM2 --> REPLY
 ```
 
@@ -106,7 +105,7 @@ Arg hints derived from `{{placeholders}}` in tool `config` (MVP) or explicit `ar
 
 ```mermaid
 flowchart TB
-    MSG[User message + RAG context + tool defs]
+    MSG[User message + capability catalog + tool defs]
     MSG --> BEDROCK[Bedrock converse / tool use]
     BEDROCK --> OUT{output?}
 
@@ -115,7 +114,13 @@ flowchart TB
     PARSE --> RUN[ExecutorRegistry.run]
 ```
 
-**Trace events:**
+**Trace events (today):**
+
+| Event | When | Payload |
+|-------|------|---------|
+| `tool_start` / `tool_complete` | LLM calls `search_knowledge` | `tool_name`, RAG stats on complete — see [../chat/03-rag-at-chat-diagrams.md](../chat/03-rag-at-chat-diagrams.md) |
+
+**Trace events (planned for executor tools):**
 
 | Event | Payload |
 |-------|---------|
