@@ -6,7 +6,7 @@ One batch load: orchestrator + attached tools, knowledge bases, workflows, and s
 
 **JWT auth only** — not used by the public webhook.
 
-**Agentic migration:** **No** route or schema change. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **planned** — runtime graph unchanged; chat routing stops `default_first_message` workflow auto-start. See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
 
 Related:
 

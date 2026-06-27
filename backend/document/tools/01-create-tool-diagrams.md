@@ -1,6 +1,6 @@
 # Create Tool — `POST /api/v1/agents/{agent_id}/tools`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` (max 500) on create/PATCH; stored in `agent.capability_catalog.tools`, not `system_prompt`. PATCH attach/detach: [08-update-tool-agent-diagrams.md](./08-update-tool-agent-diagrams.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` on create/PATCH → [08-update-tool-agent-diagrams.md](./08-update-tool-agent-diagrams.md). Phase B **no REST change**. [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md)
 
 Organization creates a **Tool** — JSON config that tells the platform which **executor** to run, which **connector** to use, and operation-specific **config**.
 

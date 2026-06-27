@@ -2,7 +2,7 @@
 
 Returns one agent for the authenticated user's organization. Draft and published agents are both readable.
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md)
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) · Phase B: [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) (**no** REST change)
 
 | Item | Change |
 |------|--------|

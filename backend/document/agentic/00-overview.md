@@ -13,12 +13,23 @@ Migration to LLM-driven routing via **capability catalog** and **final prompt** 
 
 Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_prompt` on attach/detach.
 
+## Phases
+
+| Phase | Runtime change | Status |
+|-------|----------------|--------|
+| **A** | Catalog + `FinalPromptBuilder` + attach sync | **Done** |
+| **B** | Remove auto-start workflow — LLM picks from catalog | **Planned** — [runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) |
+| **C** | `search_knowledge` tool; remove always-on RAG | Planned |
+| **D** | Sticky sub-agent | Planned |
+
 ## Docs
 
 | Doc | Purpose |
 |-----|---------|
-| [updets/api-migration-agentic.md](./updets/api-migration-agentic.md) | **All REST APIs** — endpoints, `routing_hint`, `capability_catalog` sync |
-| [updets/runtime-migration-agentic.md](./updets/runtime-migration-agentic.md) | **Runtime code** — FinalPromptBuilder, chat graph, Phase C RAG |
+| [updets/api-migration-agentic.md](./updets/api-migration-agentic.md) | **All REST APIs** — Phase A catalog + `routing_hint` |
+| [updets/runtime-migration-agentic.md](./updets/runtime-migration-agentic.md) | **Runtime** — Phase A `FinalPromptBuilder` (Done) |
+| [updets/api-migration-agentic-phase-b.md](./updets/api-migration-agentic-phase-b.md) | **Phase B** — agentic workflow routing (planned) |
+| [updets/runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) | **Phase B runtime** — remove auto-start workflow |
 
 ## API docs by resource
 

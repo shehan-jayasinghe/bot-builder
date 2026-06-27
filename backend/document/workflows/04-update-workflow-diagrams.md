@@ -1,6 +1,6 @@
 # Update Workflow — attach / detach / move — `PATCH /api/v1/workflows/{workflow_id}`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on PATCH when `agent_id` is set; stored in `agent.capability_catalog.workflows`.
+**Agentic migration:** Phase A **Done** — `routing_hint` on PATCH. Phase B **planned** — `routing_hint` guides LLM workflow tool choice at chat (no REST change). See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
 
 Create workflow: [01-create-workflow-diagrams.md](./01-create-workflow-diagrams.md)
 

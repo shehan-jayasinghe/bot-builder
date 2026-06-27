@@ -10,7 +10,7 @@ Workflow REST: [../workflows/01-create-workflow-diagrams.md](../workflows/01-cre
 
 **Status:** Implemented — `workflow_runner` + `ChatGraph` routing.
 
-**Agentic migration (REST):** `POST` / `PATCH` `/api/v1/workflows` gain optional `routing_hint` → `agent.capability_catalog.workflows`. Chat webhook unchanged. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration (REST):** Phase A **Done** — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). Phase B **planned** (runtime) — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
 ---
 
@@ -62,8 +62,12 @@ flowchart TB
 
 Workflow starts when:
 
-1. Orchestrator LLM selects a **workflow tool** (future — same pattern as sub-agent delegate), or
-2. Channel / agent config triggers a default workflow on first message (optional MVP+)
+1. **Orchestrator LLM** calls a `workflow_<name>` delegate tool (`enter_reason: orchestrator_tool`) — **primary path after Phase B**
+2. User is already in a workflow (`active_flow_state` → `enter_reason: active_state`)
+
+**Phase B (planned):** remove hardcoded auto-start on first message (`default_first_message`). Spec: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
+
+~~2. Channel / agent config triggers a default workflow on first message (optional MVP+)~~ — **removed in Phase B**
 
 ```mermaid
 flowchart TB

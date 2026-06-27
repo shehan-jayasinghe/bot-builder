@@ -1,6 +1,6 @@
 # Update Knowledge Base — attach / detach / move — `PATCH /api/v1/knowledgebases/{knowledgebase_id}`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on PATCH when `agent_id` is set; stored in `agent.capability_catalog.knowledge_bases`.
+**Agentic migration:** Phase A **Done**. Phase B **no REST change**. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
 
 Create KB: [01-create-knowledgebase-diagrams.md](./01-create-knowledgebase-diagrams.md)
 

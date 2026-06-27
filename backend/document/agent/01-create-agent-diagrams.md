@@ -322,6 +322,7 @@ flowchart TB
 | Workflows | empty `workflow_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
 | Capability catalog | empty sections on create (service/Mongo only) | [agent_service.py](../../app/services/agent_service.py) |
 | `routing_hint` on create | not on `CreateAgentRequest` — set when attaching tools/KBs/workflows/sub-agents | [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
+| Phase B | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) |
 | Webhook / publish | `status: draft` only | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Website crawl / RAG | not started | — |
 | Bedrock invoke at create time | prompt built locally only (base layer; no personality/tone/guardrails in string) | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |

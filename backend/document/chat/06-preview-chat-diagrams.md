@@ -9,7 +9,7 @@ Admin **Preview** chat (right panel). Same inference as [01-chat-completion-diag
 
 Public widget continues to use `POST /api/v1/chat/webhook/{webhook_id}`.
 
-**Agentic migration:** **No** route or schema change — same `ChatRequest` / `ChatResponse`. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **planned** — same URLs; runtime stops auto-starting workflows on first message. See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
 
 **Status:** Implemented.
 

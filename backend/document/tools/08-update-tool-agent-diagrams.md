@@ -1,6 +1,6 @@
 # Update Tool — attach / detach / move — `PATCH /api/v1/tools/{tool_id}`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on PATCH; stored in `agent.capability_catalog.tools`, not `system_prompt`.
+**Agentic migration:** Phase A **Done**. Phase B **no REST change**. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
 
 Create tool: [01-create-tool-diagrams.md](./01-create-tool-diagrams.md)
 

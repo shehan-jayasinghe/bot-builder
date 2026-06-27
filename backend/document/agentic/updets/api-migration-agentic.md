@@ -9,6 +9,7 @@ Single reference for **every REST endpoint** affected by the move to an agentic 
 
 - [../00-overview.md](../00-overview.md)
 - [runtime-migration-agentic.md](./runtime-migration-agentic.md)
+- Phase B: [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md) · [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md)
 
 **Legend**
 
@@ -264,7 +265,8 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 3. ~~**Services** — sync catalog on attach/detach~~ **Done**
 4. ~~**Runtime** — `FinalPromptBuilder` at chat (no REST change)~~ **Done**
 5. **Optional** — expose catalog on `GET /agents/{id}`; optional `PATCH capability-catalog`
-6. **Phase C** — agentic RAG tool (no new REST)
+6. **Phase B** — agentic workflow routing (no REST) — [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md)
+7. **Phase C** — agentic RAG tool (no new REST)
 
 ---
 

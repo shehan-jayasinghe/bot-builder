@@ -1,6 +1,6 @@
 # Create Sub Agent — `POST /api/v1/agents/{agent_id}/sub-agents`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on create/PATCH; stored in `agent.capability_catalog.sub_agents`. PATCH: [04-update-sub-agent-diagrams.md](./04-update-sub-agent-diagrams.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` on create/PATCH → [04-update-sub-agent-diagrams.md](./04-update-sub-agent-diagrams.md). Phase B **no REST change**.
 
 Creates a **Sub Agent** under a parent agent. Used by the **Add Sub Agent** modal on the agent detail **Sub Agents** tab.
 

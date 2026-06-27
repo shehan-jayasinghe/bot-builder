@@ -1,6 +1,6 @@
 # Create Knowledge Base — `POST /api/v1/knowledgebases`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on create/PATCH when `agent_id` is set; stored in `agent.capability_catalog.knowledge_bases`. PATCH attach/detach: [04-update-knowledgebase-agent-diagrams.md](./04-update-knowledgebase-agent-diagrams.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` when `agent_id` set; PATCH: [04-update-knowledgebase-agent-diagrams.md](./04-update-knowledgebase-agent-diagrams.md). Phase B **no REST change**.
 
 # Flow 1 — Auth
 

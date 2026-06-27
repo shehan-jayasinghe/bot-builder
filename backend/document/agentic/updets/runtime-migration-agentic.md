@@ -64,7 +64,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 | Phase | Runtime change |
 |-------|----------------|
 | **A** | Catalog model + `FinalPromptBuilder` + attach sync (see API doc) | **Done** |
-| **B** | Remove `ChatGraph._should_auto_start_workflow` — agentic workflow routing |
+| **B** | Remove `ChatGraph._should_auto_start_workflow` — agentic workflow routing | **Planned** — [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md) |
 | **C** | `search_knowledge` tool; remove always-on `RAGRetriever.retrieve()` |
 | **D** | Sticky sub-agent — do not reset to orchestrator every message |
 
