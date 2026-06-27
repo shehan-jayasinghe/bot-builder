@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from app.di.agents import get_agent_service
 from app.di.auth import get_current_user
 from app.di.knowledgebases import get_knowledgebase_service
+from app.di.preview import get_runtime_graph_service
 from app.di.sub_agents import get_sub_agent_service
 from app.di.tools import get_tool_service
 from app.domain.models.current_user import CurrentUser
@@ -16,6 +17,7 @@ from app.schemas.agent import (
     ListAgentsResponse,
 )
 from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
+from app.schemas.preview import RuntimeGraphResponse
 from app.schemas.sub_agent import (
     CreateSubAgentRequest,
     CreateSubAgentResponse,
@@ -35,6 +37,7 @@ from app.schemas.tool import (
 )
 from app.services.agent_service import AgentService
 from app.services.knowledgebase_service import KnowledgebaseService
+from app.services.runtime_graph_service import RuntimeGraphService
 from app.services.sub_agent_service import SubAgentService
 from app.services.tool_service import ToolService
 
@@ -176,6 +179,15 @@ async def update_sub_agent(
         sub_agent_id=sub_agent_id,
         request=body,
     )
+
+
+@router.get("/{agent_id}/runtime-graph", response_model=RuntimeGraphResponse)
+async def get_agent_runtime_graph(
+    agent_id: AgentIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RuntimeGraphService = Depends(get_runtime_graph_service),
+) -> RuntimeGraphResponse:
+    return await service.get_runtime_graph(current_user=current_user, agent_id=agent_id)
 
 
 @router.get("/{agent_id}", response_model=GetAgentResponse)

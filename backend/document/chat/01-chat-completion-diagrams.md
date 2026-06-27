@@ -20,6 +20,12 @@ Related config docs:
 - Phase 3 — [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md)
 - Phase 4 — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md)
 
+**Preview UI (admin builder — planned):**
+
+- [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md) — `GET .../runtime-graph`
+- [06-preview-chat-diagrams.md](./06-preview-chat-diagrams.md) — `POST .../preview/chat`
+- [07-preview-session-trace-diagrams.md](./07-preview-session-trace-diagrams.md) — `GET .../preview/sessions/{sender_id}/trace`
+
 ---
 
 # Implementation status
