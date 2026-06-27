@@ -10,7 +10,7 @@ Related:
 - Agent graph: [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md)
 - Chat events: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) — Trace events table
 
-**Status:** Planned — not implemented yet.
+**Status:** Implemented.
 
 ---
 
@@ -236,8 +236,9 @@ sequenceDiagram
 
 | What | Open file |
 |------|-----------|
-| Planned route | `app/api/v1/agents.py` *(new handler)* |
-| Planned schema | `app/schemas/preview.py` *(new)* |
+| Route | [agents.py](../../app/api/v1/agents.py) |
+| Schema | [preview.py](../../app/schemas/preview.py) |
+| Service | [preview_trace_service.py](../../app/services/preview_trace_service.py) |
+| DI | [preview.py](../../app/di/preview.py) |
 | Record events | [trace.py](../../app/domain/pipeline/observability/trace.py) |
 | Session store | [tracker.py](../../app/domain/models/tracker.py) · [tracker_service.py](../../app/services/tracker_service.py) |
-| LangSmith tokens | Bedrock callbacks *(parallel — not this API)* |

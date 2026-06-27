@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -44,3 +45,23 @@ class RuntimeGraphResponse(BaseModel):
     orchestrator: RuntimeGraphOrchestrator
     nodes: list[RuntimeGraphNode] = Field(default_factory=list)
     edges: list[RuntimeGraphEdge] = Field(default_factory=list)
+
+
+class PreviewTraceEvent(BaseModel):
+    type: str
+    at: str
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+class PreviewTraceTurn(BaseModel):
+    turn_id: str
+    started_at: str
+    events: list[PreviewTraceEvent] = Field(default_factory=list)
+    routing_decision: dict[str, Any] | None = None
+
+
+class PreviewTraceResponse(BaseModel):
+    agent_id: str
+    sender_id: str
+    source: str | None = None
+    turns: list[PreviewTraceTurn] = Field(default_factory=list)
