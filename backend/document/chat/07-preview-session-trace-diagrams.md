@@ -10,6 +10,8 @@ Related:
 - Agent graph: [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md)
 - Chat events: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) — Trace events table
 
+**Agentic migration:** **No** route or schema change. Optional later: `capability_catalog_built` trace event. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+
 **Status:** Implemented.
 
 ---

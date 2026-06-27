@@ -6,18 +6,21 @@ Main inference endpoint for the **web widget** and channels. End user sends a me
 
 Capabilities (no separate Skills layer): **orchestrator agent**, **sub-agents**, **tools**, **knowledge bases**, **workflows**.
 
+**Agentic migration (capability catalog):** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — this endpoint has **no REST/schema change**; runtime builds final prompt from `system_prompt` + guardrails + catalog + optional RAG.
+
 Related config docs:
 
-- Agent: [../agent/01-create-agent-diagrams.md](../agent/01-create-agent-diagrams.md)
+- Agent: [../agent/01-create-agent-diagrams.md](../agent/01-create-agent-diagrams.md) · [../agent/03-list-agents-diagrams.md](../agent/03-list-agents-diagrams.md)
 - Tools: [../tools/00-executor-catalog.md](../tools/00-executor-catalog.md) · runtime: [../tools/03-execute-tool-at-chat-diagrams.md](../tools/03-execute-tool-at-chat-diagrams.md)
 - Knowledge bases: [../knowledgebase/01-create-knowledgebase-diagrams.md](../knowledgebase/01-create-knowledgebase-diagrams.md)
-- Workflows: [../workflows/00-workflow-model.md](../workflows/00-workflow-model.md)
-- Sub-agents: [../sub-agents/00-sub-agent-model.md](../sub-agents/00-sub-agent-model.md)
+- Workflows: [../workflows/01-create-workflow-diagrams.md](../workflows/01-create-workflow-diagrams.md)
+- Sub-agents: [../sub-agents/01-create-sub-agent-diagrams.md](../sub-agents/01-create-sub-agent-diagrams.md)
 
-**Next-pass specs (not implemented yet):**
+**Next-pass specs:**
 
+- Agentic catalog + prompt layers — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md)
 - Phase 2 — [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md)
-- Phase 3 — [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md)
+- Phase 3 — [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) (agentic `search_knowledge` tool — Phase C in migration doc)
 - Phase 4 — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md)
 
 **Preview UI (admin builder — planned):**
@@ -34,13 +37,12 @@ Related config docs:
 |-------|--------|--------|-----------------|
 | **0** | 1–5, 12 | **Done** | Request validation, channel/agent resolve (friendly 200 fallback), tracker, RuntimeBundle batch hydrate, PII redaction, guardrails, orchestrator LLM, persist + response |
 | **1** | 6–7, 10 | **Done** | Orchestrator Bedrock turn with tool calling via `ExecutorRegistry` + `langgraph_tools` |
-| **2** | 8 | **Next pass** | Sub-agent delegation at runtime — see [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
-| **3** | 9 | **Next pass** | Qdrant / keyword RAG query at chat — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
-| **4** | 11 | **Next pass** | Workflow runtime + `input` node slot capture — see [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
+| **2** | 8 | **Done** | Sub-agent delegation at runtime — see [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
+| **3** | 9 | **Done** (always-on RAG) · **Next** (agentic RAG tool) | Qdrant / keyword RAG — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
+| **4** | 11 | **Done** | Workflow runtime — see [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
+| **A** | — | **Next** | Capability catalog + `FinalPromptBuilder` — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
 
-**Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `OrchestratorRunner` → `TrackerService.persist`.
-
-Flows **8**, **9**, and **11** are documented below for design reference; they are **not** wired in the live graph yet.
+**Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `ChatGraph` → orchestrator / workflow → `TrackerService.persist`.
 
 ---
 
@@ -58,13 +60,14 @@ flowchart TB
     F2 --> F3[Flow 3 — tracker]
     F3 --> F4[Flow 4 — RuntimeBundle]
     F4 --> F5[Flow 5 — sanitize + guardrails]
-    F5 --> F7[Flow 7 — orchestrator + tools]
+    F5 --> F6[Flow 6 — ChatGraph routing]
+    F6 --> F7[Flow 7 — orchestrator + tools]
+    F6 --> F8[Flow 8 — sub-agent]
+    F6 --> F9[Flow 9 — RAG]
+    F6 --> F11[Flow 11 — workflow]
     F7 --> F12[Flow 12 — persist + response]
-
-    F5 -.->|next pass| F6[Flow 6 — full LangGraph routing]
-    F6 -.-> F8[Flow 8 — sub-agent]
-    F6 -.-> F9[Flow 9 — RAG]
-    F6 -.-> F11[Flow 11 — workflow]
+    F8 --> F12
+    F11 --> F12
 ```
 
 ---
@@ -289,7 +292,9 @@ Sub-agent function example:
 
 # Flow 8 — Sub-agent delegation
 
-**Status: next pass** — full spec: [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md).
+**Status: done** — delegate tools via `SubAgentRunner`. Spec: [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md).
+
+**Agentic next (runtime):** sticky handover — [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md).
 
 ```mermaid
 flowchart TB
@@ -308,7 +313,9 @@ MVP: reset to orchestrator on **next** user message unless workflow active.
 
 # Flow 9 — RAG retrieval (knowledge bases)
 
-**Status: next pass** — `RAGRetriever` returns empty string today. Full spec: [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md).
+**Status: done** (always-on) — `RAGRetriever` before orchestrator; skipped during active workflow. Spec: [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md).
+
+**Agentic Phase C (runtime):** replace always-on RAG with `search_knowledge` LLM tool — [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md).
 
 ```mermaid
 flowchart TB
@@ -322,7 +329,7 @@ flowchart TB
     T --> CTX
 ```
 
-Ingest: [LlamaIndexPipeline](../../app/infrastructure/ai/indexers/llama_index_pipeline.py). Query: [RAGRetriever](../../app/domain/pipeline/rag/retriever.py) *(stub — Phase 3)*.
+Ingest: [LlamaIndexPipeline](../../app/infrastructure/ai/indexers/llama_index_pipeline.py). Query: [RAGRetriever](../../app/domain/pipeline/rag/retriever.py).
 
 Scope: orchestrator KBs or sub-agent KBs depending on `active_agent_kind`.
 
@@ -348,7 +355,9 @@ Full detail: [../tools/03-execute-tool-at-chat-diagrams.md](../tools/03-execute-
 
 # Flow 11 — Workflow runtime + slot capture
 
-**Status: next pass** — full spec: [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md).
+**Status: done** — `workflow_runner` + `ChatGraph` routing. Spec: [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md).
+
+**Agentic next (runtime):** remove `default_first_message` rule — LLM picks workflow from catalog. See [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md).
 
 Only when `tracker.active_flow_state` is set.
 
@@ -462,6 +471,18 @@ Content-Type: application/json
 
 ---
 
+# Agentic migration — API impact on this endpoint
+
+| Item | Change |
+|------|--------|
+| `POST /api/v1/chat/webhook/{webhook_id}` route | **No** |
+| `ChatRequest` / `ChatResponse` schemas | **No** |
+| Runtime | **Yes** — `FinalPromptBuilder` assembles `[1] system_prompt` + `[2] guardrails` + `[3] capability_catalog` + `[4] rag_context` (Phase C only) |
+
+Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md)
+
+---
+
 # Implementation phases
 
 | Phase | Flows | Status | Doc |
@@ -471,6 +492,7 @@ Content-Type: application/json
 | 2 | 8 | Done | [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
 | 3 | 9 | Done | [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
 | 4 | 11 | Done | [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
+| A | catalog | Next | [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
 
 ---
 

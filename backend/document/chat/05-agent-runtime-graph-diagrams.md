@@ -6,6 +6,8 @@ One batch load: orchestrator + attached tools, knowledge bases, workflows, and s
 
 **JWT auth only** — not used by the public webhook.
 
+**Agentic migration:** **No** route or schema change. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+
 Related:
 
 - Chat runtime: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) Flow 4

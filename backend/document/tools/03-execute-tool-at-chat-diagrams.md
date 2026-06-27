@@ -6,6 +6,8 @@ This is **not** a REST endpoint for org users — it runs inside `ChatCompletion
 
 Executor catalog: [00-executor-catalog.md](./00-executor-catalog.md)
 
+**Agentic migration (REST):** Tool attach APIs gain optional `routing_hint`. Chat webhook unchanged. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) and [01-create-tool-diagrams.md](./01-create-tool-diagrams.md).
+
 ---
 
 # High-level flow

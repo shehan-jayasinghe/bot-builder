@@ -4,6 +4,8 @@ Organization-scoped **connections** to external systems (customer MongoDB, REST 
 
 `organization_id` comes from JWT auth (`CurrentUser`), not from the request body.
 
+**Agentic migration:** **No** API change for connector endpoints. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+
 **Not in scope:** platform infrastructure connectors (Bedrock, S3, Qdrant, Neo4j for KB ingest) — those stay in `.env` / platform config.
 
 ---
@@ -21,6 +23,8 @@ Organization-scoped **connections** to external systems (customer MongoDB, REST 
 | `vector` | Vector DB (Qdrant, Pinecone, …) | phase 2 |
 
 Full config schemas: [00-connector-types-catalog.md](./00-connector-types-catalog.md)
+
+**Other connector routes** (`GET`, `PATCH`, `DELETE` `/api/v1/connectors/{id}`): **no agentic migration.** See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
 
 ---
 

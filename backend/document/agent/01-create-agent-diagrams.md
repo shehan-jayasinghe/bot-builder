@@ -178,6 +178,7 @@ flowchart TB
 | Save agent | Insert into `agents` collection | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Response schema | `CreateAgentResponse` (`201`) | [agent.py](../../app/schemas/agent.py) |
 | Empty tools / workflows | `tool_ids: []`, `workflow_ids: []` at create | [agent_service.py](../../app/services/agent_service.py) |
+| Capability catalog | empty `capability_catalog` on Mongo document (not in request body) | [agent_service.py](../../app/services/agent_service.py) · migration: [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
 
 ## Request body (frontend)
 
@@ -317,6 +318,8 @@ flowchart TB
 |------|--------|-----------|
 | Tools | empty `tool_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
 | Workflows | empty `workflow_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
+| Capability catalog | empty sections on create (service/Mongo only) | [agent_service.py](../../app/services/agent_service.py) |
+| `routing_hint` on create | not on `CreateAgentRequest` — set when attaching tools/KBs/workflows/sub-agents | [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
 | Webhook / publish | `status: draft` only | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Website crawl / RAG | not started | — |
 | Bedrock invoke at create time | prompt built locally only | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |

@@ -12,6 +12,8 @@ Related docs:
 - Create tool: [01-create-tool-diagrams.md](./01-create-tool-diagrams.md)
 - Runtime: [03-execute-tool-at-chat-diagrams.md](./03-execute-tool-at-chat-diagrams.md)
 
+**Agentic migration:** **No** API change for `GET /api/v1/executors`. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+
 ---
 
 # Architecture

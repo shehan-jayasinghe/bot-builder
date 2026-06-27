@@ -1,14 +1,16 @@
-# Workflow Runtime at Chat — Phase 4 (next pass)
+# Workflow Runtime at Chat — Phase 4
 
 **Not a new REST endpoint.** Runs inside `POST /api/v1/chat/webhook/{webhook_id}` when `tracker.active_flow_state` is set.
 
 Parent doc: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) · Flow 11
 
-Workflow model: [../workflows/00-workflow-model.md](../workflows/00-workflow-model.md)
+Workflow REST: [../workflows/01-create-workflow-diagrams.md](../workflows/01-create-workflow-diagrams.md) · model: [../workflows/00-workflow-model.md](../workflows/00-workflow-model.md)
 
 **Prerequisite:** Phase 0 + 1 done. Workflows attached to agent with `status: published`.
 
-**Status:** Next pass — `active_flow_state` exists on tracker; no workflow runner yet.
+**Status:** Implemented — `workflow_runner` + `ChatGraph` routing.
+
+**Agentic migration (REST):** `POST` / `PATCH` `/api/v1/workflows` gain optional `routing_hint` → `agent.capability_catalog.workflows`. Chat webhook unchanged. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
 
 ---
 

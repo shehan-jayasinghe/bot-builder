@@ -1,5 +1,7 @@
 # Create Tool — `POST /api/v1/agents/{agent_id}/tools`
 
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` (max 500) on create/PATCH; stored in `agent.capability_catalog.tools`, not `system_prompt`. PATCH attach/detach: [08-update-tool-agent-diagrams.md](./08-update-tool-agent-diagrams.md).
+
 Organization creates a **Tool** — JSON config that tells the platform which **executor** to run, which **connector** to use, and operation-specific **config**.
 
 `organization_id` comes from JWT auth (`CurrentUser`), not the request body.

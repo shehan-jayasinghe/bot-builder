@@ -4,6 +4,8 @@ Read-only catalog for the UI: which org connector types exist, labels, and requi
 
 No secrets. No org scoping — same list for all authenticated users. Optional: allow unauthenticated read for public docs; MVP uses same auth as other routes.
 
+**Agentic migration:** **No** API change. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+
 **Not included:** platform connectors (Bedrock, S3, app Mongo, Qdrant for KB) — those are not org connections.
 
 ---

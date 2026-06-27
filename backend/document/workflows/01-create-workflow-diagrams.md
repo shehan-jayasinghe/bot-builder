@@ -1,5 +1,7 @@
 # Create Workflow — `POST /api/v1/workflows`
 
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on create/PATCH when `agent_id` is set; stored in `agent.capability_catalog.workflows`. PATCH attach/detach: [04-update-workflow-diagrams.md](./04-update-workflow-diagrams.md).
+
 Organization creates a **Workflow** — named canvas with `nodes` and `edges` stored as JSON.
 
 `organization_id` comes from JWT auth (`CurrentUser`), not the request body.
