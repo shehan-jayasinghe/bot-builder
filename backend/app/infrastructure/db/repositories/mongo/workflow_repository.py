@@ -24,6 +24,32 @@ class WorkflowRepository:
     async def count_by_organization(self, *, organization_id: str) -> int:
         return await self._collection.count_documents({"organization_id": organization_id})
 
+    async def find_by_ids_for_organization(
+        self,
+        *,
+        organization_id: str,
+        workflow_ids: list[str],
+        status: str | None = None,
+        agent_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if not workflow_ids:
+            return []
+        object_ids = [
+            oid for workflow_id in workflow_ids if (oid := self._to_object_id(workflow_id))
+        ]
+        if not object_ids:
+            return []
+        query: dict[str, Any] = {
+            "_id": {"$in": object_ids},
+            "organization_id": organization_id,
+        }
+        if status is not None:
+            query["status"] = status
+        if agent_id is not None:
+            query["agent_id"] = agent_id
+        cursor = self._collection.find(query)
+        return await cursor.to_list(length=None)
+
     async def find_all_by_organization(
         self,
         *,

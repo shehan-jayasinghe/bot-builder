@@ -31,6 +31,31 @@ class BedrockLLM:
 
         return self._client
 
+    def get_client(self):
+        return self._get_client()
+
+    async def chat_from_history(
+        self,
+        *,
+        system_prompt: str,
+        history: list[dict[str, Any]],
+    ) -> str:
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+        messages: list[SystemMessage | HumanMessage | AIMessage] = [
+            SystemMessage(content=system_prompt),
+        ]
+        for turn in history:
+            role = turn.get("role")
+            content = turn.get("content", "")
+            if role == "user":
+                messages.append(HumanMessage(content=str(content)))
+            elif role == "assistant":
+                messages.append(AIMessage(content=str(content)))
+
+        response = await self._get_client().ainvoke(messages)
+        return str(response.content)
+
     async def chat(
         self,
         *,

@@ -63,6 +63,31 @@ class SubAgentRepository:
                 query["_id"] = {"$ne": exclude_id}
         return await self._collection.find_one(query)
 
+    async def find_by_ids_for_agent(
+        self,
+        *,
+        sub_agent_ids: list[str],
+        agent_id: str,
+        organization_id: str,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if not sub_agent_ids:
+            return []
+        object_ids = [
+            oid for sub_agent_id in sub_agent_ids if (oid := self._to_object_id(sub_agent_id))
+        ]
+        if not object_ids:
+            return []
+        query: dict[str, Any] = {
+            "_id": {"$in": object_ids},
+            "agent_id": agent_id,
+            "organization_id": organization_id,
+        }
+        if status is not None:
+            query["status"] = status
+        cursor = self._collection.find(query)
+        return await cursor.to_list(length=None)
+
     async def find_all_by_agent(
         self,
         *,

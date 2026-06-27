@@ -12,11 +12,17 @@ class Tracker:
         *,
         events: list[dict[str, Any]] | None = None,
         active_flow_state: dict[str, Any] | None = None,
+        active_agent_id: str | None = None,
+        active_agent_kind: str | None = None,
+        last_routing_decision: dict[str, Any] | None = None,
     ) -> None:
         self._sender_id = sender_id
         self._assistant_id = assistant_id
         self._events: list[dict[str, Any]] = list(events or [])
         self._active_flow_state = active_flow_state
+        self._active_agent_id = active_agent_id or assistant_id
+        self._active_agent_kind = active_agent_kind or "orchestrator"
+        self._last_routing_decision = last_routing_decision
 
     @property
     def sender_id(self) -> str:
@@ -30,6 +36,18 @@ class Tracker:
     def active_flow_state(self) -> dict[str, Any] | None:
         return self._active_flow_state
 
+    @property
+    def active_agent_id(self) -> str:
+        return self._active_agent_id
+
+    @property
+    def active_agent_kind(self) -> str:
+        return self._active_agent_kind
+
+    @property
+    def last_routing_decision(self) -> dict[str, Any] | None:
+        return self._last_routing_decision
+
     @classmethod
     def from_payload(cls, data: dict[str, Any]) -> "Tracker":
         return cls(
@@ -37,6 +55,9 @@ class Tracker:
             assistant_id=data["assistant_id"],
             events=data.get("events", []),
             active_flow_state=data.get("active_flow_state"),
+            active_agent_id=data.get("active_agent_id"),
+            active_agent_kind=data.get("active_agent_kind"),
+            last_routing_decision=data.get("last_routing_decision"),
         )
 
     @classmethod
@@ -46,6 +67,9 @@ class Tracker:
             assistant_id=doc["assistant_id"],
             events=doc.get("events", []),
             active_flow_state=doc.get("active_flow_state"),
+            active_agent_id=doc.get("active_agent_id"),
+            active_agent_kind=doc.get("active_agent_kind"),
+            last_routing_decision=doc.get("last_routing_decision"),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -54,6 +78,9 @@ class Tracker:
             "assistant_id": self._assistant_id,
             "events": self._events,
             "active_flow_state": self._active_flow_state,
+            "active_agent_id": self._active_agent_id,
+            "active_agent_kind": self._active_agent_kind,
+            "last_routing_decision": self._last_routing_decision,
         }
 
     def get_history(self) -> list[dict[str, Any]]:
@@ -61,6 +88,16 @@ class Tracker:
 
     def set_active_flow_state(self, state: dict[str, Any] | None) -> None:
         self._active_flow_state = state
+
+    def reset_to_orchestrator(self) -> None:
+        self._active_agent_id = self._assistant_id
+        self._active_agent_kind = "orchestrator"
+        self._last_routing_decision = None
+
+    def set_routing_decision(self, *, agent_id: str, kind: str, decision: dict[str, Any] | None) -> None:
+        self._active_agent_id = agent_id
+        self._active_agent_kind = kind
+        self._last_routing_decision = decision
 
     def append_user_message(self, *, message: str, metadata: dict[str, Any]) -> None:
         self._events.append(

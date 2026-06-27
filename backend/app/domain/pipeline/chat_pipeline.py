@@ -1,55 +1,68 @@
-from app.domain.engine.dialogue import DialogueEngine
+from app.domain.graph.orchestrator import OrchestratorRunner
+from app.domain.models.runtime_bundle import RuntimeBundle
+from app.domain.models.tracker import Tracker
 from app.domain.pipeline.guardrails.runner import GuardrailRunner
 from app.domain.pipeline.observability.trace import TraceCollector
 from app.domain.pipeline.rag.retriever import RAGRetriever
-from app.domain.pipeline.skills.router import SkillRouter
+from app.domain.pipeline.sanitization.pii_redactor import redact_pii
 from app.schemas.chat import ChatMessage
 
 
 class ChatPipeline:
-    """Runs pre/post steps around DialogueEngine for a single chat turn."""
+    """Pre/post steps around orchestrator inference for a single chat turn."""
 
     def __init__(
         self,
         guardrails: GuardrailRunner | None = None,
         rag: RAGRetriever | None = None,
-        skills: SkillRouter | None = None,
+        orchestrator: OrchestratorRunner | None = None,
         trace: TraceCollector | None = None,
     ) -> None:
         self._guardrails = guardrails or GuardrailRunner()
         self._rag = rag or RAGRetriever()
-        self._skills = skills or SkillRouter()
+        self._orchestrator = orchestrator or OrchestratorRunner()
         self._trace = trace or TraceCollector()
 
-    async def run(self, engine: DialogueEngine) -> list[ChatMessage]:
+    async def run_turn(
+        self,
+        *,
+        bundle: RuntimeBundle,
+        tracker: Tracker,
+        user_message: str,
+        connectors_by_id: dict,
+    ) -> list[str]:
+        sanitized_message = redact_pii(user_message)
+        guardrail_result = await self._guardrails.check(
+            user_message=sanitized_message,
+            guardrails=bundle.orchestrator.guardrails,
+        )
         await self._trace.record(
-            "input_message",
-            {"sender_id": engine.sender_id, "message": engine.message},
+            "guardrail_complete" if guardrail_result.allowed else "guardrail_blocked",
+            {},
         )
+        if not guardrail_result.allowed:
+            return [guardrail_result.refusal_message or "I can't help with that request."]
 
-        await self._guardrails.check(
-            user_message=engine.message,
-            system_prompt=engine.assistant.system_prompt,
-        )
-        await self._trace.record("guardrail_complete", {})
-
-        # TODO: load knowledge_base_ids from assistant config
-        rag_context = await self._rag.retrieve(
-            query=engine.message,
-            knowledge_base_ids=[],
-        )
+        kb_ids = [kb.id for kb in bundle.orchestrator.knowledge_bases]
+        rag_context = await self._rag.retrieve(query=sanitized_message, knowledge_base_ids=kb_ids)
         await self._trace.record("rag_complete", {"context_length": len(rag_context)})
 
-        # TODO: load skills from assistant config
-        skill_result = await self._skills.route(
-            user_message=engine.message,
-            skills=[],
+        guardrail_instructions = self._guardrails.build_instructions(bundle.orchestrator.guardrails)
+        if guardrail_instructions:
+            bundle.orchestrator.system_prompt = (
+                bundle.orchestrator.system_prompt + "\n\n" + guardrail_instructions
+            )
+
+        replies = await self._orchestrator.run_turn(
+            bundle=bundle,
+            tracker=tracker,
+            user_message=sanitized_message,
+            rag_context=rag_context,
+            connectors_by_id=connectors_by_id,
         )
-        if skill_result is not None:
-            await self._trace.record("tool_start", {"skill": skill_result})
+        await self._trace.record("output_message", {"message_count": len(replies)})
+        return replies
 
-        # TODO: pass rag_context and skill_result into FlowManager
-        messages = await engine.run()
-
-        await self._trace.record("output_message", {"message_count": len(messages)})
-        return messages
+    @staticmethod
+    def to_chat_messages(*, sender_id: str, replies: list[str]) -> list[ChatMessage]:
+        return [ChatMessage(recipient_id=sender_id, text=reply) for reply in replies]

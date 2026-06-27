@@ -44,6 +44,24 @@ class ConnectorRepository:
             {"name": name, "organization_id": organization_id},
         )
 
+    async def find_by_ids_for_organization(
+        self,
+        *,
+        organization_id: str,
+        connector_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        if not connector_ids:
+            return []
+        object_ids = [
+            oid for connector_id in connector_ids if (oid := self._to_object_id(connector_id))
+        ]
+        if not object_ids:
+            return []
+        cursor = self._collection.find(
+            {"_id": {"$in": object_ids}, "organization_id": organization_id},
+        )
+        return await cursor.to_list(length=None)
+
     async def find_all_by_organization(
         self,
         *,

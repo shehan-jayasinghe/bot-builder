@@ -88,6 +88,30 @@ class ToolRepository:
         cursor = self._collection.find(query).sort("created_at", -1)
         return await cursor.to_list(length=None)
 
+    async def find_by_ids_for_organization(
+        self,
+        *,
+        organization_id: str,
+        tool_ids: list[str],
+        agent_id: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if not tool_ids:
+            return []
+        object_ids = [oid for tool_id in tool_ids if (oid := self._to_object_id(tool_id))]
+        if not object_ids:
+            return []
+        query: dict[str, Any] = {
+            "_id": {"$in": object_ids},
+            "organization_id": organization_id,
+        }
+        if agent_id is not None:
+            query["agent_id"] = agent_id
+        if status is not None:
+            query["status"] = status
+        cursor = self._collection.find(query)
+        return await cursor.to_list(length=None)
+
     async def find_all_by_organization(
         self,
         *,
