@@ -10,7 +10,7 @@ Related:
 - Agent graph: [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md)
 - Chat events: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) — Trace events table
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. Phase C **planned** — per-turn `rag_complete` removed; RAG stats on `tool_complete` for `search_knowledge`. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
 **Status:** Implemented.
 
@@ -148,14 +148,14 @@ Authorization: Bearer <clerk_jwt>
 | `guardrail_complete` | Policy check passed | **LLM Request** → `guardrail_complete` |
 | `guardrail_blocked` | Policy refusal | **LLM Request** → blocked |
 | `bundle_loaded` | RuntimeBundle ready | *(optional — dev detail)* |
-| `rag_complete` | KB retrieval done | **LLM Request** → `rag_complete` |
+| `rag_complete` | KB retrieval done (pre-turn only — **removed in Phase C**) | **LLM Request** → `rag_complete` |
 | `tool_start` | Tool invoked | **Tool Start** → tool name |
 | `tool_complete` | Tool finished | *(nested under tool)* |
 | `tool_error` | Tool failed | **Tool Start** → error state |
 | `routing_decision` | Agent/workflow switch | *(feeds graph highlight)* |
 | `output_message` | Assistant reply | **Output Message** |
 
-Nested **LLM Request** rows in the UI = group `guardrail_complete` + `rag_complete` under one turn step (same timestamp bucket).
+Nested **LLM Request** rows in the UI = group `guardrail_complete` + `rag_complete` under one turn step (same timestamp bucket). **Phase C:** per-turn `rag_complete` goes away; RAG stats move to `tool_complete` for `search_knowledge`.
 
 ---
 

@@ -6,7 +6,7 @@ This is **not** a REST endpoint for org users — it runs inside `ChatCompletion
 
 Executor catalog: [00-executor-catalog.md](./00-executor-catalog.md)
 
-**Agentic migration (REST):** Phase A **Done** — `routing_hint` on tools. Phase B **no REST change** (workflows only). See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration (REST):** Phase A **Done** — `routing_hint` on tools. Phase B **no REST change** (workflows only). Phase C **no REST change** (RAG at chat). See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
 ---
 

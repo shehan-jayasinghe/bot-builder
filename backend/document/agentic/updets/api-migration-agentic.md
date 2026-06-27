@@ -10,6 +10,7 @@ Single reference for **every REST endpoint** affected by the move to an agentic 
 - [../00-overview.md](../00-overview.md)
 - [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 - Phase B: [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md) · [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md)
+- Phase C: [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md) · [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md)
 
 **Legend**
 
@@ -196,6 +197,8 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 
 `search_knowledge` is an **LLM tool** inside `OrchestratorRunner`, not a new HTTP endpoint. Today layer **[4]** uses always-on `RAGRetriever` before orchestrator; Phase C replaces that with tool-driven retrieval only.
 
+**Spec:** [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md) · [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md)
+
 ---
 
 ## Post–Phase A fixes (implemented)
@@ -266,7 +269,7 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 4. ~~**Runtime** — `FinalPromptBuilder` at chat (no REST change)~~ **Done**
 5. **Optional** — expose catalog on `GET /agents/{id}`; optional `PATCH capability-catalog`
 6. ~~**Phase B** — agentic workflow routing (no REST)~~ **Done** — [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md)
-7. **Phase C** — agentic RAG tool (no new REST)
+7. **Phase C** — agentic RAG tool (no new REST) — [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md)
 
 ---
 

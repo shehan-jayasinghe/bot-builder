@@ -178,7 +178,7 @@ Agents that depended on **silent auto-start** of the first attached workflow wil
 
 | Phase | Next |
 |-------|------|
-| **C** | Agentic RAG — `search_knowledge` tool |
+| **C** | Agentic RAG — `search_knowledge` tool | [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
 | **D** | Sticky sub-agent handover |
 
 Master index: [../00-overview.md](../00-overview.md)

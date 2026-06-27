@@ -6,7 +6,7 @@ Parent: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) · Fl
 
 Sub-agent REST (attach + `routing_hint`): [../sub-agents/01-create-sub-agent-diagrams.md](../sub-agents/01-create-sub-agent-diagrams.md)
 
-**Agentic migration (chat API):** Phase A **Done**. Phase B **no change** (workflows only). Phase D — sticky sub-agent. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration (chat API):** Phase A **Done**. Phase B **no change** (workflows only). Phase C **planned** — remove sub-agent auto-RAG prefetch; `search_knowledge` on `SubAgentRunner` turn. Phase D — sticky sub-agent. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
 **Status:** Implemented — `sub_agent_delegate.py` + orchestrator delegate tools.
 

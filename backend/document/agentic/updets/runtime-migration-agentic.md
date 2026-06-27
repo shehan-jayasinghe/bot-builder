@@ -8,7 +8,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 
 ## Implementation status
 
-**Phase A — implemented** in code (catalog sync + `FinalPromptBuilder` at chat). Phases B–D remain planned.
+**Phase A — implemented** in code (catalog sync + `FinalPromptBuilder` at chat). Phase B **Done**. Phases C–D **planned**.
 
 ## New files
 
@@ -17,7 +17,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 | `app/domain/models/capability_catalog.py` | `CapabilityCatalog`, `CapabilityEntry` models |
 | `app/domain/pipeline/prompt/capability_catalog_builder.py` | Build layer [3] text from bundle + catalog |
 | `app/domain/pipeline/prompt/final_prompt_builder.py` | Assemble layers [1]–[4] |
-| `app/domain/graph/search_knowledge_delegate.py` | **Phase C — not created** — LLM `search_knowledge` tool |
+| `app/domain/graph/search_knowledge_delegate.py` | **Phase C — Planned** — LLM `search_knowledge` tool — [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
 
 ---
 
@@ -25,10 +25,10 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 
 | File | Change |
 |------|--------|
-| `app/services/chat_completion_service.py` | Use `FinalPromptBuilder`; stop appending guardrails to `bundle.orchestrator.system_prompt`; Phase C: skip always-on RAG |
+| `app/services/chat_completion_service.py` | Use `FinalPromptBuilder`; Phase C: remove always-on RAG — [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
 | `app/services/runtime_bundle_loader.py` | Load `capability_catalog` from `agent_doc` into `RuntimeBundle` |
 | `app/domain/models/runtime_bundle.py` | Add `capability_catalog` field; stop embedding RAG in `build_system_prompt` when using `FinalPromptBuilder` |
-| `app/domain/graph/orchestrator.py` | Accept `final_prompt` string; Phase C: register `search_knowledge` tool |
+| `app/domain/graph/orchestrator.py` | Accept `final_prompt` string; Phase C: register `search_knowledge` tool — [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
 | `app/domain/graph/chat_graph.py` | **Done (Phase B):** removed `default_first_message` auto-start — LLM picks workflow from catalog |
 | `app/domain/graph/sub_agent_delegate.py` | Use `FinalPromptBuilder` for sub-agent turns; Phase D: sticky handover |
 | `app/domain/models/tracker.py` | Phase D: persist active sub-agent across turns |
@@ -65,7 +65,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 |-------|----------------|
 | **A** | Catalog model + `FinalPromptBuilder` + attach sync (see API doc) | **Done** |
 | **B** | Remove `ChatGraph._should_auto_start_workflow` — agentic workflow routing | **Done** — [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md) |
-| **C** | `search_knowledge` tool; remove always-on `RAGRetriever.retrieve()` |
+| **C** | `search_knowledge` tool; remove always-on `RAGRetriever.retrieve()` | **Planned** — [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
 | **D** | Sticky sub-agent — do not reset to orchestrator every message |
 
 ---

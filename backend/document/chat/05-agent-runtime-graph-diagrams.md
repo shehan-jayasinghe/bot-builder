@@ -6,7 +6,7 @@ One batch load: orchestrator + attached tools, knowledge bases, workflows, and s
 
 **JWT auth only** — not used by the public webhook.
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — runtime graph unchanged; chat routing no longer uses `default_first_message` workflow auto-start. See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — runtime graph unchanged; chat routing no longer uses `default_first_message` workflow auto-start. Phase C **planned** — chat RAG becomes `search_knowledge` tool (no REST change). See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
 Related:
 

@@ -19,7 +19,7 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 |-------|----------------|--------|
 | **A** | Catalog + `FinalPromptBuilder` + attach sync | **Done** |
 | **B** | Remove auto-start workflow — LLM picks from catalog | **Done** — [runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) |
-| **C** | `search_knowledge` tool; remove always-on RAG | Planned |
+| **C** | `search_knowledge` tool; remove always-on RAG | **Planned** — [runtime-migration-agentic-phase-c.md](./updets/runtime-migration-agentic-phase-c.md) |
 | **D** | Sticky sub-agent | Planned |
 
 ## Docs
@@ -30,6 +30,8 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | [updets/runtime-migration-agentic.md](./updets/runtime-migration-agentic.md) | **Runtime** — Phase A `FinalPromptBuilder` (Done) |
 | [updets/api-migration-agentic-phase-b.md](./updets/api-migration-agentic-phase-b.md) | **Phase B** — agentic workflow routing (Done) |
 | [updets/runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) | **Phase B runtime** — remove auto-start workflow |
+| [updets/api-migration-agentic-phase-c.md](./updets/api-migration-agentic-phase-c.md) | **Phase C** — agentic RAG (`search_knowledge` tool) (planned) |
+| [updets/runtime-migration-agentic-phase-c.md](./updets/runtime-migration-agentic-phase-c.md) | **Phase C runtime** — remove always-on RAG |
 
 ## API docs by resource
 

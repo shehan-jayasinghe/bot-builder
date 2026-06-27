@@ -1,6 +1,6 @@
 # Update Knowledge Base — attach / detach / move — `PATCH /api/v1/knowledgebases/{knowledgebase_id}`
 
-**Agentic migration:** Phase A **Done**. Phase B **no REST change**. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration:** Phase A **Done**. Phase B **no REST change**. Phase C **planned** — `routing_hint` guides LLM `search_knowledge` at chat (no REST change). See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
 Create KB: [01-create-knowledgebase-diagrams.md](./01-create-knowledgebase-diagrams.md)
 

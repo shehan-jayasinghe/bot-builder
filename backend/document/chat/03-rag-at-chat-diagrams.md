@@ -6,9 +6,9 @@ Parent: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) · Fl
 
 KB REST (attach + `routing_hint`): [../knowledgebase/01-create-knowledgebase-diagrams.md](../knowledgebase/01-create-knowledgebase-diagrams.md)
 
-**Agentic migration (chat API):** **No** route or schema change. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration (chat API):** **No** route or schema change. Phase A **Done**. Phase B **Done** (workflows). Phase C **planned** — agentic RAG at chat. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
-**Status:** Implemented — always-on RAG via `RAGRetriever` before orchestrator (skipped during active workflow).
+**Status:** Implemented — always-on RAG via `RAGRetriever` before orchestrator (skipped during active workflow). **Phase C** replaces with `search_knowledge` LLM tool.
 
 **Phase B side effect (Done):** RAG **runs on first message** when agent has workflows but no `active_flow_state`. See [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
@@ -37,13 +37,13 @@ Scope: orchestrator KBs; sub-agent path can run scoped RAG on delegate.
 
 ---
 
-## Agentic migration — Phase C (target)
+## Agentic migration — Phase C (planned)
 
 | Today | Target |
 |-------|--------|
 | Auto `RAGRetriever.retrieve()` every orchestrator turn | LLM calls `search_knowledge` tool when catalog hint matches |
-| Layer [4] injected before LLM | Layer [4] only after tool runs |
+| Layer [4] injected before LLM | Layer [4] empty at turn start; chunks via `search_knowledge` `ToolMessage` (not re-injected into system prompt) |
 
 `search_knowledge` is an **LLM tool**, not a new REST API.
 
-Runtime spec: [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md)
+**Spec:** [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md)

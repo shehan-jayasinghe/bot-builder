@@ -20,9 +20,10 @@ Related config docs:
 
 - Agentic catalog + prompt layers — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md)
 - Phase 2 — [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md)
-- Phase 3 — [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) (agentic `search_knowledge` tool — Phase C in migration doc)
+- Phase 3 — [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) (always-on today; agentic `search_knowledge` — Phase C)
 - Phase 4 — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md)
 - Phase B — [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) (agentic workflow routing — **Done**)
+- Phase C — [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) (agentic RAG — **planned**)
 
 **Preview UI (admin builder — planned):**
 
@@ -39,10 +40,11 @@ Related config docs:
 | **0** | 1–5, 12 | **Done** | Request validation, channel/agent resolve (friendly 200 fallback), tracker, RuntimeBundle batch hydrate, PII redaction, guardrails, orchestrator LLM, persist + response |
 | **1** | 6–7, 10 | **Done** | Orchestrator Bedrock turn with tool calling via `ExecutorRegistry` + `langgraph_tools` |
 | **2** | 8 | **Done** | Sub-agent delegation at runtime — see [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
-| **3** | 9 | **Done** (always-on RAG) · **Next** (agentic RAG tool) | Qdrant / keyword RAG — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
+| **3** | 9 | **Done** (always-on RAG) · **C next** (agentic `search_knowledge` tool) | Qdrant / keyword RAG — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
 | **4** | 11 | **Done** | Workflow runtime — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) · Phase B (LLM routing): [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 | **A** | — | **Done** | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
 | **B** | 6, 11 | **Done** | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
+| **C** | 9 | **Planned** | [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
 
 **Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `ChatGraph` → orchestrator / workflow → `TrackerService.persist`.
 
@@ -318,7 +320,7 @@ MVP: reset to orchestrator on **next** user message unless workflow active.
 
 **Status: done** (always-on) — `RAGRetriever` before orchestrator; skipped during active workflow. Spec: [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md).
 
-**Agentic Phase C (runtime):** replace always-on RAG with `search_knowledge` LLM tool — [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md).
+**Agentic Phase C (runtime, planned):** replace always-on RAG with `search_knowledge` LLM tool. Spec: [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md).
 
 ```mermaid
 flowchart TB
@@ -497,6 +499,7 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | 4 | 11 | Done | [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
 | A | catalog | Done | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
 | B | workflow routing | Done | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
+| C | agentic RAG | Planned | [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
 
 ---
 
@@ -521,5 +524,6 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | Agent create prompt | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) — base layer only | Done |
 | Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) · [registry.py](../../app/domain/executors/registry.py) | Done |
 | RAG query | [retriever.py](../../app/domain/pipeline/rag/retriever.py) | Done |
+| Search knowledge tool | [search_knowledge_delegate.py](../../app/domain/graph/search_knowledge_delegate.py) | Phase C — Planned |
 | Trace | [trace.py](../../app/domain/pipeline/observability/trace.py) | Done |
 | DI | [di/chat.py](../../app/di/chat.py) | Done |
