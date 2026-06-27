@@ -10,6 +10,7 @@ from app.domain.graph.chat_graph import ChatGraph
 from app.domain.graph.orchestrator import OrchestratorRunner
 from app.domain.pipeline.guardrails.runner import GuardrailRunner
 from app.domain.pipeline.observability.trace import TraceCollector
+from app.domain.pipeline.prompt.final_prompt_builder import FinalPromptBuilder
 from app.domain.pipeline.rag.retriever import RAGRetriever
 from app.domain.pipeline.sanitization.pii_redactor import redact_pii
 from app.infrastructure.ai.langsmith_tracing import LlmTracingContext
@@ -39,6 +40,7 @@ class ChatCompletionService:
         orchestrator: OrchestratorRunner | None = None,
         chat_graph: ChatGraph | None = None,
         trace: TraceCollector | None = None,
+        final_prompt_builder: FinalPromptBuilder | None = None,
     ) -> None:
         self._assistant_loader = assistant_loader
         self._agent_repository = agent_repository
@@ -49,6 +51,7 @@ class ChatCompletionService:
         self._orchestrator = orchestrator or OrchestratorRunner()
         self._chat_graph = chat_graph or ChatGraph(orchestrator=self._orchestrator)
         self._trace = trace or TraceCollector()
+        self._final_prompt_builder = final_prompt_builder or FinalPromptBuilder()
 
     async def complete(self, *, webhook_id: str, request: ChatRequest) -> ChatResponse:
         try:
@@ -191,10 +194,11 @@ class ChatCompletionService:
                 await self._trace.record("rag_complete", trace_data)
 
         guardrail_instructions = self._guardrails.build_instructions(bundle.orchestrator.guardrails)
-        if guardrail_instructions:
-            bundle.orchestrator.system_prompt = (
-                bundle.orchestrator.system_prompt + "\n\n" + guardrail_instructions
-            )
+        final_prompt = self._final_prompt_builder.build_from_bundle(
+            bundle=bundle,
+            guardrail_instructions=guardrail_instructions,
+            rag_context=rag_context,
+        )
 
         connectors_by_id = await self._runtime_bundle_loader.load_connectors_for_tools(
             organization_id=bundle.organization_id,
@@ -215,7 +219,7 @@ class ChatCompletionService:
             bundle=bundle,
             tracker=tracker,
             user_message=sanitized_message,
-            rag_context=rag_context,
+            system_prompt=final_prompt,
             connectors_by_id=connectors_by_id,
             tracing_context=tracing_context,
             rag=self._rag,

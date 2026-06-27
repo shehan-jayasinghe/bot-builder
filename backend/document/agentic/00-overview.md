@@ -6,10 +6,10 @@ Migration to LLM-driven routing via **capability catalog** and **final prompt** 
 
 | # | Layer | Source |
 |---|--------|--------|
-| 1 | `system_prompt` | User-owned agent config |
+| 1 | `system_prompt` | Base role/responsibilities on agent doc; personality/tone added at chat by `FinalPromptBuilder` |
 | 2 | `guardrail_instructions` | `GuardrailRunner` |
 | 3 | `capability_catalog` | `agent.capability_catalog` + live `RuntimeBundle` |
-| 4 | `rag_context` | Phase C — only after `search_knowledge` LLM tool |
+| 4 | `rag_context` | Always-on via `RAGRetriever` today; Phase C → `search_knowledge` LLM tool only |
 
 Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_prompt` on attach/detach.
 

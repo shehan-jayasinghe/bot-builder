@@ -277,6 +277,10 @@ def test_workflow_service_update_clears_agent_id() -> None:
 
         agent_repo = type("AgentRepo", (), {})()
         agent_repo.pull_workflow_id = AsyncMock(return_value=True)
+        agent_repo.remove_capability_catalog_entry = AsyncMock(return_value=True)
+        agent_repo.find_by_id_for_organization = AsyncMock(
+            return_value={"_id": AGENT_ID, "capability_catalog": {}},
+        )
         service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
         await service.update(
             current_user=_current_user(),

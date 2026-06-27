@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.domain.models.assistant import LLMConfig
+from app.domain.models.capability_catalog import CapabilityCatalog
 
 
 class RuntimeTool(BaseModel):
@@ -100,6 +101,7 @@ class RuntimeOrchestrator(BaseModel):
 class RuntimeBundle(BaseModel):
     orchestrator: RuntimeOrchestrator
     organization_id: str
+    capability_catalog: CapabilityCatalog = Field(default_factory=CapabilityCatalog)
 
     def all_runtime_tools(self) -> list[RuntimeTool]:
         tools = list(self.orchestrator.tools)

@@ -1,132 +1,81 @@
-# Update Tool Agent — `PATCH /api/v1/tools/{tool_id}`
+# Update Tool — attach / detach / move — `PATCH /api/v1/tools/{tool_id}`
 
-Attach or detach a tool to an agent by setting `agent_id`.
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on PATCH; stored in `agent.capability_catalog.tools`, not `system_prompt`.
 
-Used by the agent detail **Attach / Detach** buttons.
-
-- **Attach:** `{ "agent_id": "<agent_object_id>" }`
-- **Detach:** `{ "agent_id": null }`
-
-Also syncs `agent.tool_ids` on the agent document (`$addToSet` on attach, `$pull` on detach).
-
-Org list: [07-list-tools-diagrams.md](./07-list-tools-diagrams.md)
-
-**Note:** This endpoint is for **agent assignment only**. Editing `description`, `config`, or `status` is documented separately in [05-update-tool-diagrams.md](./05-update-tool-diagrams.md) under the agent-scoped path.
+Create tool: [01-create-tool-diagrams.md](./01-create-tool-diagrams.md)
 
 ---
 
-# Flow
+## Request body (agentic fields)
+
+| Field | When set | Effect |
+|-------|----------|--------|
+| `agent_id` | attach / detach / move | Updates `tool.agent_id` and syncs `agent.tool_ids` |
+| `routing_hint` | optional | Upserts or clears hint in `agent.capability_catalog.tools[tool_id]` |
+
+```json
+{
+  "agent_id": "6a3b7c61d8139334274fbbf1",
+  "routing_hint": "Use when user asks about account balance"
+}
+```
+
+Detach:
+
+```json
+{ "agent_id": null }
+```
+
+---
+
+## Service flow
 
 ```mermaid
 flowchart TB
-    REQ[PATCH /api/v1/tools/tool_id]
-    REQ --> AUTH[get_current_user]
-    AUTH --> LOAD[Load tool by id + organization_id]
-    LOAD -->|missing| E404[404 Tool not found]
-    LOAD --> BODY{agent_id in body?}
+    PATCH[PATCH /tools/tool_id]
+    PATCH --> LOAD[ToolService.update]
+    LOAD --> CHANGED{agent_id or routing_hint in body?}
+    CHANGED -->|no| RETURN[Return existing tool]
+    CHANGED -->|yes| MOVE{agent_id changed?}
 
-    BODY -->|attach| A1[Validate agent exists in org]
-    A1 -->|missing| E404A[404 Agent not found]
-    A1 --> NAME{Name unique on target agent?}
-    NAME -->|conflict| E409[409 Tool name exists]
-    NAME --> SYNC1[Pull from previous agent if reassigning]
-    SYNC1 --> PUSH[push tool_ids on new agent]
-    PUSH --> SAVE[Set tool.agent_id]
+    MOVE -->|detach| PULL[pull_tool_id + remove_capability_catalog_entry]
+    MOVE -->|attach new| PUSH[push_tool_id + upsert catalog]
+    MOVE -->|move A to B| PULL --> PUSH
 
-    BODY -->|detach null| PULL[pull tool_ids from previous agent]
-    PULL --> CLEAR[Set tool.agent_id = null]
-
-    SAVE --> RES[200 UpdateToolResponse]
-    CLEAR --> RES
+    PUSH --> HINT{routing_hint in body?}
+    HINT -->|yes| SET[Use request hint]
+    HINT -->|no on move| KEEP[Preserve hint from source agent]
+    SET --> UPSERT[upsert_capability_catalog_entry]
+    KEEP --> UPSERT
 ```
 
 ---
 
-# Request body (MVP)
+## Catalog rules
 
-Only `agent_id` is updatable on this route in this phase.
-
-| Field | Rule |
-|-------|------|
-| `agent_id` | 24-char ObjectId to attach, or `null` to detach |
-
-At least one field required. Empty body → `422`.
-
-### Attach example
-
-```http
-PATCH /api/v1/tools/6a3f9012d8139334274fbc00
-Authorization: Bearer <clerk_jwt>
-Content-Type: application/json
-
-{
-  "agent_id": "67agent001"
-}
-```
-
-### Detach example
-
-```json
-{
-  "agent_id": null
-}
-```
-
-Detach does **not** delete the tool document.
+| Action | `tool_ids` | `capability_catalog.tools` |
+|--------|------------|----------------------------|
+| Attach (`null` → agent) | `push_tool_id` | upsert entry |
+| Detach (agent → `null`) | `pull_tool_id` | `$unset` entry |
+| Move (agent A → B) | pull A, push B | remove from A; upsert on B |
+| Hint-only PATCH (same agent) | no change | upsert entry |
+| Re-PATCH same `agent_id` without hint | no change | **no catalog upsert** (avoids wiping hint) |
+| Move without `routing_hint` in body | — | **preserves** hint from source agent |
 
 ---
 
-# Response `200`
+## Navigate to files
 
-```json
-{
-  "id": "6a3f9012d8139334274fbc00",
-  "name": "customer_lookup",
-  "description": "Get customer loyalty info",
-  "executor": "mongo_find_one",
-  "connector_id": "6a3f8c12d8139334274fbbfe",
-  "config": {
-    "collection": "customers",
-    "filter": { "customer_id": "{{customer_id}}" }
-  },
-  "status": "active",
-  "agent_id": "67agent001",
-  "organization_id": "6a3b7c61d8139334274fbbfc",
-  "created_at": "2026-06-25T12:00:00Z",
-  "updated_at": "2026-06-26T12:00:00Z"
-}
-```
-
-After detach, `agent_id` is `null`.
-
----
-
-# Error responses
-
-| Status | When |
-|--------|------|
-| `401` | Invalid JWT |
-| `404` | Tool or agent not found |
-| `409` | Tool name already exists on target agent |
-| `422` | Invalid ObjectId, empty body |
-
----
-
-# Reassign between agents
-
-When moving a tool from agent A → agent B:
-
-1. `$pull` tool id from A.`tool_ids`
-2. `$addToSet` tool id on B.`tool_ids`
-3. Update `tool.agent_id` to B
-
----
-
-# Navigate to implementation files
-
-| Layer | File |
-|-------|------|
+| Step | File |
+|------|------|
 | API route | [tools.py](../../app/api/v1/tools.py) |
-| Service | `ToolService.update()` in [tool_service.py](../../app/services/tool_service.py) |
-| Agent sync | `push_tool_id` / `pull_tool_id` in [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
-| Schema | `UpdateToolRequest` in [tool.py](../../app/schemas/tool.py) |
+| Service | [tool_service.py](../../app/services/tool_service.py) |
+| Schema | [tool.py](../../app/schemas/tool.py) — `UpdateToolRequest` |
+| Catalog helpers | [capability_catalog.py](../../app/domain/models/capability_catalog.py) |
+| Repository | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
+
+---
+
+## List with hints
+
+`GET /api/v1/tools?agent_id={id}` returns `routing_hint` on each item (read from agent catalog). Agent-scoped list: `GET /api/v1/agents/{agent_id}/tools`.

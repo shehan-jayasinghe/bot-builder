@@ -308,7 +308,7 @@ def test_orchestrator_run_turn_handles_delegation_with_mocked_sub_runner() -> No
                 bundle=bundle,
                 tracker=tracker,
                 user_message="research loyalty",
-                rag_context="",
+                system_prompt="You are the orchestrator.",
                 connectors_by_id={},
                 rag=AsyncMock(),
             )

@@ -7,6 +7,7 @@ from app.domain.constants.agent_defaults import (
     GuardrailDef,
     merge_guardrails,
 )
+from app.domain.models.capability_catalog import empty_capability_catalog
 from app.domain.models.current_user import CurrentUser
 from app.infrastructure.ai.prompt_builder import build_system_prompt
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
@@ -49,9 +50,6 @@ class AgentService:
             description=request.description,
             industry=industry,
             agent_type=agent_type,
-            personality=personality,
-            tone=tone,
-            guardrails=guardrails,
         )
 
         llm_config = LLMConfigResponse(
@@ -78,6 +76,7 @@ class AgentService:
             "sub_agent_ids": [],
             "tool_ids": [],
             "knowledge_base_ids": [],
+            "capability_catalog": empty_capability_catalog(),
         }
 
         saved = await self._agent_repository.create(document=document)

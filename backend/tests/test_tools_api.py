@@ -160,8 +160,11 @@ def test_tool_service_create() -> None:
                 "updated_at": NOW,
             }
         )
-        agent_repo.find_by_id_for_organization = AsyncMock(return_value={"_id": ObjectId(AGENT_ID)})
+        agent_repo.find_by_id_for_organization = AsyncMock(
+            return_value={"_id": ObjectId(AGENT_ID), "capability_catalog": {}},
+        )
         agent_repo.push_tool_id = AsyncMock(return_value=True)
+        agent_repo.upsert_capability_catalog_entry = AsyncMock(return_value=True)
         connector_repo.find_by_id_for_organization = AsyncMock(
             return_value={"type": "mongo", "config": {"uri": "mongodb://localhost", "database": "db"}}
         )

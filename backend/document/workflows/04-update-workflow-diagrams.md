@@ -1,190 +1,59 @@
-# Update Workflow — `PATCH /api/v1/workflows/{workflow_id}`
+# Update Workflow — attach / detach / move — `PATCH /api/v1/workflows/{workflow_id}`
 
-Partially update a workflow. Used by the editor **Save** button — persists title, canvas `nodes` / `edges`, and optional `description`.
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — optional `routing_hint` on PATCH when `agent_id` is set; stored in `agent.capability_catalog.workflows`.
 
-Model reference: [00-workflow-model.md](./00-workflow-model.md)
-
-**Not in MVP:** `status` → `published` (Publish button disabled).
+Create workflow: [01-create-workflow-diagrams.md](./01-create-workflow-diagrams.md)
 
 ---
 
-# Flow 1 — Auth
+## Request body (agentic fields)
 
-Same as [03-get-workflow-diagrams.md](./03-get-workflow-diagrams.md) Flow 1.
+| Field | When set | Effect |
+|-------|----------|--------|
+| `agent_id` | attach / detach / move | Updates `workflow.agent_id` and syncs `agent.workflow_ids` |
+| `routing_hint` | optional | Upserts or clears hint in `agent.capability_catalog.workflows[workflow_id]` |
+| `name`, `description`, `nodes`, `edges` | content edit | Unrelated to catalog; may revert `published` → `draft` |
 
-```mermaid
-flowchart TB
-    REQ[PATCH /api/v1/workflows/workflow_id]
-    REQ --> API[API route]
-    API --> DI[get_current_user]
-    DI --> JWT[JWT verify]
-    JWT -->|invalid| E401[401]
-    JWT --> DB[user + org]
-    DB --> F2[Flow 2]
-```
-
----
-
-# Flow 2 — Validate path + load existing
-
-```mermaid
-flowchart TB
-    AUTH[CurrentUser — organization_id]
-
-    AUTH --> PATH[workflow_id]
-
-    subgraph PATHVAL["Path + ownership"]
-        P1[Validate ObjectId]
-        P2[WorkflowRepository — find by id + org]
-        P3{exists?}
-        P1 --> P2 --> P3
-    end
-
-    PATH --> PATHVAL
-    PATHVAL -->|invalid id| E422[422]
-    PATHVAL -->|missing| E404[404 Workflow not found]
-    P3 --> F3[Flow 3]
-```
-
----
-
-# Flow 3 — Validate request body (partial)
-
-All fields optional — only sent fields are updated. At least one field required.
-
-```mermaid
-flowchart TB
-    EXIST[Existing workflow loaded]
-
-    EXIST --> BODY[JSON body]
-
-    subgraph VALIDATE["Pydantic — UpdateWorkflowRequest"]
-        V1[name — 1–200 chars]
-        V2[description — max 2000 or null]
-        V3[agent_id — ObjectId or null]
-        V4[nodes — array]
-        V5[edges — array]
-        V1 --> V2 --> V3 --> V4 --> V5
-    end
-
-    BODY --> VALIDATE
-    VALIDATE -->|invalid| E422[422]
-    VALIDATE -->|empty body| E422
-    VALIDATE --> AGENT
-
-    subgraph AGENT["Optional agent check"]
-        A1{agent_id sent and not null?}
-        A2[Agent exists in org]
-        A1 -->|no| SAVE
-        A1 -->|yes| A2
-        A2 -->|missing| E404A[404 Agent not found]
-    end
-
-    AGENT --> SAVE
-
-    subgraph SAVE["Persist"]
-        S1[WorkflowRepository.update]
-        S2[Set updated_at]
-        S1 --> S2
-    end
-
-    SAVE --> RES[200 UpdateWorkflowResponse]
-```
-
-### Updatable fields (MVP)
-
-| Field | Rule |
-|-------|------|
-| `name` | optional — user edits title in editor |
-| `description` | optional |
-| `agent_id` | optional — set or clear (`null`) |
-| `nodes` | optional — full canvas node array |
-| `edges` | optional — full canvas edge array |
-
-### Immutable via PATCH (MVP)
-
-| Field | Reason |
-|-------|--------|
-| `organization_id` | From auth only |
-| `status` | Publish flow — phase 2 |
-| `id` | Path param |
-
----
-
-# Request body examples
-
-**Save title + canvas (toolbar Save)**
-
-```http
-PATCH /api/v1/workflows/6a3f9012d8139334274fbc00
-Authorization: Bearer <clerk_jwt>
-Content-Type: application/json
-
+```json
 {
-  "name": "Customer onboarding",
-  "nodes": [
-    {
-      "id": "start-1",
-      "type": "start",
-      "position": { "x": 120, "y": 220 },
-      "data": {}
-    },
-    {
-      "id": "input-1",
-      "type": "input",
-      "position": { "x": 300, "y": 220 },
-      "data": { "label": "Customer name" }
-    },
-    {
-      "id": "message-1",
-      "type": "message",
-      "position": { "x": 500, "y": 220 },
-      "data": { "text": "Hello {{name}}" }
-    }
-  ],
-  "edges": [
-    { "id": "edge-1", "source": "start-1", "target": "input-1" },
-    { "id": "edge-2", "source": "input-1", "target": "message-1" }
-  ]
+  "agent_id": "6a3b7c61d8139334274fbbf1",
+  "routing_hint": "Greet new users on first message"
 }
 ```
 
-**Rename only**
+Detach:
 
 ```json
-{ "name": "Billing flow" }
+{ "agent_id": null }
 ```
 
----
-
-# Response `200`
-
-Same shape as [03-get-workflow-diagrams.md](./03-get-workflow-diagrams.md) — full workflow document with new `updated_at`.
+`POST /api/v1/workflows/{workflow_id}/publish` does **not** change the capability catalog.
 
 ---
 
-# Error responses
+## Catalog rules
 
-| Status | When |
-|--------|------|
-| `401` | Invalid JWT |
-| `404` | Workflow or agent not found |
-| `422` | Invalid body, empty PATCH, or bad ObjectId |
-
----
-
-# Auto-save (phase 2)
-
-MVP uses manual **Save** only. `auto_save` toggle in UI is visual-only until debounced `PATCH` is implemented.
+| Action | `workflow_ids` | `capability_catalog.workflows` |
+|--------|----------------|--------------------------------|
+| Attach | `push_workflow_id` | upsert entry |
+| Detach | `pull_workflow_id` | `$unset` entry |
+| Move A → B | pull A, push B | remove from A; upsert on B |
+| Move without `routing_hint` | — | **preserves** hint from source agent |
 
 ---
 
-# Navigate to implementation files
+## Navigate to files
 
-| What | Open file |
-|------|-----------|
+| Step | File |
+|------|------|
 | API route | [workflows.py](../../app/api/v1/workflows.py) |
 | Service | [workflow_service.py](../../app/services/workflow_service.py) |
-| Repository | [workflow_repository.py](../../app/infrastructure/db/repositories/mongo/workflow_repository.py) |
-| Update schema | [workflow.py](../../app/schemas/workflow.py) |
-| Frontend Save handler | [WorkflowEditorPage.tsx](../../../frontend/src/pages/workflows/WorkflowEditorPage.tsx) *(planned)* |
+| Schema | [workflow.py](../../app/schemas/workflow.py) — `UpdateWorkflowRequest` |
+| Catalog helpers | [capability_catalog.py](../../app/domain/models/capability_catalog.py) |
+| Repository | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
+
+---
+
+## List with hints
+
+`GET /api/v1/workflows?agent_id={id}` returns `routing_hint` on each item. Single workflow: `GET /api/v1/workflows/{workflow_id}` includes hint when attached.

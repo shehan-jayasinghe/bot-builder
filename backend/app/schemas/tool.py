@@ -18,6 +18,7 @@ class CreateToolRequest(BaseModel):
     executor: ExecutorName
     connector_id: str = Field(pattern=r"^[a-fA-F0-9]{24}$")
     config: dict[str, Any]
+    routing_hint: str | None = Field(default=None, max_length=500)
 
 
 class ToolResponse(BaseModel):
@@ -30,6 +31,7 @@ class ToolResponse(BaseModel):
     status: str
     agent_id: str | None = None
     organization_id: str
+    routing_hint: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -48,6 +50,7 @@ class ToolListItem(BaseModel):
     status: str
     agent_id: str | None = None
     organization_id: str
+    routing_hint: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -59,6 +62,7 @@ class ListToolsResponse(BaseModel):
 
 class UpdateToolRequest(BaseModel):
     agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+    routing_hint: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_not_empty(self) -> "UpdateToolRequest":

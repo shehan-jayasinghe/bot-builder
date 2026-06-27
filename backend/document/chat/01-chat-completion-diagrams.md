@@ -40,7 +40,7 @@ Related config docs:
 | **2** | 8 | **Done** | Sub-agent delegation at runtime — see [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
 | **3** | 9 | **Done** (always-on RAG) · **Next** (agentic RAG tool) | Qdrant / keyword RAG — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
 | **4** | 11 | **Done** | Workflow runtime — see [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
-| **A** | — | **Next** | Capability catalog + `FinalPromptBuilder` — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
+| **A** | — | **Done** | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
 
 **Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `ChatGraph` → orchestrator / workflow → `TrackerService.persist`.
 
@@ -477,7 +477,7 @@ Content-Type: application/json
 |------|--------|
 | `POST /api/v1/chat/webhook/{webhook_id}` route | **No** |
 | `ChatRequest` / `ChatResponse` schemas | **No** |
-| Runtime | **Yes** — `FinalPromptBuilder` assembles `[1] system_prompt` + `[2] guardrails` + `[3] capability_catalog` + `[4] rag_context` (Phase C only) |
+| Runtime | **Yes** — `FinalPromptBuilder` assembles `[1] system_prompt` + personality/tone + `[2] guardrails` + `[3] capability_catalog` + `[4] rag_context` (always-on today; Phase C makes RAG tool-driven) |
 
 Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md)
 
@@ -492,7 +492,7 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | 2 | 8 | Done | [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
 | 3 | 9 | Done | [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
 | 4 | 11 | Done | [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
-| A | catalog | Next | [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
+| A | catalog | Done | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
 
 ---
 
@@ -513,6 +513,8 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | LLM | [llm.py](../../app/infrastructure/ai/llm.py) | Done |
 | PII sanitizer | [pii_redactor.py](../../app/domain/pipeline/sanitization/pii_redactor.py) | Done |
 | Guardrails | [guardrails/runner.py](../../app/domain/pipeline/guardrails/runner.py) | Done |
+| Final prompt | [final_prompt_builder.py](../../app/domain/pipeline/prompt/final_prompt_builder.py) · [capability_catalog_builder.py](../../app/domain/pipeline/prompt/capability_catalog_builder.py) | Done |
+| Agent create prompt | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) — base layer only | Done |
 | Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) · [registry.py](../../app/domain/executors/registry.py) | Done |
 | RAG query | [retriever.py](../../app/domain/pipeline/rag/retriever.py) | Done |
 | Trace | [trace.py](../../app/domain/pipeline/observability/trace.py) | Done |

@@ -1,9 +1,11 @@
 from typing import Any
 
+from app.domain.constants.capability_catalog_constants import SUB_AGENTS_SECTION
 from app.domain.constants.sub_agent_constants import (
     MAX_SUB_AGENTS_PER_AGENT,
     SUB_AGENT_STATUS_ACTIVE,
 )
+from app.domain.models.capability_catalog import get_routing_hint, parse_capability_catalog
 from app.domain.models.current_user import CurrentUser
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.infrastructure.db.repositories.mongo.knowledgebase_repository import KnowledgebaseRepository
@@ -101,7 +103,14 @@ class SubAgentService:
         )
         if not pushed:
             raise AgentNotFoundError("Agent not found")
-        return self._document_to_response(saved)
+        await self._agent_repository.upsert_capability_catalog_entry(
+            agent_id=agent_id,
+            organization_id=current_user.organization_id,
+            section=SUB_AGENTS_SECTION,
+            resource_id=sub_agent_id,
+            routing_hint=request.routing_hint,
+        )
+        return self._document_to_response(saved, routing_hint=request.routing_hint)
 
     async def list_by_agent(
         self,
@@ -110,13 +119,20 @@ class SubAgentService:
         agent_id: str,
         status: str | None = None,
     ) -> ListSubAgentsResponse:
-        await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+        agent = await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
         documents = await self._sub_agent_repository.find_all_by_agent(
             agent_id=agent_id,
             organization_id=current_user.organization_id,
             status=status,
         )
-        items = [self._document_to_list_item(document) for document in documents]
+        catalog = parse_capability_catalog(agent.get("capability_catalog"))
+        items = [
+            self._document_to_list_item(
+                document,
+                routing_hint=get_routing_hint(catalog, SUB_AGENTS_SECTION, str(document["_id"])),
+            )
+            for document in documents
+        ]
         return ListSubAgentsResponse(items=items, total=len(items))
 
     async def get_by_id(
@@ -126,7 +142,7 @@ class SubAgentService:
         agent_id: str,
         sub_agent_id: str,
     ) -> GetSubAgentResponse:
-        await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+        agent = await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
         document = await self._sub_agent_repository.find_by_id_for_agent(
             sub_agent_id=sub_agent_id,
             agent_id=agent_id,
@@ -134,7 +150,11 @@ class SubAgentService:
         )
         if document is None:
             raise SubAgentNotFoundError("Sub-agent not found")
-        return self._document_to_response(document)
+        catalog = parse_capability_catalog(agent.get("capability_catalog"))
+        return self._document_to_response(
+            document,
+            routing_hint=get_routing_hint(catalog, SUB_AGENTS_SECTION, sub_agent_id),
+        )
 
     async def update(
         self,
@@ -184,23 +204,42 @@ class SubAgentService:
             )
 
         updates = self._build_update_fields(request)
-        updated = await self._sub_agent_repository.update(
-            sub_agent_id=sub_agent_id,
-            agent_id=agent_id,
-            organization_id=current_user.organization_id,
-            updates=updates,
-        )
-        if updated is None:
-            raise SubAgentNotFoundError("Sub-agent not found")
-        return self._document_to_response(updated)
+        if updates:
+            updated = await self._sub_agent_repository.update(
+                sub_agent_id=sub_agent_id,
+                agent_id=agent_id,
+                organization_id=current_user.organization_id,
+                updates=updates,
+            )
+            if updated is None:
+                raise SubAgentNotFoundError("Sub-agent not found")
+        else:
+            updated = existing
 
-    async def _ensure_agent(self, *, agent_id: str, organization_id: str) -> None:
+        if "routing_hint" in request.model_fields_set:
+            await self._agent_repository.upsert_capability_catalog_entry(
+                agent_id=agent_id,
+                organization_id=current_user.organization_id,
+                section=SUB_AGENTS_SECTION,
+                resource_id=sub_agent_id,
+                routing_hint=request.routing_hint,
+            )
+
+        agent = await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+        catalog = parse_capability_catalog(agent.get("capability_catalog"))
+        return self._document_to_response(
+            updated,
+            routing_hint=get_routing_hint(catalog, SUB_AGENTS_SECTION, sub_agent_id),
+        )
+
+    async def _ensure_agent(self, *, agent_id: str, organization_id: str) -> dict[str, Any]:
         agent = await self._agent_repository.find_by_id_for_organization(
             agent_id=agent_id,
             organization_id=organization_id,
         )
         if agent is None:
             raise AgentNotFoundError("Agent not found")
+        return agent
 
     async def _validate_capabilities(
         self,
@@ -264,7 +303,12 @@ class SubAgentService:
 
         return updates
 
-    def _document_to_list_item(self, document: dict[str, Any]) -> SubAgentListItem:
+    def _document_to_list_item(
+        self,
+        document: dict[str, Any],
+        *,
+        routing_hint: str | None = None,
+    ) -> SubAgentListItem:
         tool_ids = list(document.get("tool_ids") or [])
         knowledge_base_ids = list(document.get("knowledge_base_ids") or [])
         workflow_ids = list(document.get("workflow_ids") or [])
@@ -280,11 +324,17 @@ class SubAgentService:
             parameter_count=len(parameters),
             agent_id=str(document["agent_id"]),
             organization_id=str(document["organization_id"]),
+            routing_hint=routing_hint,
             created_at=document["created_at"],
             updated_at=document["updated_at"],
         )
 
-    def _document_to_response(self, document: dict[str, Any]) -> SubAgentResponse:
+    def _document_to_response(
+        self,
+        document: dict[str, Any],
+        *,
+        routing_hint: str | None = None,
+    ) -> SubAgentResponse:
         parameters = [
             SubAgentParameter(**parameter) for parameter in (document.get("parameters") or [])
         ]
@@ -302,6 +352,7 @@ class SubAgentService:
             status=str(document.get("status", SUB_AGENT_STATUS_ACTIVE)),
             agent_id=str(document["agent_id"]),
             organization_id=str(document["organization_id"]),
+            routing_hint=routing_hint,
             created_at=document["created_at"],
             updated_at=document["updated_at"],
         )

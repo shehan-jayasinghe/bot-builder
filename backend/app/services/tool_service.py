@@ -2,8 +2,15 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.domain.constants.capability_catalog_constants import TOOLS_SECTION
 from app.domain.constants.executor_constants import EXECUTOR_CONNECTOR_TYPES
 from app.domain.constants.tool_constants import TOOL_STATUS_ACTIVE
+from app.domain.models.capability_catalog import (
+    get_routing_hint,
+    parse_capability_catalog,
+    resolve_routing_hint_for_upsert,
+    should_sync_catalog_on_agent_change,
+)
 from app.domain.models.current_user import CurrentUser
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.infrastructure.db.repositories.mongo.connector_repository import ConnectorRepository
@@ -93,7 +100,14 @@ class ToolService:
         )
         if not pushed:
             raise AgentNotFoundError("Agent not found")
-        return self._document_to_response(saved)
+        await self._agent_repository.upsert_capability_catalog_entry(
+            agent_id=agent_id,
+            organization_id=current_user.organization_id,
+            section=TOOLS_SECTION,
+            resource_id=tool_id,
+            routing_hint=request.routing_hint,
+        )
+        return self._document_to_response(saved, routing_hint=request.routing_hint)
 
     async def list_by_agent(
         self,
@@ -103,14 +117,21 @@ class ToolService:
         executor: str | None = None,
         status: str | None = None,
     ) -> ListToolsResponse:
-        await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+        agent = await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
         documents = await self._tool_repository.find_all_by_agent(
             agent_id=agent_id,
             organization_id=current_user.organization_id,
             executor=executor,
             status=status,
         )
-        items = [self._document_to_list_item(document) for document in documents]
+        catalog = parse_capability_catalog(agent.get("capability_catalog"))
+        items = [
+            self._document_to_list_item(
+                document,
+                routing_hint=get_routing_hint(catalog, TOOLS_SECTION, str(document["_id"])),
+            )
+            for document in documents
+        ]
         return ListToolsResponse(items=items, total=len(items))
 
     async def list_by_organization(
@@ -121,8 +142,10 @@ class ToolService:
         executor: str | None = None,
         status: str | None = None,
     ) -> ListToolsResponse:
+        catalog = parse_capability_catalog({})
         if agent_id is not None:
-            await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+            agent = await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+            catalog = parse_capability_catalog(agent.get("capability_catalog"))
 
         documents = await self._tool_repository.find_all_by_organization(
             organization_id=current_user.organization_id,
@@ -130,7 +153,17 @@ class ToolService:
             executor=executor,
             status=status,
         )
-        items = [self._document_to_list_item(document) for document in documents]
+        items = [
+            self._document_to_list_item(
+                document,
+                routing_hint=(
+                    get_routing_hint(catalog, TOOLS_SECTION, str(document["_id"]))
+                    if agent_id is not None
+                    else None
+                ),
+            )
+            for document in documents
+        ]
         return ListToolsResponse(items=items, total=len(items))
 
     async def update(
@@ -147,46 +180,99 @@ class ToolService:
         if existing is None:
             raise ToolNotFoundError("Tool not found")
 
-        if "agent_id" not in request.model_fields_set:
+        agent_id_changed = "agent_id" in request.model_fields_set
+        hint_changed = "routing_hint" in request.model_fields_set
+        if not agent_id_changed and not hint_changed:
             return self._document_to_response(existing)
 
-        new_agent_id = request.agent_id
         previous_agent_id = existing.get("agent_id")
-
-        if new_agent_id is not None:
-            await self._ensure_agent(agent_id=new_agent_id, organization_id=current_user.organization_id)
-            duplicate = await self._tool_repository.find_by_name_for_agent(
-                name=str(existing["name"]),
-                agent_id=new_agent_id,
-                organization_id=current_user.organization_id,
-            )
-            if duplicate is not None and str(duplicate["_id"]) != tool_id:
-                raise ToolNameExistsError("Tool name already exists for this agent")
-
-        if previous_agent_id and previous_agent_id != new_agent_id:
-            await self._agent_repository.pull_tool_id(
+        new_agent_id = request.agent_id if agent_id_changed else previous_agent_id
+        preserved_hint: str | None = None
+        if (
+            agent_id_changed
+            and previous_agent_id
+            and previous_agent_id != new_agent_id
+            and not hint_changed
+        ):
+            previous_agent = await self._agent_repository.find_by_id_for_organization(
                 agent_id=str(previous_agent_id),
                 organization_id=current_user.organization_id,
-                tool_id=tool_id,
             )
+            if previous_agent is not None:
+                previous_catalog = parse_capability_catalog(previous_agent.get("capability_catalog"))
+                preserved_hint = get_routing_hint(previous_catalog, TOOLS_SECTION, tool_id)
 
-        if new_agent_id is not None and new_agent_id != previous_agent_id:
-            pushed = await self._agent_repository.push_tool_id(
-                agent_id=new_agent_id,
+        if agent_id_changed:
+            if new_agent_id is not None:
+                await self._ensure_agent(agent_id=new_agent_id, organization_id=current_user.organization_id)
+                duplicate = await self._tool_repository.find_by_name_for_agent(
+                    name=str(existing["name"]),
+                    agent_id=new_agent_id,
+                    organization_id=current_user.organization_id,
+                )
+                if duplicate is not None and str(duplicate["_id"]) != tool_id:
+                    raise ToolNameExistsError("Tool name already exists for this agent")
+
+            if previous_agent_id and previous_agent_id != new_agent_id:
+                await self._agent_repository.pull_tool_id(
+                    agent_id=str(previous_agent_id),
+                    organization_id=current_user.organization_id,
+                    tool_id=tool_id,
+                )
+                await self._agent_repository.remove_capability_catalog_entry(
+                    agent_id=str(previous_agent_id),
+                    organization_id=current_user.organization_id,
+                    section=TOOLS_SECTION,
+                    resource_id=tool_id,
+                )
+
+            if new_agent_id is not None and new_agent_id != previous_agent_id:
+                pushed = await self._agent_repository.push_tool_id(
+                    agent_id=new_agent_id,
+                    organization_id=current_user.organization_id,
+                    tool_id=tool_id,
+                )
+                if not pushed:
+                    raise AgentNotFoundError("Agent not found")
+
+            updated = await self._tool_repository.update(
+                tool_id=tool_id,
                 organization_id=current_user.organization_id,
-                tool_id=tool_id,
+                updates={"agent_id": new_agent_id},
             )
-            if not pushed:
-                raise AgentNotFoundError("Agent not found")
+            if updated is None:
+                raise ToolNotFoundError("Tool not found")
+        else:
+            updated = existing
 
-        updated = await self._tool_repository.update(
-            tool_id=tool_id,
-            organization_id=current_user.organization_id,
-            updates={"agent_id": new_agent_id},
-        )
-        if updated is None:
-            raise ToolNotFoundError("Tool not found")
-        return self._document_to_response(updated)
+        if should_sync_catalog_on_agent_change(
+            agent_id_changed=agent_id_changed,
+            hint_changed=hint_changed,
+            previous_agent_id=str(previous_agent_id) if previous_agent_id else None,
+            new_agent_id=str(new_agent_id) if new_agent_id else None,
+        ):
+            await self._agent_repository.upsert_capability_catalog_entry(
+                agent_id=str(new_agent_id),
+                organization_id=current_user.organization_id,
+                section=TOOLS_SECTION,
+                resource_id=tool_id,
+                routing_hint=resolve_routing_hint_for_upsert(
+                    hint_changed=hint_changed,
+                    request_routing_hint=request.routing_hint,
+                    preserved_routing_hint=preserved_hint,
+                ),
+            )
+
+        routing_hint: str | None = None
+        if new_agent_id is not None:
+            agent_doc = await self._agent_repository.find_by_id_for_organization(
+                agent_id=str(new_agent_id),
+                organization_id=current_user.organization_id,
+            )
+            catalog = parse_capability_catalog((agent_doc or {}).get("capability_catalog"))
+            routing_hint = get_routing_hint(catalog, TOOLS_SECTION, tool_id)
+
+        return self._document_to_response(updated, routing_hint=routing_hint)
 
     async def get_by_id(
         self,
@@ -195,7 +281,7 @@ class ToolService:
         agent_id: str,
         tool_id: str,
     ) -> GetToolResponse:
-        await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
+        agent = await self._ensure_agent(agent_id=agent_id, organization_id=current_user.organization_id)
         document = await self._tool_repository.find_by_id_for_agent(
             tool_id=tool_id,
             agent_id=agent_id,
@@ -203,15 +289,20 @@ class ToolService:
         )
         if document is None:
             raise ToolNotFoundError("Tool not found")
-        return self._document_to_response(document)
+        catalog = parse_capability_catalog(agent.get("capability_catalog"))
+        return self._document_to_response(
+            document,
+            routing_hint=get_routing_hint(catalog, TOOLS_SECTION, tool_id),
+        )
 
-    async def _ensure_agent(self, *, agent_id: str, organization_id: str) -> None:
+    async def _ensure_agent(self, *, agent_id: str, organization_id: str) -> dict[str, Any]:
         agent = await self._agent_repository.find_by_id_for_organization(
             agent_id=agent_id,
             organization_id=organization_id,
         )
         if agent is None:
             raise AgentNotFoundError("Agent not found")
+        return agent
 
     async def _load_connector(self, *, connector_id: str, organization_id: str) -> dict[str, Any]:
         connector = await self._connector_repository.find_by_id_for_organization(
@@ -232,7 +323,12 @@ class ToolService:
                 f"Executor {executor} requires connector type {expected}, got {connector_type}"
             )
 
-    def _document_to_list_item(self, document: dict[str, Any]) -> ToolListItem:
+    def _document_to_list_item(
+        self,
+        document: dict[str, Any],
+        *,
+        routing_hint: str | None = None,
+    ) -> ToolListItem:
         return ToolListItem(
             id=str(document["_id"]),
             name=str(document["name"]),
@@ -243,9 +339,15 @@ class ToolService:
             status=str(document.get("status", TOOL_STATUS_ACTIVE)),
             agent_id=document.get("agent_id"),
             organization_id=str(document["organization_id"]),
+            routing_hint=routing_hint,
             created_at=document["created_at"],
             updated_at=document["updated_at"],
         )
 
-    def _document_to_response(self, document: dict[str, Any]) -> ToolResponse:
-        return ToolResponse(**self._document_to_list_item(document).model_dump())
+    def _document_to_response(
+        self,
+        document: dict[str, Any],
+        *,
+        routing_hint: str | None = None,
+    ) -> ToolResponse:
+        return ToolResponse(**self._document_to_list_item(document, routing_hint=routing_hint).model_dump())

@@ -23,6 +23,7 @@ class CreateKnowledgebaseRequest(BaseModel):
     website_url: HttpUrl | None = None
     crawl_depth: int | None = Field(default=None, ge=1, le=5)
     agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+    routing_hint: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_source_fields(self) -> "CreateKnowledgebaseRequest":
@@ -49,6 +50,7 @@ class CreateKnowledgebaseResponse(BaseModel):
     website_url: str | None = None
     crawl_depth: int | None = None
     agent_id: str | None = None
+    routing_hint: str | None = None
     status: str
     job_id: str
     job_status: str
@@ -73,6 +75,7 @@ class KnowledgebaseListItem(BaseModel):
     website_url: str | None = None
     crawl_depth: int | None = None
     agent_id: str | None = None
+    routing_hint: str | None = None
     status: str
     organization_id: str
     created_at: datetime
@@ -85,6 +88,7 @@ class ListKnowledgebasesResponse(BaseModel):
 
 class UpdateKnowledgebaseRequest(BaseModel):
     agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+    routing_hint: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_not_empty(self) -> "UpdateKnowledgebaseRequest":
@@ -102,6 +106,7 @@ class UpdateKnowledgebaseResponse(BaseModel):
     website_url: str | None = None
     crawl_depth: int | None = None
     agent_id: str | None = None
+    routing_hint: str | None = None
     status: str
     organization_id: str
     created_at: datetime

@@ -31,13 +31,12 @@ class OrchestratorRunner:
         bundle: RuntimeBundle,
         tracker: Tracker,
         user_message: str,
-        rag_context: str,
+        system_prompt: str,
         connectors_by_id: dict[str, dict[str, Any]],
         tracing_context: LlmTracingContext | None = None,
         rag: "RAGRetriever | None" = None,
     ) -> AgentTurnResult:
         orchestrator = bundle.orchestrator
-        system_prompt = self._build_system_prompt(orchestrator, rag_context=rag_context)
         history = _cap_history(tracker.get_history())
 
         reserved_names = {tool.name for tool in orchestrator.tools}
@@ -220,14 +219,6 @@ class OrchestratorRunner:
                 )
 
         return AgentTurnResult(replies=["I couldn't complete that request. Please try again."])
-
-    @staticmethod
-    def _build_system_prompt(
-        orchestrator: RuntimeOrchestrator,
-        *,
-        rag_context: str,
-    ) -> str:
-        return orchestrator.build_system_prompt(rag_context=rag_context or None)
 
     @staticmethod
     def _build_llm(

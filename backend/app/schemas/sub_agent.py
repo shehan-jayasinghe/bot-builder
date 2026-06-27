@@ -33,6 +33,7 @@ class CreateSubAgentRequest(BaseModel):
     knowledge_base_ids: list[str] = Field(default_factory=list)
     workflow_ids: list[str] = Field(default_factory=list)
     parameters: list[SubAgentParameter] = Field(default_factory=list)
+    routing_hint: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_unique_parameter_names(self) -> "CreateSubAgentRequest":
@@ -62,6 +63,7 @@ class SubAgentResponse(BaseModel):
     status: str
     agent_id: str
     organization_id: str
+    routing_hint: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -82,6 +84,7 @@ class SubAgentListItem(BaseModel):
     parameter_count: int
     agent_id: str
     organization_id: str
+    routing_hint: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -100,6 +103,7 @@ class UpdateSubAgentRequest(BaseModel):
     workflow_ids: list[str] | None = None
     parameters: list[SubAgentParameter] | None = None
     status: SubAgentStatus | None = None
+    routing_hint: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_not_empty(self) -> "UpdateSubAgentRequest":

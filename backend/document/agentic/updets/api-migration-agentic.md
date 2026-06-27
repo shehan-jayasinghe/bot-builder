@@ -2,7 +2,7 @@
 
 Single reference for **every REST endpoint** affected by the move to an agentic runtime:
 
-- Final prompt layers: `[1] system_prompt` → `[2] guardrails` → `[3] capability_catalog` → `[4] rag_context` (Phase C only)
+- Final prompt layers: `[1] system_prompt` (+ personality/tone at runtime) → `[2] guardrails` → `[3] capability_catalog` → `[4] rag_context` (**always-on today**; Phase C makes RAG tool-driven only)
 - `routing_hint` on attachable resources → stored in `agent.capability_catalog` (not in `system_prompt`)
 
 **Related specs:**
@@ -51,7 +51,7 @@ Agentic behavior is **internal** (`FinalPromptBuilder` + catalog). Same URLs and
 | Method | Path | Route change | Schema change | What to do |
 |--------|------|:------------:|:-------------:|------------|
 | `GET` | `/api/v1/agents` | **No** | **No** | **No API work.** Doc: [../../agent/03-list-agents-diagrams.md](../../agent/03-list-agents-diagrams.md) |
-| `POST` | `/api/v1/agents` | **No** | **No** *(response)* | **Service only:** `agent_service.create_draft` must init Mongo field `capability_catalog` with empty sections `{ tools, knowledge_bases, workflows, sub_agents }`. Do **not** add catalog to `CreateAgentRequest`. Doc: [../../agent/01-create-agent-diagrams.md](../../agent/01-create-agent-diagrams.md) |
+| `POST` | `/api/v1/agents` | **No** | **No** *(response)* | **Done.** `create_draft` inits empty `capability_catalog`. Doc: [../../agent/01-create-agent-diagrams.md](../../agent/01-create-agent-diagrams.md) |
 | `GET` | `/api/v1/agents/{agent_id}` | **No** | **Optional Yes** | **Optional:** add `capability_catalog` to `GetAgentResponse` so builder UI can edit hints. Not required for Phase A if hints are set only via attach APIs. Doc: [../../agent/02-get-agent-diagrams.md](../../agent/02-get-agent-diagrams.md) |
 
 ---
@@ -62,11 +62,11 @@ Attach = create on agent (`POST .../agents/{id}/tools`) or `PATCH .../tools/{id}
 
 | Method | Path | Route change | Schema change | What to do |
 |--------|------|:------------:|:-------------:|------------|
-| `POST` | `/api/v1/agents/{agent_id}/tools` | **No** | **Yes** | Add optional `routing_hint: str \| None` (max 500) to `CreateToolRequest`. **Service:** after `push_tool_id`, upsert `agent.capability_catalog.tools[tool_id] = { routing_hint }`. Doc: [../../tools/01-create-tool-diagrams.md](../../tools/01-create-tool-diagrams.md) |
-| `GET` | `/api/v1/agents/{agent_id}/tools` | **No** | **Optional** | **Optional:** include `routing_hint` on `ToolListItem` (read from agent catalog). |
-| `GET` | `/api/v1/agents/{agent_id}/tools/{tool_id}` | **No** | **Optional** | **Optional:** include `routing_hint` on `GetToolResponse`. |
-| `GET` | `/api/v1/tools` | **No** | **No** | **No API work.** |
-| `PATCH` | `/api/v1/tools/{tool_id}` | **No** | **Yes** | Add optional `routing_hint` to `UpdateToolRequest`. **Service:** on attach (`agent_id` set) → upsert catalog entry; on detach (`agent_id: null`) → `$unset` catalog key + existing `pull_tool_id`; on move → remove from old agent catalog, add to new. |
+| `POST` | `/api/v1/agents/{agent_id}/tools` | **No** | **Yes** | **Done.** Doc: [../../tools/01-create-tool-diagrams.md](../../tools/01-create-tool-diagrams.md) |
+| `GET` | `/api/v1/agents/{agent_id}/tools` | **No** | **Optional** | **Done:** `routing_hint` on `ToolListItem` (from agent catalog). |
+| `GET` | `/api/v1/agents/{agent_id}/tools/{tool_id}` | **No** | **Optional** | **Done:** `routing_hint` on `GetToolResponse`. |
+| `GET` | `/api/v1/tools` | **No** | **Optional** | **Done:** `routing_hint` on list items when `?agent_id=` filter is set. Without filter, hint is omitted. |
+| `PATCH` | `/api/v1/tools/{tool_id}` | **No** | **Yes** | **Done.** `routing_hint` on `UpdateToolRequest`. Catalog sync on attach/detach/move. Doc: [../../tools/08-update-tool-agent-diagrams.md](../../tools/08-update-tool-agent-diagrams.md) |
 
 **Route file:** `app/api/v1/agents.py`, `app/api/v1/tools.py` — **no new routes.**
 
@@ -76,10 +76,10 @@ Attach = create on agent (`POST .../agents/{id}/tools`) or `PATCH .../tools/{id}
 
 | Method | Path | Route change | Schema change | What to do |
 |--------|------|:------------:|:-------------:|------------|
-| `GET` | `/api/v1/agents/{agent_id}/knowledgebases` | **No** | **Optional** | **Optional:** `routing_hint` on list items. |
-| `GET` | `/api/v1/knowledgebases` | **No** | **No** | **No API work.** |
-| `POST` | `/api/v1/knowledgebases` | **No** | **Yes** | Add optional `routing_hint` to `CreateKnowledgebaseRequest`. When `agent_id` is set: upsert `capability_catalog.knowledge_bases[kb_id]` after create + `push_knowledge_base_id`. Doc: [../../knowledgebase/01-create-knowledgebase-diagrams.md](../../knowledgebase/01-create-knowledgebase-diagrams.md) |
-| `PATCH` | `/api/v1/knowledgebases/{knowledgebase_id}` | **No** | **Yes** | Add optional `routing_hint` to `UpdateKnowledgebaseRequest`. Sync catalog on attach / detach / move (same pattern as tools). |
+| `GET` | `/api/v1/agents/{agent_id}/knowledgebases` | **No** | **Optional** | **Done:** `routing_hint` on list items. |
+| `GET` | `/api/v1/knowledgebases` | **No** | **Optional** | **Done:** `routing_hint` when `?agent_id=` filter is set. |
+| `POST` | `/api/v1/knowledgebases` | **No** | **Yes** | **Done.** Doc: [../../knowledgebase/01-create-knowledgebase-diagrams.md](../../knowledgebase/01-create-knowledgebase-diagrams.md) |
+| `PATCH` | `/api/v1/knowledgebases/{knowledgebase_id}` | **No** | **Yes** | **Done.** Doc: [../../knowledgebase/04-update-knowledgebase-agent-diagrams.md](../../knowledgebase/04-update-knowledgebase-agent-diagrams.md) |
 
 **Route file:** `app/api/v1/knowledgebases.py` — **no new routes.**
 
@@ -89,10 +89,10 @@ Attach = create on agent (`POST .../agents/{id}/tools`) or `PATCH .../tools/{id}
 
 | Method | Path | Route change | Schema change | What to do |
 |--------|------|:------------:|:-------------:|------------|
-| `GET` | `/api/v1/workflows` | **No** | **No** | **No API work.** |
-| `POST` | `/api/v1/workflows` | **No** | **Yes** | Add optional `routing_hint` to `CreateWorkflowRequest`. When `agent_id` set: upsert `capability_catalog.workflows[workflow_id]`. Doc: [../../workflows/01-create-workflow-diagrams.md](../../workflows/01-create-workflow-diagrams.md) |
-| `GET` | `/api/v1/workflows/{workflow_id}` | **No** | **Optional** | **Optional:** `routing_hint` on response. |
-| `PATCH` | `/api/v1/workflows/{workflow_id}` | **No** | **Yes** | Add optional `routing_hint` to `UpdateWorkflowRequest`. Sync catalog on `agent_id` attach/detach/move. |
+| `GET` | `/api/v1/workflows` | **No** | **Optional** | **Done:** `routing_hint` when `?agent_id=` filter is set. |
+| `POST` | `/api/v1/workflows` | **No** | **Yes** | **Done.** Doc: [../../workflows/01-create-workflow-diagrams.md](../../workflows/01-create-workflow-diagrams.md) |
+| `GET` | `/api/v1/workflows/{workflow_id}` | **No** | **Optional** | **Done:** `routing_hint` when workflow is attached to an agent. |
+| `PATCH` | `/api/v1/workflows/{workflow_id}` | **No** | **Yes** | **Done.** Doc: [../../workflows/04-update-workflow-diagrams.md](../../workflows/04-update-workflow-diagrams.md) |
 | `POST` | `/api/v1/workflows/{workflow_id}/publish` | **No** | **No** | **No API work.** Publishing does not affect catalog. |
 
 **Route file:** `app/api/v1/workflows.py` — **no new routes.**
@@ -103,10 +103,10 @@ Attach = create on agent (`POST .../agents/{id}/tools`) or `PATCH .../tools/{id}
 
 | Method | Path | Route change | Schema change | What to do |
 |--------|------|:------------:|:-------------:|------------|
-| `POST` | `/api/v1/agents/{agent_id}/sub-agents` | **No** | **Yes** | Add optional `routing_hint` to `CreateSubAgentRequest`. **Service:** after create + `push_sub_agent_id`, upsert `capability_catalog.sub_agents[sub_agent_id]`. Doc: [../../sub-agents/01-create-sub-agent-diagrams.md](../../sub-agents/01-create-sub-agent-diagrams.md) |
-| `GET` | `/api/v1/agents/{agent_id}/sub-agents` | **No** | **Optional** | **Optional:** `routing_hint` on `SubAgentListItem`. |
-| `GET` | `/api/v1/agents/{agent_id}/sub-agents/{sub_agent_id}` | **No** | **Optional** | **Optional:** `routing_hint` on `GetSubAgentResponse`. |
-| `PATCH` | `/api/v1/agents/{agent_id}/sub-agents/{sub_agent_id}` | **No** | **Yes** | Add optional `routing_hint` to `UpdateSubAgentRequest`. Update catalog entry without re-creating sub-agent. |
+| `POST` | `/api/v1/agents/{agent_id}/sub-agents` | **No** | **Yes** | **Done.** Doc: [../../sub-agents/01-create-sub-agent-diagrams.md](../../sub-agents/01-create-sub-agent-diagrams.md) |
+| `GET` | `/api/v1/agents/{agent_id}/sub-agents` | **No** | **Optional** | **Done:** `routing_hint` on `SubAgentListItem`. |
+| `GET` | `/api/v1/agents/{agent_id}/sub-agents/{sub_agent_id}` | **No** | **Optional** | **Done:** `routing_hint` on `GetSubAgentResponse`. |
+| `PATCH` | `/api/v1/agents/{agent_id}/sub-agents/{sub_agent_id}` | **No** | **Yes** | **Done.** Doc: [../../sub-agents/04-update-sub-agent-diagrams.md](../../sub-agents/04-update-sub-agent-diagrams.md) |
 
 **Route file:** `app/api/v1/agents.py` — **no new routes.**
 
@@ -158,6 +158,8 @@ routing_hint: str | None = Field(default=None, max_length=500)
 
 - Never write hints into `agent.system_prompt`.
 - Detach resource → remove id from `*_ids` **and** remove catalog key.
+- Move resource between agents **without** `routing_hint` in PATCH → **preserve** existing hint on the target agent.
+- Re-PATCH the same `agent_id` without `routing_hint` → no catalog upsert (avoids wiping hint).
 - Chat runtime reads catalog + live `RuntimeBundle` to build layer **[3]**.
 
 Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md).
@@ -191,7 +193,20 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 
 ### Not a REST API (Phase C)
 
-`search_knowledge` is an **LLM tool** inside `OrchestratorRunner`, not a new HTTP endpoint. Layer **[4]** `rag_context` is injected only after that tool runs.
+`search_knowledge` is an **LLM tool** inside `OrchestratorRunner`, not a new HTTP endpoint. Today layer **[4]** uses always-on `RAGRetriever` before orchestrator; Phase C replaces that with tool-driven retrieval only.
+
+---
+
+## Post–Phase A fixes (implemented)
+
+| Fix | Where |
+|-----|--------|
+| Stored `system_prompt` = base role/responsibilities only (no baked personality/tone/guardrails) | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |
+| Personality, tone, guardrails added at chat via `FinalPromptBuilder` | [final_prompt_builder.py](../../app/domain/pipeline/prompt/final_prompt_builder.py) |
+| Legacy agents with baked prompts — skip duplicate layers if markers already in `system_prompt` | `FinalPromptBuilder` baked-content detection |
+| Preserve `routing_hint` on tool/KB/workflow move | `resolve_routing_hint_for_upsert` in [capability_catalog.py](../../app/domain/models/capability_catalog.py) |
+| Skip catalog upsert on same-agent re-PATCH | `should_sync_catalog_on_agent_change` |
+| Org list endpoints return hints when `?agent_id=` | tool / KB / workflow services |
 
 ---
 
@@ -236,7 +251,7 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 | `app/services/knowledgebase_service.py` | Catalog sync |
 | `app/services/workflow_service.py` | Catalog sync |
 | `app/services/sub_agent_service.py` | Catalog sync |
-| `app/infrastructure/db/repositories/mongo/agent_repository.py` | Helpers: `upsert_catalog_entry`, `remove_catalog_entry` (or inline `$set` / `$unset`) |
+| `app/infrastructure/db/repositories/mongo/agent_repository.py` | `upsert_capability_catalog_entry`, `remove_capability_catalog_entry` |
 | `app/services/chat_completion_service.py` | **No API change** — use `FinalPromptBuilder`; stop mutating `system_prompt` for guardrails |
 | `app/services/runtime_bundle_loader.py` | Load `capability_catalog` into `RuntimeBundle` |
 
@@ -244,10 +259,10 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 
 ## Implementation order (API-facing)
 
-1. **Mongo + agent create** — empty `capability_catalog`
-2. **Schemas** — `routing_hint` on attachable create/update
-3. **Services** — sync catalog on attach/detach
-4. **Runtime** — `FinalPromptBuilder` at chat (no REST change)
+1. ~~**Mongo + agent create** — empty `capability_catalog`~~ **Done**
+2. ~~**Schemas** — `routing_hint` on attachable create/update~~ **Done**
+3. ~~**Services** — sync catalog on attach/detach~~ **Done**
+4. ~~**Runtime** — `FinalPromptBuilder` at chat (no REST change)~~ **Done**
 5. **Optional** — expose catalog on `GET /agents/{id}`; optional `PATCH capability-catalog`
 6. **Phase C** — agentic RAG tool (no new REST)
 

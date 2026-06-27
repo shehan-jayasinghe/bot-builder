@@ -175,7 +175,7 @@ def test_workflow_runner_end_clears_via_chat_graph() -> None:
             ),
             tracker=tracker,
             user_message="bye",
-            rag_context="",
+            system_prompt="Help users.",
             connectors_by_id={},
         ),
     )
@@ -226,7 +226,7 @@ def test_chat_graph_auto_starts_hello_workflow() -> None:
             bundle=bundle,
             tracker=tracker,
             user_message="hello",
-            rag_context="",
+            system_prompt="Help users.",
             connectors_by_id={},
         ),
     )
@@ -332,7 +332,7 @@ def test_orchestrator_workflow_tool_enters_workflow() -> None:
             bundle=bundle,
             tracker=tracker,
             user_message="start hello flow",
-            rag_context="",
+            system_prompt="Help users.",
             connectors_by_id={},
         ),
     )

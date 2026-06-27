@@ -5,6 +5,7 @@ from app.domain.constants.sub_agent_constants import SUB_AGENT_STATUS_ACTIVE
 from app.domain.constants.tool_constants import TOOL_STATUS_ACTIVE
 from app.domain.constants.workflow_constants import WORKFLOW_STATUS_DRAFT, WORKFLOW_STATUS_PUBLISHED
 from app.domain.models.assistant import LLMConfig
+from app.domain.models.capability_catalog import parse_capability_catalog
 from app.domain.models.runtime_bundle import (
     RuntimeBundle,
     RuntimeKnowledgeBase,
@@ -142,7 +143,11 @@ class RuntimeBundleLoader:
             workflows=orchestrator_workflows,
             sub_agents=sub_agents,
         )
-        return RuntimeBundle(orchestrator=orchestrator, organization_id=organization_id)
+        return RuntimeBundle(
+            orchestrator=orchestrator,
+            organization_id=organization_id,
+            capability_catalog=parse_capability_catalog(agent_doc.get("capability_catalog")),
+        )
 
     async def load_connectors_for_tools(
         self,

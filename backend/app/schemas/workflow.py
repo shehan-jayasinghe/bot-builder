@@ -27,6 +27,7 @@ class CreateWorkflowRequest(BaseModel):
     name: str = Field(default="Welcome", min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
     agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+    routing_hint: str | None = Field(default=None, max_length=500)
     nodes: list[WorkflowNode] | None = None
     edges: list[WorkflowEdge] | None = None
 
@@ -36,6 +37,7 @@ class WorkflowResponse(BaseModel):
     name: str
     description: str | None = None
     agent_id: str | None = None
+    routing_hint: str | None = None
     status: str
     nodes: list[dict[str, Any]]
     edges: list[dict[str, Any]]
@@ -53,6 +55,7 @@ class UpdateWorkflowRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
     agent_id: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{24}$")
+    routing_hint: str | None = Field(default=None, max_length=500)
     nodes: list[WorkflowNode] | None = None
     edges: list[WorkflowEdge] | None = None
 
@@ -68,6 +71,7 @@ class WorkflowListItem(BaseModel):
     name: str
     description: str | None = None
     agent_id: str | None = None
+    routing_hint: str | None = None
     status: str
     node_count: int
     organization_id: str

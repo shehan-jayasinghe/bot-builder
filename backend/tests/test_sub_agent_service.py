@@ -86,7 +86,10 @@ def _service_with_mocks() -> tuple[SubAgentService, object, object, object, obje
 def test_sub_agent_service_create() -> None:
     async def _run() -> None:
         service, sub_agent_repo, agent_repo, tool_repo, kb_repo, workflow_repo = _service_with_mocks()
-        agent_repo.find_by_id_for_organization = AsyncMock(return_value={"_id": AGENT_ID})
+        agent_repo.find_by_id_for_organization = AsyncMock(
+            return_value={"_id": AGENT_ID, "capability_catalog": {}},
+        )
+        agent_repo.upsert_capability_catalog_entry = AsyncMock(return_value=True)
         sub_agent_repo.count_by_agent = AsyncMock(return_value=0)
         sub_agent_repo.find_by_name_for_agent = AsyncMock(return_value=None)
         tool_repo.find_by_id_for_agent = AsyncMock(return_value={"_id": TOOL_ID})

@@ -189,6 +189,52 @@ class AgentRepository:
         )
         return result.matched_count > 0
 
+    async def upsert_capability_catalog_entry(
+        self,
+        *,
+        agent_id: str,
+        organization_id: str,
+        section: str,
+        resource_id: str,
+        routing_hint: str | None = None,
+    ) -> bool:
+        object_id = self._to_object_id(agent_id)
+        if object_id is None:
+            return False
+        entry: dict[str, Any] = {}
+        if routing_hint is not None:
+            entry["routing_hint"] = routing_hint
+        result = await self._collection.update_one(
+            {"_id": object_id, "organization_id": organization_id},
+            {
+                "$set": {
+                    f"capability_catalog.{section}.{resource_id}": entry,
+                    "updated_at": datetime.now(UTC),
+                },
+            },
+        )
+        return result.matched_count > 0
+
+    async def remove_capability_catalog_entry(
+        self,
+        *,
+        agent_id: str,
+        organization_id: str,
+        section: str,
+        resource_id: str,
+    ) -> bool:
+        object_id = self._to_object_id(agent_id)
+        if object_id is None:
+            return False
+        result = await self._collection.update_one(
+            {"_id": object_id, "organization_id": organization_id},
+            {
+                "$unset": {f"capability_catalog.{section}.{resource_id}": ""},
+                "$set": {"updated_at": datetime.now(UTC)},
+            },
+        )
+        return result.matched_count > 0
+
     @staticmethod
     def _to_object_id(agent_id: str) -> ObjectId | None:
         try:
