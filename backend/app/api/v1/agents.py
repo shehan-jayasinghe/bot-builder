@@ -6,6 +6,7 @@ from app.di.agents import get_agent_service
 from app.di.auth import get_current_user
 from app.di.knowledgebases import get_knowledgebase_service
 from app.di.preview import get_runtime_graph_service
+from app.di.chat import get_chat_completion_service
 from app.di.sub_agents import get_sub_agent_service
 from app.di.tools import get_tool_service
 from app.domain.models.current_user import CurrentUser
@@ -16,6 +17,7 @@ from app.schemas.agent import (
     GetAgentResponse,
     ListAgentsResponse,
 )
+from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
 from app.schemas.preview import RuntimeGraphResponse
 from app.schemas.sub_agent import (
@@ -36,6 +38,7 @@ from app.schemas.tool import (
     ToolStatus,
 )
 from app.services.agent_service import AgentService
+from app.services.chat_completion_service import ChatCompletionService
 from app.services.knowledgebase_service import KnowledgebaseService
 from app.services.runtime_graph_service import RuntimeGraphService
 from app.services.sub_agent_service import SubAgentService
@@ -188,6 +191,20 @@ async def get_agent_runtime_graph(
     service: RuntimeGraphService = Depends(get_runtime_graph_service),
 ) -> RuntimeGraphResponse:
     return await service.get_runtime_graph(current_user=current_user, agent_id=agent_id)
+
+
+@router.post("/{agent_id}/preview/chat", response_model=ChatResponse)
+async def preview_chat(
+    agent_id: AgentIdPath,
+    body: ChatRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: ChatCompletionService = Depends(get_chat_completion_service),
+) -> ChatResponse:
+    return await service.complete_preview(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+        request=body,
+    )
 
 
 @router.get("/{agent_id}", response_model=GetAgentResponse)

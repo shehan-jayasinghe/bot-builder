@@ -15,6 +15,10 @@ class Tracker:
         active_agent_id: str | None = None,
         active_agent_kind: str | None = None,
         last_routing_decision: dict[str, Any] | None = None,
+        source: str | None = None,
+        organization_id: str | None = None,
+        turns: list[dict[str, Any]] | None = None,
+        current_turn_events: list[dict[str, Any]] | None = None,
     ) -> None:
         self._sender_id = sender_id
         self._assistant_id = assistant_id
@@ -23,6 +27,10 @@ class Tracker:
         self._active_agent_id = active_agent_id or assistant_id
         self._active_agent_kind = active_agent_kind or "orchestrator"
         self._last_routing_decision = last_routing_decision
+        self._source = source
+        self._organization_id = organization_id
+        self._turns: list[dict[str, Any]] = list(turns or [])
+        self._current_turn_events: list[dict[str, Any]] = list(current_turn_events or [])
 
     @property
     def sender_id(self) -> str:
@@ -48,6 +56,24 @@ class Tracker:
     def last_routing_decision(self) -> dict[str, Any] | None:
         return self._last_routing_decision
 
+    @property
+    def source(self) -> str | None:
+        return self._source
+
+    @property
+    def organization_id(self) -> str | None:
+        return self._organization_id
+
+    @property
+    def turns(self) -> list[dict[str, Any]]:
+        return list(self._turns)
+
+    def set_source(self, source: str) -> None:
+        self._source = source
+
+    def set_organization_id(self, organization_id: str) -> None:
+        self._organization_id = organization_id
+
     @classmethod
     def from_payload(cls, data: dict[str, Any]) -> "Tracker":
         return cls(
@@ -58,6 +84,10 @@ class Tracker:
             active_agent_id=data.get("active_agent_id"),
             active_agent_kind=data.get("active_agent_kind"),
             last_routing_decision=data.get("last_routing_decision"),
+            source=data.get("source"),
+            organization_id=data.get("organization_id"),
+            turns=data.get("turns", []),
+            current_turn_events=data.get("current_turn_events", []),
         )
 
     @classmethod
@@ -70,6 +100,10 @@ class Tracker:
             active_agent_id=doc.get("active_agent_id"),
             active_agent_kind=doc.get("active_agent_kind"),
             last_routing_decision=doc.get("last_routing_decision"),
+            source=doc.get("source"),
+            organization_id=doc.get("organization_id"),
+            turns=doc.get("turns", []),
+            current_turn_events=doc.get("current_turn_events", []),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -81,6 +115,10 @@ class Tracker:
             "active_agent_id": self._active_agent_id,
             "active_agent_kind": self._active_agent_kind,
             "last_routing_decision": self._last_routing_decision,
+            "source": self._source,
+            "organization_id": self._organization_id,
+            "turns": self._turns,
+            "current_turn_events": self._current_turn_events,
         }
 
     def get_history(self) -> list[dict[str, Any]]:
@@ -119,3 +157,23 @@ class Tracker:
                     "timestamp": now,
                 },
             )
+
+    def append_trace_event(self, event: dict[str, Any]) -> None:
+        self._current_turn_events.append(event)
+
+    def finish_trace_turn(
+        self,
+        *,
+        turn_id: str,
+        started_at: str,
+        routing_decision: dict[str, Any] | None,
+    ) -> None:
+        self._turns.append(
+            {
+                "turn_id": turn_id,
+                "started_at": started_at,
+                "events": list(self._current_turn_events),
+                "routing_decision": routing_decision,
+            },
+        )
+        self._current_turn_events = []

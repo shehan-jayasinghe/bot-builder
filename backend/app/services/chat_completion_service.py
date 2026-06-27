@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from app.domain.constants.chat_constants import (
     ASSISTANT_UNAVAILABLE_MESSAGE,
@@ -10,12 +11,17 @@ from app.domain.pipeline.guardrails.runner import GuardrailRunner
 from app.domain.pipeline.observability.trace import TraceCollector
 from app.domain.pipeline.rag.retriever import RAGRetriever
 from app.domain.pipeline.sanitization.pii_redactor import redact_pii
+from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.schemas.chat import ChatMessage, ChatRequest, ChatResponse
 from app.services.assistant_loader import AssistantLoader
 from app.services.runtime_bundle_loader import RuntimeBundleLoader
 from app.services.tracker_service import TrackerService
+from app.shared.exceptions.agent import AgentNotFoundError
 
 logger = logging.getLogger(__name__)
+
+CHAT_SOURCE_WEBHOOK = "webhook"
+CHAT_SOURCE_PREVIEW = "preview"
 
 
 class ChatCompletionService:
@@ -23,6 +29,7 @@ class ChatCompletionService:
         self,
         *,
         assistant_loader: AssistantLoader,
+        agent_repository: AgentRepository,
         tracker_service: TrackerService,
         runtime_bundle_loader: RuntimeBundleLoader,
         guardrails: GuardrailRunner | None = None,
@@ -31,6 +38,7 @@ class ChatCompletionService:
         trace: TraceCollector | None = None,
     ) -> None:
         self._assistant_loader = assistant_loader
+        self._agent_repository = agent_repository
         self._tracker_service = tracker_service
         self._runtime_bundle_loader = runtime_bundle_loader
         self._guardrails = guardrails or GuardrailRunner()
@@ -40,33 +48,72 @@ class ChatCompletionService:
 
     async def complete(self, *, webhook_id: str, request: ChatRequest) -> ChatResponse:
         try:
-            return await self._complete_turn(webhook_id=webhook_id, request=request)
+            resolved = await self._assistant_loader.try_resolve(
+                webhook_id=webhook_id,
+                metadata=request.metadata,
+            )
+            if resolved is None:
+                return self._unavailable_response(request.sender_id)
+            return await self._complete_turn(
+                agent_doc=resolved.agent_doc,
+                request=request,
+                source=CHAT_SOURCE_WEBHOOK,
+            )
         except Exception:
             logger.exception("Chat completion failed for webhook_id=%s", webhook_id)
             return self._error_response(request.sender_id)
 
-    async def _complete_turn(self, *, webhook_id: str, request: ChatRequest) -> ChatResponse:
+    async def complete_preview(
+        self,
+        *,
+        agent_id: str,
+        organization_id: str,
+        request: ChatRequest,
+    ) -> ChatResponse:
+        agent_doc = await self._agent_repository.find_by_id_for_organization(
+            agent_id=agent_id,
+            organization_id=organization_id,
+        )
+        if agent_doc is None:
+            raise AgentNotFoundError(f"Agent not found: {agent_id}")
+
+        try:
+            return await self._complete_turn(
+                agent_doc=agent_doc,
+                request=request,
+                source=CHAT_SOURCE_PREVIEW,
+            )
+        except Exception:
+            logger.exception("Preview chat failed for agent_id=%s", agent_id)
+            return self._error_response(request.sender_id)
+
+    async def _complete_turn(
+        self,
+        *,
+        agent_doc: dict[str, Any],
+        request: ChatRequest,
+        source: str,
+    ) -> ChatResponse:
+        agent_id = str(agent_doc["_id"])
+        self._trace.begin_turn()
+
         await self._trace.record(
             "input_message",
             {"sender_id": request.sender_id, "message": request.message},
         )
 
-        resolved = await self._assistant_loader.try_resolve(
-            webhook_id=webhook_id,
-            metadata=request.metadata,
-        )
-        if resolved is None:
-            return self._unavailable_response(request.sender_id)
-
-        agent_id = str(resolved.agent_doc["_id"])
         tracker = await self._tracker_service.load_or_create(
             sender_id=request.sender_id,
             assistant_id=agent_id,
+            source=source,
+            organization_id=str(agent_doc["organization_id"]),
         )
+        self._trace.bind_tracker(tracker)
+
         if tracker.active_agent_kind == "sub_agent":
             tracker.reset_to_orchestrator()
 
-        bundle = await self._runtime_bundle_loader.load(agent_doc=resolved.agent_doc)
+        bundle = await self._runtime_bundle_loader.load(agent_doc=agent_doc)
         await self._trace.record(
             "bundle_loaded",
             {
@@ -85,6 +132,10 @@ class ChatCompletionService:
             await self._trace.record("guardrail_blocked", {})
             replies = [guardrail_result.refusal_message or GUARDRAIL_REFUSAL_MESSAGE]
             tracker.append_user_message(message=sanitized_message, metadata=request.metadata)
+            routing = {"mode": "orchestrator", "blocked": True}
+            tracker.set_routing_decision(agent_id=agent_id, kind="orchestrator", decision=routing)
+            await self._trace.record("output_message", {"message_count": len(replies)})
+            self._trace.finish_turn(routing_decision=routing)
             await self._tracker_service.persist(tracker, replies)
             return ChatResponse(
                 messages=[ChatMessage(recipient_id=request.sender_id, text=replies[0])],
@@ -118,13 +169,11 @@ class ChatCompletionService:
             connectors_by_id=connectors_by_id,
         )
 
-        tracker.set_routing_decision(
-            agent_id=agent_id,
-            kind="orchestrator",
-            decision={"mode": "orchestrator"},
-        )
-        await self._tracker_service.persist(tracker, replies)
+        routing = {"mode": "orchestrator"}
+        tracker.set_routing_decision(agent_id=agent_id, kind="orchestrator", decision=routing)
         await self._trace.record("output_message", {"message_count": len(replies)})
+        self._trace.finish_turn(routing_decision=routing)
+        await self._tracker_service.persist(tracker, replies)
 
         return ChatResponse(
             messages=[

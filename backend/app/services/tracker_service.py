@@ -21,6 +21,8 @@ class TrackerService:
         assistant_id: str,
         message: str | None = None,
         metadata: dict[str, Any] | None = None,
+        source: str | None = None,
+        organization_id: str | None = None,
     ) -> Tracker:
         tracker: Tracker | None = None
 
@@ -41,6 +43,11 @@ class TrackerService:
 
         if tracker is None:
             tracker = Tracker(sender_id=sender_id, assistant_id=assistant_id)
+
+        if source is not None:
+            tracker.set_source(source)
+        if organization_id is not None:
+            tracker.set_organization_id(organization_id)
 
         if message is not None:
             tracker.append_user_message(message=message, metadata=metadata or {})

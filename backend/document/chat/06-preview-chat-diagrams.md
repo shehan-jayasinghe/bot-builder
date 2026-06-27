@@ -9,7 +9,7 @@ Admin **Preview** chat (right panel). Same inference as [01-chat-completion-diag
 
 Public widget continues to use `POST /api/v1/chat/webhook/{webhook_id}`.
 
-**Status:** Planned — not implemented yet.
+**Status:** Implemented.
 
 ---
 
@@ -149,7 +149,8 @@ Same schema as webhook — [schemas/chat.py](../../app/schemas/chat.py):
 
 | What | Open file |
 |------|-----------|
-| Planned route | `app/api/v1/agents.py` *(new handler)* |
-| Reuse service | [chat_completion_service.py](../../app/services/chat_completion_service.py) |
-| Reuse schemas | [schemas/chat.py](../../app/schemas/chat.py) |
-| Trace persist | [trace.py](../../app/domain/pipeline/observability/trace.py) *(implement persist)* |
+| Route | [agents.py](../../app/api/v1/agents.py) |
+| Service | [chat_completion_service.py](../../app/services/chat_completion_service.py) |
+| Schemas | [schemas/chat.py](../../app/schemas/chat.py) |
+| Trace persist | [trace.py](../../app/domain/pipeline/observability/trace.py) |
+| DI | [chat.py](../../app/di/chat.py) |
