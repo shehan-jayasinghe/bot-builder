@@ -35,6 +35,7 @@ export type Workflow = {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   organization_id: string;
+  routing_hint?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -47,6 +48,7 @@ export type WorkflowListItem = {
   status: string;
   node_count: number;
   organization_id: string;
+  routing_hint?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -60,6 +62,7 @@ export type CreateWorkflowPayload = {
   name?: string;
   description?: string;
   agent_id?: string;
+  routing_hint?: string | null;
   nodes?: WorkflowNode[];
   edges?: WorkflowEdge[];
 };
@@ -68,6 +71,7 @@ export type UpdateWorkflowPayload = {
   name?: string;
   description?: string | null;
   agent_id?: string | null;
+  routing_hint?: string | null;
   nodes?: WorkflowNode[];
   edges?: WorkflowEdge[];
 };

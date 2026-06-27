@@ -7,6 +7,7 @@ import { listToolsByAgent } from "../../api/tools";
 import { listWorkflows } from "../../api/workflows";
 import type { CreateSubAgentPayload } from "../../types/subAgent";
 import { getApiError } from "../../utils/apiError";
+import { RoutingHintField } from "./RoutingHintField";
 
 const NONE = "";
 
@@ -28,6 +29,7 @@ export function CreateSubAgentModal({ agentId, open, onClose, onSuccess }: Creat
   const [toolId, setToolId] = useState(NONE);
   const [knowledgeBaseId, setKnowledgeBaseId] = useState(NONE);
   const [workflowId, setWorkflowId] = useState(NONE);
+  const [routingHint, setRoutingHint] = useState("");
 
   const toolsQuery = useQuery({
     queryKey: ["tools", "agent", agentId],
@@ -63,6 +65,7 @@ export function CreateSubAgentModal({ agentId, open, onClose, onSuccess }: Creat
       setToolId(NONE);
       setKnowledgeBaseId(NONE);
       setWorkflowId(NONE);
+      setRoutingHint("");
       createMutation.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when modal opens/closes only
@@ -94,6 +97,7 @@ export function CreateSubAgentModal({ agentId, open, onClose, onSuccess }: Creat
       knowledge_base_ids: knowledgeBaseId ? [knowledgeBaseId] : [],
       workflow_ids: workflowId ? [workflowId] : [],
       parameters: [],
+      routing_hint: routingHint.trim() || null,
     });
   }
 
@@ -145,9 +149,15 @@ export function CreateSubAgentModal({ agentId, open, onClose, onSuccess }: Creat
               rows={2}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="When should the main agent delegate to this sub agent?"
+              placeholder="Short summary for the builder UI."
             />
           </label>
+
+          <RoutingHintField
+            capabilityKind="sub_agent"
+            value={routingHint}
+            onChange={setRoutingHint}
+          />
 
           <label className="agent-detail__field">
             <span>Instructions</span>

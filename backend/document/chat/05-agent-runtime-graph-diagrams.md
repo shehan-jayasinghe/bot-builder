@@ -6,7 +6,7 @@ One batch load: orchestrator + attached tools, knowledge bases, workflows, and s
 
 **JWT auth only** — not used by the public webhook.
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — runtime graph unchanged. Phase C **Done** — chat RAG via `search_knowledge` tool. Phase D **planned** — sticky sub-agent graph highlight. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — runtime graph unchanged. Phase C **Done** — chat RAG via `search_knowledge` tool. Phase D **Done** — sticky sub-agent graph highlight. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 Related:
 

@@ -102,7 +102,7 @@ class OrchestratorRunner:
 
         delegation = result.delegation
         sub_runner = SubAgentRunner(tool_executor=self)
-        replies = await sub_runner.run_turn(
+        sub_result = await sub_runner.run_turn(
             sub_agent=delegation.sub_agent,
             orchestrator=orchestrator,
             tracker=tracker,
@@ -113,6 +113,8 @@ class OrchestratorRunner:
             rag=rag,
             trace=trace,
         )
+        if sub_result.orchestrator_return:
+            return sub_result
         routing = {
             "mode": "delegate",
             "type": "delegate",
@@ -120,7 +122,7 @@ class OrchestratorRunner:
             "sub_agent_name": delegation.sub_agent.name,
             "args": delegation.args,
         }
-        return AgentTurnResult(replies=replies, routing=routing)
+        return AgentTurnResult(replies=sub_result.replies, routing=routing)
 
     async def execute_tool_turn(
         self,
@@ -137,6 +139,7 @@ class OrchestratorRunner:
         delegates_by_name: dict[str, RuntimeSubAgent] | None = None,
         workflow_tools: list[BaseTool] | None = None,
         workflows_by_name: dict[str, RuntimeWorkflow] | None = None,
+        return_to_orchestrator_tool: BaseTool | None = None,
         tracing_context: LlmTracingContext | None = None,
         rag: "RAGRetriever | None" = None,
         trace: TraceCallback | None = None,
@@ -171,6 +174,8 @@ class OrchestratorRunner:
             langgraph_tools.append(search_knowledge_tool)
         langgraph_tools.extend(delegate_tools)
         langgraph_tools.extend(workflow_tools)
+        if return_to_orchestrator_tool is not None:
+            langgraph_tools.append(return_to_orchestrator_tool)
         if not langgraph_tools:
             reply = await self._simple_chat(
                 orchestrator=orchestrator,
@@ -231,6 +236,12 @@ class OrchestratorRunner:
                             args=tool_args,
                         ),
                     )
+
+                if (
+                    return_to_orchestrator_tool is not None
+                    and tool_name == return_to_orchestrator_tool.name
+                ):
+                    return AgentTurnResult(replies=[], orchestrator_return=True)
 
                 if tool_name == SEARCH_KNOWLEDGE_TOOL_NAME:
                     tool_result = await self._run_search_knowledge_tool(

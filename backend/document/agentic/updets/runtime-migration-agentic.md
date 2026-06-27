@@ -8,7 +8,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 
 ## Implementation status
 
-**Phase A — implemented** in code (catalog sync + `FinalPromptBuilder` at chat). Phase B **Done**. Phase C **Done**. Phase D **planned**.
+**Phase A — implemented** in code (catalog sync + `FinalPromptBuilder` at chat). Phase B **Done**. Phase C **Done**. Phase D **Done**.
 
 ## New files
 
@@ -25,13 +25,13 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 
 | File | Change |
 |------|--------|
-| `app/services/chat_completion_service.py` | **Done (Phase C):** no pre-turn RAG; **Phase D Planned:** remove `reset_to_orchestrator` on sub-agent — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| `app/services/chat_completion_service.py` | **Done (Phase C):** no pre-turn RAG; **Done (Phase D):** sticky sub-agent — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
 | `app/services/runtime_bundle_loader.py` | Load `capability_catalog` from `agent_doc` into `RuntimeBundle` |
-| `app/domain/models/runtime_bundle.py` | **Phase D Planned:** add `find_sub_agent_by_id()` — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md); `capability_catalog` + legacy `build_system_prompt` |
+| `app/domain/models/runtime_bundle.py` | **Done (Phase D):** `find_sub_agent_by_id()` — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md); `capability_catalog` + legacy `build_system_prompt` |
 | `app/domain/graph/orchestrator.py` | **Done (Phase C):** `search_knowledge` tool in `execute_tool_turn` — [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
-| `app/domain/graph/chat_graph.py` | **Done (Phase B):** workflow routing; **Phase D Planned:** sticky sub-agent branch — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
-| `app/domain/graph/sub_agent_delegate.py` | **Done (Phase C):** `search_knowledge` on sub-agent turns; **Phase D Planned:** sticky + optional `return_to_orchestrator` — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
-| `app/domain/models/tracker.py` | **Phase D Planned:** sticky helpers — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| `app/domain/graph/chat_graph.py` | **Done (Phase B):** workflow routing; **Done (Phase D):** sticky sub-agent branch — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| `app/domain/graph/sub_agent_delegate.py` | **Done (Phase C):** `search_knowledge` on sub-agent turns; **Done (Phase D):** sticky + `return_to_orchestrator` — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| `app/domain/models/tracker.py` | **Done (Phase D):** sticky state via `active_agent_*` + `last_routing_decision` — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
 | `app/infrastructure/ai/prompt_builder.py` | Agent create: base `system_prompt` only (role + responsibilities) |
 | `app/di/chat.py` | Wire `FinalPromptBuilder` |
 
@@ -66,7 +66,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 | **A** | Catalog model + `FinalPromptBuilder` + attach sync (see API doc) | **Done** |
 | **B** | Remove `ChatGraph._should_auto_start_workflow` — agentic workflow routing | **Done** — [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md) |
 | **C** | `search_knowledge` tool; remove always-on `RAGRetriever.retrieve()` | **Done** — [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md) |
-| **D** | Sticky sub-agent — do not reset to orchestrator every message | **Planned** — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| **D** | Sticky sub-agent — do not reset to orchestrator every message | **Done** — [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
 
 ---
 

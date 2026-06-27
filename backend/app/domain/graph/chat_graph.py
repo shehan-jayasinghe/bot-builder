@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from app.domain.graph.orchestrator import OrchestratorRunner
-from app.domain.graph.turn_result import AgentTurnResult
+from app.domain.graph.sub_agent_delegate import SubAgentRunner
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeWorkflow
 from app.domain.models.tracker import Tracker
 from app.domain.workflow.workflow_runner import WorkflowReply, WorkflowRunner, WorkflowTurnResult
@@ -56,6 +56,19 @@ class ChatGraph:
                     trace=trace,
                 )
 
+        if tracker.active_agent_kind == "sub_agent":
+            sticky_result = await self._run_sticky_sub_agent_turn(
+                bundle=bundle,
+                tracker=tracker,
+                user_message=user_message,
+                connectors_by_id=connectors_by_id,
+                tracing_context=tracing_context,
+                rag=rag,
+                trace=trace,
+            )
+            if sticky_result is not None:
+                return sticky_result
+
         turn_result = await self._orchestrator.run_turn(
             bundle=bundle,
             tracker=tracker,
@@ -85,6 +98,58 @@ class ChatGraph:
         return ChatGraphResult(
             replies=[WorkflowReply(text=reply) for reply in turn_result.replies],
             routing=turn_result.routing,
+        )
+
+    async def _run_sticky_sub_agent_turn(
+        self,
+        *,
+        bundle: RuntimeBundle,
+        tracker: Tracker,
+        user_message: str,
+        connectors_by_id: dict[str, dict[str, Any]],
+        tracing_context: LlmTracingContext | None,
+        rag: "RAGRetriever | None",
+        trace: TraceCallback | None,
+    ) -> ChatGraphResult | None:
+        sub_agent = bundle.orchestrator.find_sub_agent_by_id(tracker.active_agent_id)
+        if sub_agent is None:
+            tracker.reset_to_orchestrator()
+            return None
+
+        last_decision = tracker.last_routing_decision or {}
+        delegate_args = dict(last_decision.get("args") or {})
+
+        sub_runner = SubAgentRunner(tool_executor=self._orchestrator)
+        sub_result = await sub_runner.run_turn(
+            sub_agent=sub_agent,
+            orchestrator=bundle.orchestrator,
+            tracker=tracker,
+            delegate_args=delegate_args,
+            bundle=bundle,
+            connectors_by_id=connectors_by_id,
+            tracing_context=tracing_context,
+            rag=rag,
+            trace=trace,
+        )
+
+        if sub_result.orchestrator_return:
+            tracker.reset_to_orchestrator()
+            return ChatGraphResult(
+                replies=[WorkflowReply(text=reply) for reply in sub_result.replies],
+                routing=sub_result.routing,
+            )
+
+        routing = {
+            "mode": "delegate",
+            "type": "delegate",
+            "sub_agent_id": sub_agent.id,
+            "sub_agent_name": sub_agent.name,
+            "args": delegate_args,
+            "sticky": True,
+        }
+        return ChatGraphResult(
+            replies=[WorkflowReply(text=reply) for reply in sub_result.replies],
+            routing=routing,
         )
 
     async def _enter_and_run_workflow(

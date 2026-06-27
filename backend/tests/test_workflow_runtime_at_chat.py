@@ -345,3 +345,47 @@ def test_orchestrator_workflow_tool_enters_workflow() -> None:
     orchestrator.run_turn.assert_awaited_once()
     assert result.replies[0].text == "Welcome"
     assert result.routing.get("enter_reason") == "orchestrator_tool"
+
+
+def test_workflow_takes_priority_over_sticky_sub_agent() -> None:
+    workflow = _hello_workflow()
+    bundle = RuntimeBundle(
+        organization_id=ORG_ID,
+        orchestrator=RuntimeOrchestrator(
+            id=str(AGENT_ID),
+            name="Bot",
+            system_prompt="Help users.",
+            workflows=[workflow],
+        ),
+    )
+    tracker = Tracker(
+        sender_id="preview-1",
+        assistant_id=str(AGENT_ID),
+        active_agent_id="6a3f9012d8139334274fbc04",
+        active_agent_kind="sub_agent",
+        active_flow_state={
+            "workflow_id": WORKFLOW_ID,
+            "current_node_id": "message-1",
+            "slots": {},
+            "awaiting_slot": None,
+        },
+    )
+    tracker.append_user_message(message="hi", metadata={})
+
+    orchestrator = AsyncMock()
+    orchestrator.run_turn = AsyncMock()
+    graph = ChatGraph(orchestrator=orchestrator)
+
+    result = asyncio.run(
+        graph.run_turn(
+            bundle=bundle,
+            tracker=tracker,
+            user_message="next",
+            system_prompt="Help users.",
+            connectors_by_id={},
+        ),
+    )
+
+    orchestrator.run_turn.assert_not_awaited()
+    assert result.routing.get("mode") == "workflow"
+    assert result.replies[0].text == "Welcome"

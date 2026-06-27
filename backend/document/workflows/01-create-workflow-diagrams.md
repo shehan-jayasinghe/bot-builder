@@ -1,6 +1,6 @@
 # Create Workflow — `POST /api/v1/workflows`
 
-**Agentic migration (REST):** Phase A **Done** — `routing_hint` → `agent.capability_catalog.workflows`. PATCH: [04-update-workflow-diagrams.md](./04-update-workflow-diagrams.md). Phase B **Done** — runtime only (LLM picks workflow; no auto-start). Phase C **no REST change**. Phase D **planned** — workflow priority over sticky sub-agent at chat. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration (REST):** Phase A **Done** — `routing_hint` → `agent.capability_catalog.workflows`. PATCH: [04-update-workflow-diagrams.md](./04-update-workflow-diagrams.md). Phase B **Done** — runtime only (LLM picks workflow; no auto-start). Phase C **no REST change**. Phase D **Done** — workflow priority over sticky sub-agent at chat. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 Organization creates a **Workflow** — named canvas with `nodes` and `edges` stored as JSON.
 

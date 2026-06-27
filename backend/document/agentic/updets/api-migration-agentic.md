@@ -271,7 +271,7 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 5. **Optional** — expose catalog on `GET /agents/{id}`; optional `PATCH capability-catalog`
 6. ~~**Phase B** — agentic workflow routing (no REST)~~ **Done** — [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md)
 7. ~~**Phase C** — agentic RAG tool (no new REST)~~ **Done** — [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md)
-8. **Phase D** — sticky sub-agent (no REST) — [api-migration-agentic-phase-d.md](./api-migration-agentic-phase-d.md)
+8. ~~**Phase D** — sticky sub-agent (no REST)~~ **Done** — [api-migration-agentic-phase-d.md](./api-migration-agentic-phase-d.md)
 
 ---
 

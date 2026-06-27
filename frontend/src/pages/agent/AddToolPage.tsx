@@ -13,6 +13,7 @@ import {
   parseToolConfig,
   ToolConfigFields,
 } from "../../components/agent/ToolConfigFields";
+import { RoutingHintField } from "../../components/agent/RoutingHintField";
 import { CONNECTOR_TYPE_ICONS } from "../../constants/tools";
 import type { ConnectorType, HttpAuthType } from "../../types/connector";
 import type { ExecutorCatalogItem, ExecutorName } from "../../types/executor";
@@ -134,6 +135,7 @@ export function AddToolPage() {
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [toolName, setToolName] = useState("");
   const [toolDescription, setToolDescription] = useState("");
+  const [routingHint, setRoutingHint] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { data: agent, isLoading: agentLoading } = useQuery({
@@ -267,6 +269,7 @@ export function AddToolPage() {
       executor: selectedExecutorItem.executor,
       connector_id: connectorId,
       config,
+      routing_hint: routingHint.trim() || null,
     });
   }
 
@@ -643,6 +646,8 @@ export function AddToolPage() {
             />
             <small>The LLM uses this to decide when to invoke the tool.</small>
           </label>
+
+          <RoutingHintField capabilityKind="tool" value={routingHint} onChange={setRoutingHint} />
 
           <div className="agent-form__section">
             <span className="agent-form__label">REVIEW</span>

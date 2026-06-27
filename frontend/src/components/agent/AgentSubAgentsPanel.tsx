@@ -93,6 +93,9 @@ export function AgentSubAgentsPanel({ agentId }: AgentSubAgentsPanelProps) {
                   ) : (
                     <span className="agent-kb-list__meta">{formatSkillSummary(item)}</span>
                   )}
+                  {item.routing_hint ? (
+                    <span className="agent-kb-list__meta agent-kb-list__hint">{item.routing_hint}</span>
+                  ) : null}
                 </div>
                 <div className="agent-kb-list__actions">
                   <span className="agent-kb-list__meta">{formatSkillSummary(item)}</span>

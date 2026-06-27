@@ -24,7 +24,7 @@ Related config docs:
 - Phase 4 — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md)
 - Phase B — [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) (agentic workflow routing — **Done**)
 - Phase C — [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) (agentic RAG — **Done**)
-- Phase D — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) (sticky sub-agent — **planned**)
+- Phase D — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) (sticky sub-agent — **Done**)
 
 **Preview UI (admin builder — planned):**
 
@@ -46,7 +46,7 @@ Related config docs:
 | **A** | — | **Done** | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
 | **B** | 6, 11 | **Done** | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 | **C** | 9 | **Done** | [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
-| **D** | 8 | **Planned** | Sticky sub-agent — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
+| **D** | 8 | **Done** | Sticky sub-agent — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
 
 **Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `ChatGraph` → orchestrator / workflow → `TrackerService.persist`.
 
@@ -301,7 +301,7 @@ Sub-agent function example:
 
 # Flow 8 — Sub-agent delegation
 
-**Status: done** — delegate tools via `SubAgentRunner`. **Phase D (planned):** sticky handover — follow-up messages stay on sub-agent. Spec: [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md).
+**Status:** Implemented — delegate tools + sticky follow-up (Phase D **Done**). Spec: [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md).
 
 ```mermaid
 flowchart TB
@@ -314,7 +314,7 @@ flowchart TB
     LLM -->|text| F12[Flow 12]
 ```
 
-MVP today: reset to orchestrator on **next** user message unless workflow active. **Phase D:** keep `active_agent_kind == sub_agent` until explicit exit.
+MVP: follow-up messages stay on sub-agent until workflow enter, `return_to_orchestrator` tool, or detached sub-agent fallback.
 
 ---
 
@@ -500,7 +500,7 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | A | catalog | Done | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
 | B | workflow routing | Done | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 | C | agentic RAG | Done | [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
-| D | sticky sub-agent | Planned | [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
+| D | sticky sub-agent | Done | [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
 
 ---
 

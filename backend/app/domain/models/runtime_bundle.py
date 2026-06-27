@@ -74,6 +74,12 @@ class RuntimeOrchestrator(BaseModel):
                 return sub_agent
         return None
 
+    def find_sub_agent_by_id(self, sub_agent_id: str) -> RuntimeSubAgent | None:
+        for sub_agent in self.sub_agents:
+            if sub_agent.id == sub_agent_id:
+                return sub_agent
+        return None
+
     def find_workflow_by_id(self, workflow_id: str) -> RuntimeWorkflow | None:
         for workflow in self.workflows:
             if workflow.id == workflow_id:

@@ -849,6 +849,14 @@ button {
   text-transform: lowercase;
 }
 
+.agent-kb-list__hint {
+  text-transform: none;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .agent-kb-list__actions {
   display: flex;
   align-items: center;

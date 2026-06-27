@@ -24,3 +24,4 @@ class AgentTurnResult:
     routing: dict[str, Any] = field(default_factory=lambda: {"mode": "orchestrator"})
     delegation: DelegationRequest | None = None
     workflow_enter: WorkflowEnterRequest | None = None
+    orchestrator_return: bool = False

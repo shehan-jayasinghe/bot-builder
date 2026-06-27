@@ -10,7 +10,7 @@ Related:
 - Agent graph: [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md)
 - Chat events: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) — Trace events table
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. Phase C **Done** — RAG stats on `tool_complete` for `search_knowledge`. Phase D **planned** — `sub_agent_continue` on sticky turns. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. Phase C **Done** — RAG stats on `tool_complete` for `search_knowledge`. Phase D **Done** — `sub_agent_continue` on sticky turns. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
 **Status:** Implemented.
 
@@ -158,7 +158,7 @@ Authorization: Bearer <clerk_jwt>
 | `tool_complete` | Tool finished — for `search_knowledge` includes `kb_ids`, `chunk_count`, `context_length` | *(nested under tool)* |
 | `tool_error` | Tool failed | **Tool Start** → error state |
 | `sub_agent_start` | First delegate from orchestrator | *(feeds graph highlight)* |
-| `sub_agent_continue` | Sticky follow-up on same sub-agent (**Phase D — planned**) | *(feeds graph highlight)* |
+| `sub_agent_continue` | Sticky follow-up on same sub-agent (Phase D **Done**) | *(feeds graph highlight)* |
 | `sub_agent_complete` | Sub-agent turn finished | *(nested)* |
 | `routing_decision` | Agent/workflow switch | *(feeds graph highlight)* |
 | `output_message` | Assistant reply | **Output Message** |

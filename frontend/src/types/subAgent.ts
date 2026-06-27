@@ -8,6 +8,7 @@ export type CreateSubAgentPayload = {
   knowledge_base_ids?: string[];
   workflow_ids?: string[];
   parameters?: [];
+  routing_hint?: string | null;
 };
 
 export type SubAgent = {
@@ -22,6 +23,7 @@ export type SubAgent = {
   status: SubAgentStatus | string;
   agent_id: string;
   organization_id: string;
+  routing_hint?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -37,6 +39,7 @@ export type SubAgentListItem = {
   parameter_count: number;
   agent_id: string;
   organization_id: string;
+  routing_hint?: string | null;
   created_at: string;
   updated_at: string;
 };

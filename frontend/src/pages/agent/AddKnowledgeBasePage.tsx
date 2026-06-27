@@ -10,6 +10,7 @@ import {
   KnowledgeBaseFormFields,
   type KnowledgeBaseFormState,
 } from "../../components/agent/KnowledgeBaseForm";
+import { RoutingHintField } from "../../components/agent/RoutingHintField";
 import { WizardLayout } from "../../components/agent/WizardLayout";
 
 function getApiError(error: unknown): string {
@@ -32,6 +33,7 @@ export function AddKnowledgeBasePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<KnowledgeBaseFormState>(DEFAULT_KB_FORM_STATE);
+  const [routingHint, setRoutingHint] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { data: agent, isLoading } = useQuery({
@@ -71,6 +73,7 @@ export function AddKnowledgeBasePage() {
       storage_type: form.storageType,
       source_type: form.sourceType,
       agent_id: agentId,
+      routing_hint: routingHint.trim() || null,
       website_url: form.sourceType === "website" ? form.websiteUrl.trim() : undefined,
       crawl_depth: form.sourceType === "website" ? form.crawlDepth : undefined,
       file: form.sourceType === "file" ? form.documentFile : undefined,
@@ -103,6 +106,11 @@ export function AddKnowledgeBasePage() {
     >
       <div className="agent-form">
         <KnowledgeBaseFormFields form={form} onChange={setForm} />
+        <RoutingHintField
+          capabilityKind="knowledgebase"
+          value={routingHint}
+          onChange={setRoutingHint}
+        />
         {error ? <p className="agent-form__error">{error}</p> : null}
       </div>
     </WizardLayout>

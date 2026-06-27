@@ -6,7 +6,7 @@
 
 **Goal:** After orchestrator delegates to a sub-agent, **follow-up user messages** stay on that sub-agent until an explicit exit — not reset to orchestrator every turn.
 
-**Status:** **Planned** (not implemented in code yet).
+**Status:** **Done** (implemented in code).
 
 ---
 
@@ -22,14 +22,14 @@ Phase D is **runtime-only**. No new URLs, no Pydantic changes.
 
 ---
 
-## What changes at chat (not REST)
+## What changed at chat (not REST)
 
-| Today (post–Phase C) | After Phase D |
-|----------------------|---------------|
-| Start of every turn: if `active_agent_kind == "sub_agent"` → `tracker.reset_to_orchestrator()` | **Remove** reset — keep sticky sub-agent state |
-| Follow-up messages always run orchestrator LLM first | Follow-up messages run **SubAgentRunner** directly when sticky |
-| `active_agent_id` / `active_agent_kind` set on delegate, then cleared next message | Persist until **explicit exit**, then orchestrator runs on the next turn |
-| `last_routing_decision.args` only used on delegate turn | Reuse stored delegate args (or empty) on sticky follow-up turns |
+| Before Phase D | After Phase D (Done) |
+|----------------|----------------------|
+| Start of every turn: if `active_agent_kind == "sub_agent"` → `tracker.reset_to_orchestrator()` | No per-turn reset — sticky sub-agent state persists |
+| Follow-up messages always ran orchestrator LLM first | Follow-up messages run **SubAgentRunner** directly when sticky |
+| `active_agent_id` / `active_agent_kind` cleared next message | Persist until **explicit exit** |
+| `last_routing_decision.args` only on delegate turn | Reused on sticky follow-up turns |
 
 Workflow priority is **unchanged** (Phase B): `active_flow_state` still routes to `WorkflowRunner` before sub-agent sticky path.
 
@@ -43,7 +43,7 @@ Workflow priority is **unchanged** (Phase B): `active_flow_state` still routes t
 |--------|------|----------------|
 | `POST` | `/api/v1/chat/webhook/{webhook_id}` | **Runtime only** — no schema change. Doc: [../../chat/01-chat-completion-diagrams.md](../../chat/01-chat-completion-diagrams.md) |
 | `POST` | `/api/v1/agents/{agent_id}/preview/chat` | **Runtime only** — same as webhook |
-| `GET` | `.../preview/sessions/{sender_id}/trace` | **Optional:** `sub_agent_continue` trace on sticky turns (see runtime spec) |
+| `GET` | `.../preview/sessions/{sender_id}/trace` | **Done:** `sub_agent_continue` trace on sticky turns |
 | `GET` | `/api/v1/agents/{agent_id}/runtime-graph` | **No change** — graph highlight uses `active_agent_id` (already supported) |
 
 ### Sub-agents (REST — Phase A already done)
@@ -95,15 +95,15 @@ Doc: [../../sub-agents/01-create-sub-agent-diagrams.md](../../sub-agents/01-crea
 
 ## Service / repository — Phase D (runtime)
 
-| Component | Change |
+| Component | Status |
 |-----------|--------|
-| `app/services/chat_completion_service.py` | **Remove** `reset_to_orchestrator()` at turn start when `active_agent_kind == "sub_agent"` |
-| `app/domain/graph/chat_graph.py` | **Add** sticky branch — route to `SubAgentRunner` when `active_agent_kind == "sub_agent"` and no active workflow |
-| `app/domain/graph/sub_agent_delegate.py` | **Optional:** `return_to_orchestrator` stub tool for explicit exit |
-| `app/domain/models/tracker.py` | **Optional:** helper to read sticky delegate args from `last_routing_decision` |
-| `app/domain/models/runtime_bundle.py` | **Add** `find_sub_agent_by_id()` on `RuntimeOrchestrator` |
-| `app/domain/graph/orchestrator.py` | **No change** to delegate entry — still sets routing on first delegate |
-| `app/services/tracker_service.py` | **No change** — already persists `active_agent_*` |
+| `app/services/chat_completion_service.py` | **Done** — no per-turn reset; `sub_agent_continue` trace |
+| `app/domain/graph/chat_graph.py` | **Done** — sticky branch → `SubAgentRunner` |
+| `app/domain/graph/sub_agent_delegate.py` | **Done** — `return_to_orchestrator` tool |
+| `app/domain/models/runtime_bundle.py` | **Done** — `find_sub_agent_by_id()` |
+| `app/domain/models/tracker.py` | **Done** — `active_agent_*` + `last_routing_decision` (no new helpers) |
+| `app/domain/graph/orchestrator.py` | **No change** — delegate entry unchanged |
+| `app/services/tracker_service.py` | **No change** |
 
 Detail: [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md)
 
@@ -111,11 +111,11 @@ Detail: [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase
 
 ## Implementation order (Phase D)
 
-1. Remove per-turn `reset_to_orchestrator()` in `chat_completion_service.py`
-2. Add sticky routing in `ChatGraph.run_turn` (sub-agent path before orchestrator)
-3. Wire `SubAgentRunner` with delegate args from `last_routing_decision` on follow-up turns
-4. Define exit conditions (workflow, `return_to_orchestrator` tool, optional orchestrator re-route)
-5. Add / update tests; annotate chat + sub-agent docs; mark Phase D **Done** in [runtime-migration-agentic.md](./runtime-migration-agentic.md)
+1. ~~Remove per-turn `reset_to_orchestrator()` in `chat_completion_service.py`~~ **Done**
+2. ~~Add sticky routing in `ChatGraph.run_turn`~~ **Done**
+3. ~~Wire `SubAgentRunner` with delegate args from `last_routing_decision`~~ **Done**
+4. ~~Exit conditions: workflow, `return_to_orchestrator`, detached sub-agent fallback~~ **Done**
+5. ~~Tests + doc annotations; mark Phase D **Done**~~ **Done**
 
 ---
 
@@ -123,11 +123,9 @@ Detail: [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase
 
 | File | Action | Status |
 |------|--------|--------|
-| `tests/test_sub_agent_delegation_at_chat.py` | Follow-up message stays on sub-agent (no reset) | **Planned** |
-| `tests/test_sub_agent_delegation_at_chat.py` | Rewrite `test_chat_completion_resets_sub_agent_before_next_turn` — assert **sticky** after Phase D | **Planned** |
-| `tests/test_chat_completion_service.py` | Sticky turn skips orchestrator `run_turn` | **Planned** |
-| `tests/test_workflow_runtime_at_chat.py` | Workflow still takes priority over sticky sub-agent | **Planned** |
-| Sticky exit tests | `return_to_orchestrator` or workflow exit clears sticky state | **Planned** |
+| `tests/test_sub_agent_delegation_at_chat.py` | Follow-up message stays on sub-agent (no reset) | **Done** |
+| `tests/test_sub_agent_delegation_at_chat.py` | Sticky `ChatGraph` + `return_to_orchestrator` tests | **Done** |
+| `tests/test_workflow_runtime_at_chat.py` | Workflow still takes priority over sticky sub-agent | **Done** |
 
 ---
 

@@ -18,6 +18,8 @@ _PARAM_TYPE_MAP: dict[str, type] = {
     "boolean": bool,
 }
 
+RETURN_TO_ORCHESTRATOR_TOOL_NAME = "return_to_orchestrator"
+
 
 def normalize_sub_agent_name(name: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_]+", "_", name.strip().lower())
@@ -84,6 +86,20 @@ def format_delegate_context(delegate_args: dict[str, Any]) -> str:
     return "## Delegation context\n" + "\n".join(lines)
 
 
+def build_return_to_orchestrator_tool() -> StructuredTool:
+    async def _return_stub(**_kwargs: Any) -> str:
+        return "Returning to the main assistant."
+
+    return StructuredTool.from_function(
+        coroutine=_return_stub,
+        name=RETURN_TO_ORCHESTRATOR_TOOL_NAME,
+        description=(
+            "Return control to the main orchestrator assistant when the delegated task is "
+            "complete or the user wants to change topic."
+        ),
+    )
+
+
 def build_sub_agent_system_prompt(
     sub_agent: RuntimeSubAgent,
     *,
@@ -114,7 +130,7 @@ class SubAgentRunner:
         tracing_context: LlmTracingContext | None = None,
         rag: Any = None,
         trace: Any = None,
-    ) -> list[str]:
+    ) -> AgentTurnResult:
         system_prompt = build_sub_agent_system_prompt(
             sub_agent,
             delegate_args=delegate_args,
@@ -123,9 +139,11 @@ class SubAgentRunner:
             sub_agent.knowledge_bases,
             capability_catalog=bundle.capability_catalog,
         )
+        return_to_orchestrator_tool = build_return_to_orchestrator_tool()
         scoped_tools = [
             tool for tool in sub_agent.tools
             if not (search_knowledge_tool is not None and tool.name == SEARCH_KNOWLEDGE_TOOL_NAME)
+            and tool.name != RETURN_TO_ORCHESTRATOR_TOOL_NAME
         ]
         history = _cap_history(tracker.get_history())
         result = await self._tool_executor.execute_tool_turn(
@@ -138,12 +156,19 @@ class SubAgentRunner:
             organization_id=bundle.organization_id,
             delegate_tools=[],
             delegates_by_name={},
+            return_to_orchestrator_tool=return_to_orchestrator_tool,
             connectors_by_id=connectors_by_id,
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
         )
-        return result.replies
+        if result.orchestrator_return:
+            return AgentTurnResult(
+                replies=result.replies,
+                routing={"mode": "orchestrator", "returned_from_sub_agent": True},
+                orchestrator_return=True,
+            )
+        return AgentTurnResult(replies=result.replies)
 
 
 def _cap_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -117,9 +117,6 @@ class ChatCompletionService:
         )
         self._trace.bind_tracker(tracker)
 
-        if tracker.active_agent_kind == "sub_agent" and tracker.active_flow_state is None:
-            tracker.reset_to_orchestrator()
-
         bundle = await self._runtime_bundle_loader.load(
             agent_doc=agent_doc,
             for_preview=source == CHAT_SOURCE_PREVIEW,
@@ -204,14 +201,23 @@ class ChatCompletionService:
         routing = turn_result.routing
 
         if routing.get("mode") == "delegate":
-            await self._trace.record(
-                "sub_agent_start",
-                {
-                    "sub_agent_id": routing.get("sub_agent_id"),
-                    "sub_agent_name": routing.get("sub_agent_name"),
-                    "args": routing.get("args"),
-                },
-            )
+            if routing.get("sticky"):
+                await self._trace.record(
+                    "sub_agent_continue",
+                    {
+                        "sub_agent_id": routing.get("sub_agent_id"),
+                        "sub_agent_name": routing.get("sub_agent_name"),
+                    },
+                )
+            else:
+                await self._trace.record(
+                    "sub_agent_start",
+                    {
+                        "sub_agent_id": routing.get("sub_agent_id"),
+                        "sub_agent_name": routing.get("sub_agent_name"),
+                        "args": routing.get("args"),
+                    },
+                )
             await self._trace.record("sub_agent_complete", {"reply_count": len(replies)})
 
         tracker.set_routing_decision(

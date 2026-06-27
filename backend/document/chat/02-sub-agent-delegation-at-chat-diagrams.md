@@ -6,27 +6,13 @@ Parent: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) · Fl
 
 Sub-agent REST (attach + `routing_hint`): [../sub-agents/01-create-sub-agent-diagrams.md](../sub-agents/01-create-sub-agent-diagrams.md)
 
-**Agentic migration (chat API):** Phase A **Done**. Phase B **no change** (workflows only). Phase C **Done** — `search_knowledge` on `SubAgentRunner` turn. Phase D **planned** — sticky sub-agent handover. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration (chat API):** Phase A **Done**. Phase B **no change** (workflows only). Phase C **Done** — `search_knowledge` on `SubAgentRunner` turn. Phase D **Done** — sticky sub-agent handover. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
-**Status:** Implemented — `sub_agent_delegate.py` + orchestrator delegate tools. Sticky follow-up (**Phase D**) not yet in code.
+**Status:** Implemented — `sub_agent_delegate.py` + orchestrator delegate tools + sticky follow-up in `chat_graph.py`.
 
 ---
 
-## Runtime flow (today)
-
-```mermaid
-flowchart TB
-    ORCH[Orchestrator LLM]
-    ORCH -->|delegate tool| DELEG[SubAgentRunner]
-    DELEG --> PROMPT[sub_agent instructions + delegate args]
-    PROMPT --> SCOPE[Scoped tools + search_knowledge + KBs]
-    SCOPE --> LLM[Bedrock]
-    LLM -->|tool| EXEC[Flow 10 — ExecutorRegistry]
-    LLM -->|text| REPLY[Flow 12 — response]
-    REPLY --> RESET[Next turn: reset_to_orchestrator]
-```
-
-## Runtime flow (Phase D — planned)
+## Runtime flow
 
 ```mermaid
 flowchart TB
@@ -36,31 +22,43 @@ flowchart TB
     WF -->|no| KIND{active_agent_kind?}
     KIND -->|sub_agent| STICKY[SubAgentRunner — sticky follow-up]
     KIND -->|orchestrator| ORCH[OrchestratorRunner]
-    ORCH -->|delegate| DELEG[SubAgentRunner — first entry]
-    STICKY --> REPLY[Reply]
-    DELEG --> REPLY
+    ORCH -->|delegate tool| DELEG[SubAgentRunner — first entry]
+    STICKY --> SCOPE[Scoped tools + search_knowledge + return_to_orchestrator]
+    DELEG --> SCOPE
+    SCOPE --> LLM[Bedrock]
+    LLM -->|tool| EXEC[Flow 10 — ExecutorRegistry]
+    LLM -->|return_to_orchestrator| EXIT[Reset to orchestrator]
+    LLM -->|text| REPLY[Flow 12 — response]
 ```
+
+**First entry:** orchestrator LLM calls a delegate tool → `SubAgentRunner` with delegate args.
+
+**Sticky follow-up (Phase D):** when `active_agent_kind == "sub_agent"`, `ChatGraph` runs `SubAgentRunner` directly — reuses `last_routing_decision.args`.
+
+**Exit:** workflow enter/exit, `return_to_orchestrator` tool, or detached sub-agent → orchestrator fallback.
+
+---
 
 ## Implementation files
 
 | What | File |
 |------|------|
-| Delegate tools | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) |
+| Delegate tools + `return_to_orchestrator` | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) |
 | Orchestrator wiring | [orchestrator.py](../../app/domain/graph/orchestrator.py) |
-| Sticky routing (Phase D) | [chat_graph.py](../../app/domain/graph/chat_graph.py) |
-| Reset today (remove in D) | [chat_completion_service.py](../../app/services/chat_completion_service.py) |
+| Sticky routing | [chat_graph.py](../../app/domain/graph/chat_graph.py) |
+| Sub-agent lookup | `find_sub_agent_by_id()` in [runtime_bundle.py](../../app/domain/models/runtime_bundle.py) |
 | Session state | [tracker.py](../../app/domain/models/tracker.py) |
-| Trace | `sub_agent_start` / `sub_agent_complete` in [chat_completion_service.py](../../app/services/chat_completion_service.py) |
+| Trace | `sub_agent_start` / `sub_agent_continue` / `sub_agent_complete` in [chat_completion_service.py](../../app/services/chat_completion_service.py) |
 
-## Agentic migration — Phase D (planned)
+## Agentic migration — Phase D (Done)
 
-| Item | Change |
+| Item | Status |
 |------|--------|
 | Sticky handover | Keep `active_agent_id` / `active_agent_kind` across turns until explicit exit |
-| Remove reset | Delete `reset_to_orchestrator()` at turn start when `active_agent_kind == "sub_agent"` |
+| No per-turn reset | Removed `reset_to_orchestrator()` at turn start in `chat_completion_service` |
 | Follow-up routing | `ChatGraph` runs `SubAgentRunner` directly when sticky |
-| Exit | Workflow enter/exit; optional `return_to_orchestrator` tool |
+| Exit | Workflow priority; `return_to_orchestrator` tool; detached sub-agent fallback |
 | Delegate args | Reuse `last_routing_decision.args` on sticky turns |
-| Sub-agent lookup | Add `find_sub_agent_by_id()` on `RuntimeOrchestrator` (resolve `active_agent_id`) |
+| Sub-agent lookup | `find_sub_agent_by_id()` on `RuntimeOrchestrator` |
 
 Runtime spec: [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) · API: [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md)

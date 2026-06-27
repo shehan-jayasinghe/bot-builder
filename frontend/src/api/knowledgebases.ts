@@ -2,6 +2,7 @@ import type {
   CreateKnowledgebasePayload,
   Knowledgebase,
   ListKnowledgebasesResponse,
+  UpdateKnowledgebasePayload,
 } from "../types/knowledgebase";
 import { api } from "./client";
 
@@ -35,6 +36,9 @@ export async function createKnowledgebase(payload: CreateKnowledgebasePayload): 
   if (payload.agent_id) {
     formData.append("agent_id", payload.agent_id);
   }
+  if (payload.routing_hint) {
+    formData.append("routing_hint", payload.routing_hint);
+  }
 
   if (payload.source_type === "website") {
     formData.append("website_url", payload.website_url ?? "");
@@ -53,7 +57,7 @@ export async function createKnowledgebase(payload: CreateKnowledgebasePayload): 
 
 export async function updateKnowledgebase(
   knowledgebaseId: string,
-  payload: { agent_id?: string | null },
+  payload: UpdateKnowledgebasePayload,
 ): Promise<Knowledgebase> {
   const { data } = await api.patch<Knowledgebase>(`/knowledgebases/${knowledgebaseId}`, payload);
   return data;
