@@ -75,9 +75,9 @@ export function AgentDetailPage() {
           ))}
         </div>
         <div className="agent-detail__topbar-actions">
-          <button type="button" className="btn btn--ghost">
+          <Link to={`/agent/${agentId}/preview`} className="btn btn--ghost">
             Preview
-          </button>
+          </Link>
           <button type="button" className="btn btn--primary">
             Publish
           </button>
