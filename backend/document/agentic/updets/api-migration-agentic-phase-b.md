@@ -6,6 +6,8 @@
 
 **Goal:** Workflows start only when the **orchestrator LLM** chooses a workflow tool — not via hardcoded first-message auto-start.
 
+**Status:** **Done** (implemented in code).
+
 ---
 
 ## Summary
@@ -97,10 +99,10 @@ Doc: [../../workflows/01-create-workflow-diagrams.md](../../workflows/01-create-
 
 | Component | Change |
 |-----------|--------|
-| `app/domain/graph/chat_graph.py` | Remove `_should_auto_start_workflow` + `default_first_message` branch |
-| `app/services/chat_completion_service.py` | Remove `will_auto_start_workflow`; RAG skip = `in_workflow` only |
-| `app/domain/workflow/workflow_delegate.py` | **Optional:** enrich tool `description` with `routing_hint` from catalog |
-| `app/domain/graph/orchestrator.py` | **Optional:** pass catalog hints into `build_workflow_delegate_tools` |
+| `app/domain/graph/chat_graph.py` | **Done** — removed `_should_auto_start_workflow` + `default_first_message` branch |
+| `app/services/chat_completion_service.py` | **Done** — `skip_rag = in_workflow` only |
+| `app/domain/workflow/workflow_delegate.py` | **Done** — tool `description` includes `routing_hint` from catalog |
+| `app/domain/graph/orchestrator.py` | **Done** — passes catalog into `build_workflow_delegate_tools` |
 | `app/services/workflow_service.py` | **No change** |
 | `app/services/runtime_bundle_loader.py` | **No change** |
 
@@ -110,21 +112,21 @@ Detail: [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase
 
 ## Implementation order (Phase B)
 
-1. Remove auto-start from `ChatGraph` + `chat_completion_service`
-2. Update / replace tests that assert `default_first_message`
-3. **Optional:** workflow tool descriptions include `routing_hint`
-4. Update chat + workflow runtime docs; mark Phase B **Done** in [runtime-migration-agentic.md](./runtime-migration-agentic.md)
+1. ~~Remove auto-start from `ChatGraph` + `chat_completion_service`~~ **Done**
+2. ~~Update / replace tests that assert `default_first_message`~~ **Done**
+3. ~~Workflow tool descriptions include `routing_hint`~~ **Done**
+4. ~~Update chat + workflow runtime docs; mark Phase B **Done**~~ **Done**
 
 ---
 
 ## Tests to add / update
 
-| File | Action |
-|------|--------|
-| `tests/test_workflow_runtime_at_chat.py` | Remove or rewrite `test_should_auto_start_workflow_*`, `test_chat_graph_auto_starts_hello_workflow` |
-| `tests/test_workflow_runtime_at_chat.py` | Add: first message → orchestrator runs, no auto workflow |
-| `tests/test_workflow_runtime_at_chat.py` | Keep: LLM `workflow_*` tool → `workflow_enter` with `orchestrator_tool` |
-| `tests/test_chat_completion_service.py` | Assert RAG not skipped solely because first message + workflows exist |
+| File | Action | Status |
+|------|--------|--------|
+| `tests/test_workflow_runtime_at_chat.py` | Removed auto-start tests; added orchestrator-first-message test | **Done** |
+| `tests/test_workflow_runtime_at_chat.py` | LLM `workflow_*` tool → `workflow_enter` with `orchestrator_tool` | **Done** |
+| `tests/test_workflow_runtime_at_chat.py` | `routing_hint` in workflow delegate tool description | **Done** |
+| `tests/test_chat_completion_service.py` | RAG not skipped solely because first message + workflows exist | **Done** |
 
 ---
 
@@ -132,7 +134,7 @@ Detail: [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase
 
 | Doc | Phase B note |
 |-----|----------------|
-| [../../chat/01-chat-completion-diagrams.md](../../chat/01-chat-completion-diagrams.md) | Flow 6 / 11 — remove auto-start |
+| [../../chat/01-chat-completion-diagrams.md](../../chat/01-chat-completion-diagrams.md) | Flow 6 / 11 — LLM workflow routing (Done) |
 | [../../chat/04-workflow-runtime-at-chat-diagrams.md](../../chat/04-workflow-runtime-at-chat-diagrams.md) | Flow 1 — enter via LLM tool only |
 | [../../chat/06-preview-chat-diagrams.md](../../chat/06-preview-chat-diagrams.md) | Same runtime as webhook |
 | [../../workflows/01-create-workflow-diagrams.md](../../workflows/01-create-workflow-diagrams.md) | Emphasize `routing_hint` for LLM |

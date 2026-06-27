@@ -29,7 +29,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 | `app/services/runtime_bundle_loader.py` | Load `capability_catalog` from `agent_doc` into `RuntimeBundle` |
 | `app/domain/models/runtime_bundle.py` | Add `capability_catalog` field; stop embedding RAG in `build_system_prompt` when using `FinalPromptBuilder` |
 | `app/domain/graph/orchestrator.py` | Accept `final_prompt` string; Phase C: register `search_knowledge` tool |
-| `app/domain/graph/chat_graph.py` | Phase B: remove `default_first_message` rule — LLM picks workflow from catalog |
+| `app/domain/graph/chat_graph.py` | **Done (Phase B):** removed `default_first_message` auto-start — LLM picks workflow from catalog |
 | `app/domain/graph/sub_agent_delegate.py` | Use `FinalPromptBuilder` for sub-agent turns; Phase D: sticky handover |
 | `app/domain/models/tracker.py` | Phase D: persist active sub-agent across turns |
 | `app/infrastructure/ai/prompt_builder.py` | Agent create: base `system_prompt` only (role + responsibilities) |
@@ -64,7 +64,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 | Phase | Runtime change |
 |-------|----------------|
 | **A** | Catalog model + `FinalPromptBuilder` + attach sync (see API doc) | **Done** |
-| **B** | Remove `ChatGraph._should_auto_start_workflow` — agentic workflow routing | **Planned** — [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md) |
+| **B** | Remove `ChatGraph._should_auto_start_workflow` — agentic workflow routing | **Done** — [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md) |
 | **C** | `search_knowledge` tool; remove always-on `RAGRetriever.retrieve()` |
 | **D** | Sticky sub-agent — do not reset to orchestrator every message |
 
@@ -76,4 +76,4 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 |------|--------|--------|
 | `tests/test_capability_catalog_builder.py` | Layer [3] text from hints + bundle | **Done** |
 | `tests/test_final_prompt_builder.py` | Layer ordering, legacy dedup, no mutation of stored `system_prompt` | **Done** |
-| Update `tests/test_chat_completion_service.py` | Final prompt path, RAG skip in workflow | Partial |
+| `tests/test_chat_completion_service.py` | RAG on first message with workflows (Phase B) | **Done** |

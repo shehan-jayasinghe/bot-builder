@@ -18,7 +18,7 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | Phase | Runtime change | Status |
 |-------|----------------|--------|
 | **A** | Catalog + `FinalPromptBuilder` + attach sync | **Done** |
-| **B** | Remove auto-start workflow — LLM picks from catalog | **Planned** — [runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) |
+| **B** | Remove auto-start workflow — LLM picks from catalog | **Done** — [runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) |
 | **C** | `search_knowledge` tool; remove always-on RAG | Planned |
 | **D** | Sticky sub-agent | Planned |
 
@@ -28,7 +28,7 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 |-----|---------|
 | [updets/api-migration-agentic.md](./updets/api-migration-agentic.md) | **All REST APIs** — Phase A catalog + `routing_hint` |
 | [updets/runtime-migration-agentic.md](./updets/runtime-migration-agentic.md) | **Runtime** — Phase A `FinalPromptBuilder` (Done) |
-| [updets/api-migration-agentic-phase-b.md](./updets/api-migration-agentic-phase-b.md) | **Phase B** — agentic workflow routing (planned) |
+| [updets/api-migration-agentic-phase-b.md](./updets/api-migration-agentic-phase-b.md) | **Phase B** — agentic workflow routing (Done) |
 | [updets/runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) | **Phase B runtime** — remove auto-start workflow |
 
 ## API docs by resource

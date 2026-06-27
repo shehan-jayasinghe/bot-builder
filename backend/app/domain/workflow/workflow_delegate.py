@@ -4,6 +4,7 @@ from typing import Any
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
+from app.domain.models.capability_catalog import CapabilityCatalog, get_routing_hint
 from app.domain.models.runtime_bundle import RuntimeWorkflow
 
 
@@ -28,6 +29,7 @@ def build_workflow_delegate_tools(
     workflows: list[RuntimeWorkflow],
     *,
     reserved_names: set[str],
+    capability_catalog: CapabilityCatalog | None = None,
 ) -> tuple[list[StructuredTool], dict[str, RuntimeWorkflow]]:
     tools: list[StructuredTool] = []
     by_name: dict[str, RuntimeWorkflow] = {}
@@ -38,6 +40,10 @@ def build_workflow_delegate_tools(
             continue
 
         description = workflow.description or f"Start workflow {workflow.name}"
+        if capability_catalog is not None:
+            routing_hint = get_routing_hint(capability_catalog, "workflows", workflow.id)
+            if routing_hint:
+                description = f"{routing_hint} — {description}"
 
         async def _workflow_stub(**_kwargs: Any) -> str:
             return "Workflow start is handled by the chat runtime."

@@ -56,16 +56,6 @@ class ChatGraph:
                     trace=trace,
                 )
 
-        if _should_auto_start_workflow(tracker, bundle):
-            workflow = bundle.orchestrator.workflows[0]
-            return await self._enter_and_run_workflow(
-                workflow=workflow,
-                tracker=tracker,
-                user_message=user_message,
-                enter_reason="default_first_message",
-                trace=trace,
-            )
-
         turn_result = await self._orchestrator.run_turn(
             bundle=bundle,
             tracker=tracker,
@@ -195,12 +185,3 @@ class ChatGraph:
             }
 
         return ChatGraphResult(replies=result.replies, routing=routing)
-
-
-def _should_auto_start_workflow(tracker: Tracker, bundle: RuntimeBundle) -> bool:
-    if tracker.active_flow_state is not None:
-        return False
-    if not bundle.orchestrator.workflows:
-        return False
-    user_messages = sum(1 for event in tracker.get_history() if event.get("role") == "user")
-    return user_messages == 1

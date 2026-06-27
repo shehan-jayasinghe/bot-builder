@@ -10,7 +10,7 @@ Workflow REST: [../workflows/01-create-workflow-diagrams.md](../workflows/01-cre
 
 **Status:** Implemented — `workflow_runner` + `ChatGraph` routing.
 
-**Agentic migration (REST):** Phase A **Done** — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). Phase B **planned** (runtime) — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
+**Agentic migration (REST):** Phase A **Done** — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). Phase B **Done** (runtime) — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
 ---
 
@@ -65,7 +65,7 @@ Workflow starts when:
 1. **Orchestrator LLM** calls a `workflow_<name>` delegate tool (`enter_reason: orchestrator_tool`) — **primary path after Phase B**
 2. User is already in a workflow (`active_flow_state` → `enter_reason: active_state`)
 
-**Phase B (planned):** remove hardcoded auto-start on first message (`default_first_message`). Spec: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
+**Phase B (Done):** removed hardcoded auto-start on first message (`default_first_message`). Workflows enter via LLM `workflow_*` tool or `active_flow_state`. Spec: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
 ~~2. Channel / agent config triggers a default workflow on first message (optional MVP+)~~ — **removed in Phase B**
 
@@ -187,7 +187,7 @@ flowchart TB
 
 # Flow 5 — Integration with LangGraph routing (Flow 6)
 
-When Phase 4 lands, update the routing graph:
+**Status: done** — `ChatGraph` routes workflow vs orchestrator; orchestrator can enter workflow via `workflow_*` tool (Phase B).
 
 ```mermaid
 flowchart TB
@@ -195,10 +195,11 @@ flowchart TB
     START --> MODE{active_flow_state set?}
     MODE -->|yes| F11[Flow 11]
     MODE -->|no| F7[Flow 7]
-    F11 -->|done / end| F7
+    F7 -->|workflow_* tool| F11
+    F11 -->|exited| F7
 ```
 
-Replace direct `OrchestratorRunner` call in `ChatCompletionService` with `ChatGraph.run()` or a `WorkflowRunner` branch.
+`ChatCompletionService` delegates to `ChatGraph.run_turn` (not direct `OrchestratorRunner`).
 
 ---
 
@@ -214,16 +215,17 @@ Replace direct `OrchestratorRunner` call in `ChatCompletionService` with `ChatGr
 
 ---
 
-# Files to add / update (implementation checklist)
+# Implementation files (done)
 
-| Action | File |
-|--------|------|
-| Add | `app/domain/workflow/workflow_runner.py` — node dispatch + slot validation |
-| Add | `app/domain/workflow/slot_validator.py` — regex / type checks for `input` nodes |
-| Add | `app/domain/graph/chat_graph.py` — Flow 6 router (workflow vs orchestrator) |
-| Update | [chat_completion_service.py](../../app/services/chat_completion_service.py) — branch on `active_flow_state` |
-| Update | [tracker.py](../../app/domain/models/tracker.py) — helpers for flow state transitions |
-| Tests | `tests/test_workflow_runtime_at_chat.py` |
+| File | Role |
+|------|------|
+| [workflow_runner.py](../../app/domain/workflow/workflow_runner.py) | Node dispatch + slot validation |
+| [slot_validator.py](../../app/domain/workflow/slot_validator.py) | Regex / type checks for `input` nodes |
+| [chat_graph.py](../../app/domain/graph/chat_graph.py) | Flow 6 router — workflow vs orchestrator; LLM `workflow_*` entry (Phase B) |
+| [chat_completion_service.py](../../app/services/chat_completion_service.py) | Wires `ChatGraph`; RAG skip when `in_workflow` only |
+| [tracker.py](../../app/domain/models/tracker.py) | Flow state transitions |
+| [workflow_delegate.py](../../app/domain/workflow/workflow_delegate.py) | `workflow_*` LangGraph tools + `routing_hint` in descriptions |
+| Tests | [test_workflow_runtime_at_chat.py](../../tests/test_workflow_runtime_at_chat.py) |
 
 **No API schema change** — same `ChatRequest` / `ChatResponse`. Optional future: `metadata.workflow_payload` for button clicks.
 
@@ -231,9 +233,10 @@ Replace direct `OrchestratorRunner` call in `ChatCompletionService` with `ChatGr
 
 # Test plan
 
-- [ ] `message` node — slot substitution in emitted text
-- [ ] `input` node — prompt on first visit; capture on second message
-- [ ] Invalid slot — retry message, stay on same node
-- [ ] `end` node — clears state; next turn hits orchestrator
-- [ ] Active workflow blocks orchestrator for that turn
-- [ ] Published workflow in bundle; draft workflows excluded
+- [x] `message` node — slot substitution in emitted text
+- [x] `input` node — prompt on first visit; capture on second message
+- [x] Invalid slot — retry message, stay on same node
+- [x] `end` node — clears state; next turn hits orchestrator
+- [x] Active workflow blocks orchestrator for that turn
+- [x] First message with workflows → orchestrator (no auto-start — Phase B)
+- [x] LLM `workflow_*` tool → `workflow_enter` with `orchestrator_tool`

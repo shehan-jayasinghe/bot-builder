@@ -10,7 +10,7 @@ KB REST (attach + `routing_hint`): [../knowledgebase/01-create-knowledgebase-dia
 
 **Status:** Implemented — always-on RAG via `RAGRetriever` before orchestrator (skipped during active workflow).
 
-**Phase B side effect (planned):** RAG will **run on first message** when agent has workflows but no `active_flow_state` — today RAG is skipped because auto-start workflow fires first. See [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
+**Phase B side effect (Done):** RAG **runs on first message** when agent has workflows but no `active_flow_state`. See [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
 ---
 

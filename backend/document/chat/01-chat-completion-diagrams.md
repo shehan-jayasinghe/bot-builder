@@ -22,7 +22,7 @@ Related config docs:
 - Phase 2 — [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md)
 - Phase 3 — [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) (agentic `search_knowledge` tool — Phase C in migration doc)
 - Phase 4 — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md)
-- Phase B — [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) (agentic workflow routing — planned)
+- Phase B — [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) (agentic workflow routing — **Done**)
 
 **Preview UI (admin builder — planned):**
 
@@ -40,9 +40,9 @@ Related config docs:
 | **1** | 6–7, 10 | **Done** | Orchestrator Bedrock turn with tool calling via `ExecutorRegistry` + `langgraph_tools` |
 | **2** | 8 | **Done** | Sub-agent delegation at runtime — see [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
 | **3** | 9 | **Done** (always-on RAG) · **Next** (agentic RAG tool) | Qdrant / keyword RAG — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
-| **4** | 11 | **Done** (runtime) · **B next** (remove auto-start) | Workflow runtime — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) · Phase B: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
+| **4** | 11 | **Done** | Workflow runtime — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) · Phase B (LLM routing): [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 | **A** | — | **Done** | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
-| **B** | 6, 11 | **Planned** | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
+| **B** | 6, 11 | **Done** | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 
 **Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `ChatGraph` → orchestrator / workflow → `TrackerService.persist`.
 
@@ -249,29 +249,30 @@ flowchart TB
     START --> MODE{active_flow_state set?}
     MODE -->|yes| F11[Flow 11 — workflow]
     MODE -->|no| F7[Flow 7 — orchestrator]
-    F11 -->|done| F7
+    F7 -->|workflow_* tool| F11
+    F11 -->|exited| F7
     F7 -->|delegate| F8[Flow 8 — sub-agent]
     F7 -->|tool| F10[Flow 10 — tool]
-    F7 -->|KB attached| F9[Flow 9 — RAG]
     F8 -->|tool| F10
-    F9 --> F7
     F10 --> F7
     F7 --> F12[Flow 12]
     F8 --> F12
     F11 --> F12
 ```
 
+RAG (Flow 9) runs in `ChatCompletionService` before `ChatGraph` when not in an active workflow.
+
 ---
 
 # Flow 7 — Orchestrator node
 
-**Status: done** (simple path — no sub-agent delegate functions yet).
+**Status: done** — orchestrator LLM with executor tools, sub-agent delegates, and workflow delegate tools.
 
 ```mermaid
 flowchart TB
     BUNDLE[RuntimeBundle.orchestrator]
     BUNDLE --> PROMPT[system_prompt + personality + tone + RAG context]
-    BUNDLE --> TOOLS[LLM tool defs from bundle.tools]
+    BUNDLE --> TOOLS[LLM tool defs — executors + workflow_* + delegates]
     BUNDLE --> SUBS[Delegate functions from bundle.sub_agents]
     PROMPT --> LLM[Bedrock converse + tool use]
     TOOLS --> LLM
@@ -359,9 +360,9 @@ Full detail: [../tools/03-execute-tool-at-chat-diagrams.md](../tools/03-execute-
 
 **Status: done** — `workflow_runner` + `ChatGraph` routing. Spec: [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md).
 
-**Agentic Phase B (runtime, planned):** remove `default_first_message` auto-start — LLM picks workflow via `workflow_*` tool + catalog hints. Spec: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
+**Agentic Phase B (runtime, Done):** removed `default_first_message` auto-start — LLM picks workflow via `workflow_*` tool + catalog hints. Spec: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
-Only when `tracker.active_flow_state` is set.
+Runs when `tracker.active_flow_state` is set **or** when the orchestrator LLM calls a `workflow_<name>` tool in the same turn (`enter_reason: orchestrator_tool`).
 
 ```mermaid
 flowchart TB
@@ -495,7 +496,7 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | 3 | 9 | Done | [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
 | 4 | 11 | Done | [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
 | A | catalog | Done | [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md) |
-| B | workflow routing | Planned | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
+| B | workflow routing | Done | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 
 ---
 

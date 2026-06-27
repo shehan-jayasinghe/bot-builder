@@ -8,7 +8,7 @@ from app.domain.constants.workflow_constants import (
     DEFAULT_STARTER_NODES,
     WORKFLOW_STATUS_PUBLISHED,
 )
-from app.domain.graph.chat_graph import ChatGraph, _should_auto_start_workflow
+from app.domain.graph.chat_graph import ChatGraph
 from app.domain.graph.turn_result import AgentTurnResult, WorkflowEnterRequest
 from app.domain.models.runtime_bundle import (
     RuntimeBundle,
@@ -17,7 +17,11 @@ from app.domain.models.runtime_bundle import (
 )
 from app.domain.models.tracker import Tracker
 from app.domain.workflow.slot_validator import validate_slot_value
-from app.domain.workflow.workflow_delegate import normalize_workflow_name, workflow_tool_name
+from app.domain.workflow.workflow_delegate import (
+    build_workflow_delegate_tools,
+    normalize_workflow_name,
+    workflow_tool_name,
+)
 from app.domain.workflow.workflow_runner import WorkflowRunner
 from app.schemas.chat import ChatRequest
 from app.services.chat_completion_service import ChatCompletionService
@@ -186,26 +190,25 @@ def test_workflow_runner_end_clears_via_chat_graph() -> None:
     assert result.routing.get("workflow_exited") is True
 
 
-def test_should_auto_start_workflow_on_first_message() -> None:
-    bundle = RuntimeBundle(
-        organization_id=ORG_ID,
-        orchestrator=RuntimeOrchestrator(
-            id=str(AGENT_ID),
-            name="Bot",
-            system_prompt="Help users.",
-            workflows=[_hello_workflow()],
-        ),
+def test_build_workflow_delegate_tools_includes_routing_hint() -> None:
+    workflow = _hello_workflow()
+    from app.domain.models.capability_catalog import CapabilityCatalog, CapabilityEntry
+
+    catalog = CapabilityCatalog(
+        workflows={WORKFLOW_ID: CapabilityEntry(routing_hint="Greet new users")},
     )
-    tracker = Tracker(sender_id="user-1", assistant_id=str(AGENT_ID))
-    tracker.append_user_message(message="hello", metadata={})
+    tools, by_name = build_workflow_delegate_tools(
+        [workflow],
+        reserved_names=set(),
+        capability_catalog=catalog,
+    )
 
-    assert _should_auto_start_workflow(tracker, bundle) is True
+    assert len(tools) == 1
+    assert "Greet new users" in tools[0].description
+    assert workflow_tool_name("hello") in by_name
 
-    tracker.append_user_message(message="again", metadata={})
-    assert _should_auto_start_workflow(tracker, bundle) is False
 
-
-def test_chat_graph_auto_starts_hello_workflow() -> None:
+def test_chat_graph_first_message_invokes_orchestrator_not_auto_start() -> None:
     workflow = _hello_workflow()
     bundle = RuntimeBundle(
         organization_id=ORG_ID,
@@ -219,6 +222,7 @@ def test_chat_graph_auto_starts_hello_workflow() -> None:
     tracker = Tracker(sender_id="preview-1", assistant_id=str(AGENT_ID))
     tracker.append_user_message(message="hello", metadata={})
     orchestrator = AsyncMock()
+    orchestrator.run_turn.return_value = AgentTurnResult(replies=["How can I help?"])
     graph = ChatGraph(orchestrator=orchestrator)
 
     result = asyncio.run(
@@ -231,9 +235,10 @@ def test_chat_graph_auto_starts_hello_workflow() -> None:
         ),
     )
 
-    orchestrator.run_turn.assert_not_called()
-    assert result.replies[0].text == "Welcome"
+    orchestrator.run_turn.assert_awaited_once()
+    assert result.replies[0].text == "How can I help?"
     assert tracker.active_flow_state is None
+    assert result.routing.get("mode") == "orchestrator"
 
 
 def test_chat_completion_preview_loads_bundle_for_preview() -> None:
@@ -339,3 +344,4 @@ def test_orchestrator_workflow_tool_enters_workflow() -> None:
 
     orchestrator.run_turn.assert_awaited_once()
     assert result.replies[0].text == "Welcome"
+    assert result.routing.get("enter_reason") == "orchestrator_tool"

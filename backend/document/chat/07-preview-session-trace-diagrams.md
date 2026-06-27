@@ -10,7 +10,7 @@ Related:
 - Agent graph: [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md)
 - Chat events: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) — Trace events table
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **planned** — `workflow_enter` trace will no longer use `reason: default_first_message`. See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. See [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md).
 
 **Status:** Implemented.
 

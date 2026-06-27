@@ -48,6 +48,7 @@ class OrchestratorRunner:
         workflow_tools, workflows_by_name = build_workflow_delegate_tools(
             orchestrator.workflows,
             reserved_names=reserved_names,
+            capability_catalog=bundle.capability_catalog,
         )
         has_executor_tools = bool(orchestrator.tools)
         has_delegates = bool(delegate_tools)

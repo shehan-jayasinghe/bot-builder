@@ -8,7 +8,7 @@
 
 ## Implementation status
 
-**Phase B — planned** (not implemented in code yet).
+**Phase B — Done** (implemented in code).
 
 ---
 
@@ -146,8 +146,8 @@ Workflow tool naming: `workflow_<normalized_name>` — see [workflow_delegate.py
 
 | File | Covers | Status |
 |------|--------|--------|
-| `tests/test_workflow_runtime_at_chat.py` | Remove auto-start tests; add LLM-routed enter | **Planned** |
-| `tests/test_chat_completion_service.py` | RAG runs on first message when workflows attached | **Planned** |
+| `tests/test_workflow_runtime_at_chat.py` | Remove auto-start tests; add LLM-routed enter | **Done** |
+| `tests/test_chat_completion_service.py` | RAG runs on first message when workflows attached | **Done** |
 
 ### Tests to remove or rewrite
 

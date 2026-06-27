@@ -162,12 +162,7 @@ class ChatCompletionService:
         await self._tracker_service.save_session(tracker)
 
         in_workflow = tracker.active_flow_state is not None
-        will_auto_start_workflow = (
-            not in_workflow
-            and bool(bundle.orchestrator.workflows)
-            and sum(1 for event in tracker.get_history() if event.get("role") == "user") == 1
-        )
-        skip_rag = in_workflow or will_auto_start_workflow
+        skip_rag = in_workflow
 
         kb_list = bundle.orchestrator.knowledge_bases
         if skip_rag or not kb_list:
