@@ -50,7 +50,7 @@ class RuntimeBundleLoader:
         )
 
         tool_ids = _unique(
-            _string_list(agent_doc.get("tool_ids"))
+            _tool_ids_from_agent(agent_doc)
             + _collect_ids(sub_agent_docs, "tool_ids"),
         )
         knowledge_base_ids = _unique(
@@ -93,7 +93,7 @@ class RuntimeBundleLoader:
 
         orchestrator_tools = [
             tools_by_id[tool_id]
-            for tool_id in _string_list(agent_doc.get("tool_ids"))
+            for tool_id in _tool_ids_from_agent(agent_doc)
             if tool_id in tools_by_id
         ]
         orchestrator_kbs = [
@@ -245,6 +245,13 @@ def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _tool_ids_from_agent(agent_doc: dict[str, Any]) -> list[str]:
+    tool_ids = _string_list(agent_doc.get("tool_ids"))
+    if not tool_ids:
+        tool_ids = _string_list(agent_doc.get("skill_ids"))
+    return tool_ids
 
 
 def _string_list(value: Any) -> list[str]:

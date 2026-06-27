@@ -177,7 +177,7 @@ flowchart TB
 | Repository DI | `get_agent_repository()` | [repositories.py](../../app/di/repositories.py) |
 | Save agent | Insert into `agents` collection | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Response schema | `CreateAgentResponse` (`201`) | [agent.py](../../app/schemas/agent.py) |
-| Empty skills / workflows | `skill_ids: []`, `workflow_ids: []` at create | [agent_service.py](../../app/services/agent_service.py) |
+| Empty tools / workflows | `tool_ids: []`, `workflow_ids: []` at create | [agent_service.py](../../app/services/agent_service.py) |
 
 ## Request body (frontend)
 
@@ -315,7 +315,7 @@ flowchart TB
 
 | Item | Status | Open file |
 |------|--------|-----------|
-| Tools / skills | empty `skill_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
+| Tools | empty `tool_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
 | Workflows | empty `workflow_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
 | Webhook / publish | `status: draft` only | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Website crawl / RAG | not started | — |

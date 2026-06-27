@@ -515,5 +515,4 @@ async def run(
 | Executor registry | [registry.py](../../app/domain/executors/registry.py) *(planned)* |
 | Static catalog | [executor_catalog.py](../../app/domain/catalog/executor_catalog.py) *(planned)* |
 | API route | [executors.py](../../app/api/v1/executors.py) *(planned)* |
-| Tool router (runtime) | [router.py](../../app/domain/pipeline/tools/router.py) *(planned)* |
-| Legacy stub | [router.py](../../app/domain/pipeline/skills/router.py) — replace with ToolRouter |
+| Tool routing (runtime) | [orchestrator.py](../../app/domain/graph/orchestrator.py) |

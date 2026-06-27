@@ -1,6 +1,4 @@
 from app.di.chat import get_chat_completion_service
-from app.di.engine import get_dialogue_engine_factory
-from app.di.pipeline import get_chat_pipeline
 from app.di.repositories import (
     get_agent_repository,
     get_channel_repository,
@@ -14,8 +12,6 @@ __all__ = [
     "get_assistant_loader",
     "get_channel_repository",
     "get_chat_completion_service",
-    "get_chat_pipeline",
-    "get_dialogue_engine_factory",
     "get_tracker_repository",
     "get_tracker_service",
     "get_tracker_session_store",

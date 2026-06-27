@@ -11,7 +11,7 @@ bot-builder/
 │       ├── api/v1/           # handlers
 │       ├── di/               # dependency injection
 │       ├── services/         # application services
-│       ├── domain/           # models, engine, pipeline
+│       ├── domain/           # models, graph, workflow, pipeline
 │       ├── infrastructure/   # db (mongo/redis/repos), ai
 │       └── schemas/
 ├── docker-compose.yml
@@ -25,16 +25,13 @@ Wired today:
 ```text
 POST /api/v1/chat/webhook/{webhook_id}
   → chat.py
-  → DialogueEngine.from_channel()
-      → AssistantLoader (stub)
-      → Tracker (in-memory stub)
-  → ChatPipeline
-      → GuardrailRunner      (TODO stub)
-      → RAGRetriever         (TODO stub)
-      → SkillRouter          (TODO stub)
-      → TraceCollector       (TODO stub)
-      → DialogueEngine.run()
-          → FlowManager → Bedrock LLM
+  → ChatCompletionService
+      → AssistantLoader.try_resolve()
+      → RuntimeBundleLoader.load()
+      → GuardrailRunner
+      → RAGRetriever
+      → ChatGraph (workflow / orchestrator routing)
+      → OrchestratorRunner → Bedrock LLM + tool execution
   → ChatResponse (text + optional buttons)
 ```
 
@@ -44,23 +41,24 @@ Full product includes: applications, onboarding, agent config (personality/tone)
 
 | Module | Status |
 |--------|--------|
-| Chat inference + pipeline hooks | In progress |
-| Assistant loader from MongoDB | TODO |
-| Guardrails | TODO stub |
-| RAG (Qdrant) | TODO stub |
-| Skills / tool routing | TODO stub |
-| Trace API | TODO stub |
-| Workflows runtime | TODO |
-| Admin / builder APIs | TODO |
-| Frontend | TODO |
+| Chat inference + graph routing | Done |
+| Assistant loader from MongoDB | Done |
+| Guardrails | Done |
+| RAG (Qdrant) | Done |
+| Tool execution via orchestrator | Done |
+| Trace events | Done |
+| Workflows runtime | Done |
+| Sub-agent delegation | Done |
+| Admin / builder APIs | In progress |
+| Frontend | In progress |
 
 ### Runtime pipeline (per message — target)
 
 1. Input message
 2. Guardrails (`guardrail_complete`)
-3. RAG (`rag_complete`)
-4. Skill / workflow routing (`tool_start`)
-5. FlowManager / LLM
+3. RAG (`rag_complete`) — skipped during active workflow
+4. ChatGraph routing (workflow / orchestrator / sub-agent)
+5. OrchestratorRunner / Bedrock LLM + tool calls
 6. Rich response (text, buttons, cards)
 7. Trace persisted
 

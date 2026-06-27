@@ -109,6 +109,10 @@ class AssistantLoader:
                 llm_config.max_output_tokens if llm_config else int(agent_doc.get("max_output_tokens", 1024))
             )
 
+            tool_ids = AssistantLoader._string_list(agent_doc.get("tool_ids"))
+            if not tool_ids:
+                tool_ids = AssistantLoader._string_list(agent_doc.get("skill_ids"))
+
             return DialogueAssistant(
                 id=str(agent_doc["_id"]),
                 name=str(agent_doc["name"]),
@@ -119,8 +123,7 @@ class AssistantLoader:
                 tone=AssistantLoader._optional_str(agent_doc.get("tone")),
                 llm_config=llm_config,
                 status=str(agent_doc.get("status", "published")),
-                skill_ids=AssistantLoader._string_list(agent_doc.get("skill_ids")),
-                tool_ids=AssistantLoader._string_list(agent_doc.get("tool_ids")),
+                tool_ids=tool_ids,
                 sub_agent_ids=AssistantLoader._string_list(agent_doc.get("sub_agent_ids")),
                 workflow_ids=AssistantLoader._string_list(agent_doc.get("workflow_ids")),
                 knowledge_base_ids=AssistantLoader._string_list(agent_doc.get("knowledge_base_ids")),

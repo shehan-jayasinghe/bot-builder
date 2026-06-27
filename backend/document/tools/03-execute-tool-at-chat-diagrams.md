@@ -2,7 +2,7 @@
 
 When a user sends a message, the platform may run one or more **Tools** via **Executors** and **Connectors**.
 
-This is **not** a REST endpoint for org users — it runs inside `ChatPipeline` on `POST /api/v1/chat/webhook/{webhook_id}`.
+This is **not** a REST endpoint for org users — it runs inside `ChatCompletionService` on `POST /api/v1/chat/webhook/{webhook_id}`.
 
 Executor catalog: [00-executor-catalog.md](./00-executor-catalog.md)
 
@@ -14,7 +14,7 @@ Executor catalog: [00-executor-catalog.md](./00-executor-catalog.md)
 flowchart TB
     USER[User message]
     CHAT[POST /chat/webhook/webhook_id]
-    PIPE[ChatPipeline.run]
+    PIPE[ChatCompletionService.complete]
 
     USER --> CHAT --> PIPE
 
@@ -34,7 +34,7 @@ flowchart TB
 
     LOAD --> LLM[Bedrock — tool-calling]
 
-    LLM -->|no tool| REPLY[DialogueEngine — text reply]
+    LLM -->|no tool| REPLY[OrchestratorRunner — text reply]
     LLM -->|tool call| EXEC
 
     subgraph EXEC["ExecutorRegistry.run"]
@@ -56,7 +56,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    ENGINE[DialogueEngine — assistant / agent config]
+    ENGINE[RuntimeBundle — orchestrator tools]
 
     ENGINE --> IDS[agent.tool_ids]
     IDS --> REPO[ToolRepository.find_by_ids + organization_id]
@@ -68,8 +68,8 @@ flowchart TB
 
 | Step | File |
 |------|------|
-| Agent load | [dialogue.py](../../app/domain/engine/dialogue.py) |
-| Tool load | [tool_repository.py](../../app/infrastructure/db/repositories/mongo/tool_repository.py) *(planned)* |
+| Agent load | [runtime_bundle_loader.py](../../app/services/runtime_bundle_loader.py) |
+| Tool load | [tool_repository.py](../../app/infrastructure/db/repositories/mongo/tool_repository.py) |
 
 ---
 
@@ -207,31 +207,17 @@ Never return raw connector secrets to the LLM or user.
 | **Knowledge Base** | `RAGRetriever` | Semantic retrieval — separate from tools |
 | **Tools** | `ToolRouter` / `ExecutorRegistry` | Actions — query DB, call APIs |
 
-Both run in `ChatPipeline` before the final LLM reply. KB is read-only retrieval; tools are side-effect operations.
+Both run in `ChatCompletionService` before the final LLM reply. KB is read-only retrieval; tools are side-effect operations.
 
 ---
 
-# Migration from SkillRouter
-
-Current stub: [skills/router.py](../../app/domain/pipeline/skills/router.py)
-
-| Old | New |
-|-----|-----|
-| `SkillRouter` | `ToolRouter` |
-| `skills=[]` | `tools=[]` loaded from Mongo |
-| `skill_ids` on agent | `tool_ids` |
-
-**Planned:** [tools/router.py](../../app/domain/pipeline/tools/router.py) *(planned)*
-
----
-
-# Navigate to planned files
+# Navigate to implementation files
 
 | Layer | File |
 |-------|------|
 | Chat entry | [chat.py](../../app/api/v1/chat.py) |
-| Pipeline | [chat_pipeline.py](../../app/domain/pipeline/chat_pipeline.py) |
-| Tool router | [tools/router.py](../../app/domain/pipeline/tools/router.py) *(planned)* |
-| Executor registry | [executors/registry.py](../../app/domain/executors/registry.py) *(planned)* |
-| Template resolver | [executors/template.py](../../app/domain/executors/template.py) *(planned)* |
+| Entry service | [chat_completion_service.py](../../app/services/chat_completion_service.py) |
+| Orchestrator | [orchestrator.py](../../app/domain/graph/orchestrator.py) |
+| Executor registry | [executors/registry.py](../../app/domain/executors/registry.py) |
+| Template resolver | [executors/template.py](../../app/domain/executors/template.py) |
 | Trace | [trace.py](../../app/domain/pipeline/observability/trace.py) |

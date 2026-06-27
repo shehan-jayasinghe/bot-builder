@@ -226,7 +226,7 @@ Authorization: Bearer <clerk_jwt>
     "max_output_tokens": 1024
   },
   "status": "draft",
-  "skill_ids": [],
+  "tool_ids": [],
   "workflow_ids": [],
   "created_at": "2026-06-24T12:00:00Z"
 }

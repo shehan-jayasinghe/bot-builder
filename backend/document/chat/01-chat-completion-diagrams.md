@@ -236,9 +236,7 @@ flowchart TB
 
 # Flow 6 — LangGraph routing
 
-**Status: partial.** Today the service calls `OrchestratorRunner` directly (Flows 7 + 10). Full graph routing (workflow / sub-agent / RAG branches) is **next pass**.
-
-Replaces [FlowManager](../../app/domain/engine/flow_manager.py). Replaces [SkillRouter](../../app/domain/pipeline/skills/router.py).
+**Status: done.** Implemented in [chat_graph.py](../../app/domain/graph/chat_graph.py) and wired from [chat_completion_service.py](../../app/services/chat_completion_service.py).
 
 ```mermaid
 flowchart TB
@@ -458,12 +456,9 @@ Content-Type: application/json
 
 # Legacy migration
 
-| Remove / replace | With |
-|------------------|------|
-| `FlowManager` | LangGraph — Flow 6–11 |
-| `SkillRouter` | Tool calling — Flow 10 |
-| `skill_ids` on agent | `tool_ids` |
-| Global `SlotExtractor` | Workflow slots only — Flow 11 |
+| Removed | Replaced with |
+|---------|----------------|
+| `skill_ids` on agent (write path) | `tool_ids` — legacy `skill_ids` read at load time when `tool_ids` is empty |
 
 ---
 
@@ -473,9 +468,9 @@ Content-Type: application/json
 |-------|--------|--------|-----|
 | 0 | 1–5, 12 | Done | this file |
 | 1 | 6–7, 10 | Done | this file · [tools/03-execute-tool-at-chat-diagrams.md](../tools/03-execute-tool-at-chat-diagrams.md) |
-| 2 | 8 | Next pass | [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
-| 3 | 9 | Next pass | [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
-| 4 | 11 | Next pass | [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
+| 2 | 8 | Done | [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
+| 3 | 9 | Done | [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) |
+| 4 | 11 | Done | [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) |
 
 ---
 
@@ -486,19 +481,17 @@ Content-Type: application/json
 | API route | [chat.py](../../app/api/v1/chat.py) | Done |
 | Entry service | [chat_completion_service.py](../../app/services/chat_completion_service.py) | Done |
 | Schemas | [schemas/chat.py](../../app/schemas/chat.py) | Done |
-| Pipeline helpers | [chat_pipeline.py](../../app/domain/pipeline/chat_pipeline.py) | Done |
+| Graph routing | [chat_graph.py](../../app/domain/graph/chat_graph.py) | Done |
 | Runtime bundle | [runtime_bundle.py](../../app/domain/models/runtime_bundle.py) · [runtime_bundle_loader.py](../../app/services/runtime_bundle_loader.py) | Done |
 | Orchestrator | [orchestrator.py](../../app/domain/graph/orchestrator.py) | Done |
+| Sub-agent delegate | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) | Done |
+| Workflow runtime | [workflow_runner.py](../../app/domain/workflow/workflow_runner.py) | Done |
 | Assistant resolve | [assistant_loader.py](../../app/services/assistant_loader.py) | Done |
 | Tracker | [tracker.py](../../app/domain/models/tracker.py) · [tracker_service.py](../../app/services/tracker_service.py) | Done |
 | LLM | [llm.py](../../app/infrastructure/ai/llm.py) | Done |
 | PII sanitizer | [pii_redactor.py](../../app/domain/pipeline/sanitization/pii_redactor.py) | Done |
 | Guardrails | [guardrails/runner.py](../../app/domain/pipeline/guardrails/runner.py) | Done |
 | Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) · [registry.py](../../app/domain/executors/registry.py) | Done |
-| RAG query | [retriever.py](../../app/domain/pipeline/rag/retriever.py) | Stub — Phase 3 |
-| Trace | [trace.py](../../app/domain/pipeline/observability/trace.py) | Stub |
+| RAG query | [retriever.py](../../app/domain/pipeline/rag/retriever.py) | Done |
+| Trace | [trace.py](../../app/domain/pipeline/observability/trace.py) | Done |
 | DI | [di/chat.py](../../app/di/chat.py) | Done |
-| Legacy *(bypassed)* | [dialogue.py](../../app/domain/engine/dialogue.py) · [flow_manager.py](../../app/domain/engine/flow_manager.py) · [skills/router.py](../../app/domain/pipeline/skills/router.py) | Legacy |
-| Planned — Phase 2 | `domain/graph/sub_agent_delegate.py` | Next pass |
-| Planned — Phase 3 | extend [retriever.py](../../app/domain/pipeline/rag/retriever.py) · Qdrant client | Next pass |
-| Planned — Phase 4 | `domain/workflow/workflow_runner.py` · `domain/graph/chat_graph.py` | Next pass |

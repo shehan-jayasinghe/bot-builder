@@ -20,7 +20,6 @@ class DialogueAssistant(BaseModel):
     tone: str | None = None
     llm_config: LLMConfig | None = None
     status: str = "published"
-    skill_ids: list[str] = Field(default_factory=list)
     tool_ids: list[str] = Field(default_factory=list)
     sub_agent_ids: list[str] = Field(default_factory=list)
     workflow_ids: list[str] = Field(default_factory=list)

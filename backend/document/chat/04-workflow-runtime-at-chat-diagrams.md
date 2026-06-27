@@ -217,7 +217,6 @@ Replace direct `OrchestratorRunner` call in `ChatCompletionService` with `ChatGr
 | Add | `app/domain/graph/chat_graph.py` — Flow 6 router (workflow vs orchestrator) |
 | Update | [chat_completion_service.py](../../app/services/chat_completion_service.py) — branch on `active_flow_state` |
 | Update | [tracker.py](../../app/domain/models/tracker.py) — helpers for flow state transitions |
-| Deprecate | [slot_extractor.py](../../app/domain/engine/slot_extractor.py) — do not use globally |
 | Tests | `tests/test_workflow_runtime_at_chat.py` |
 
 **No API schema change** — same `ChatRequest` / `ChatResponse`. Optional future: `metadata.workflow_payload` for button clicks.
