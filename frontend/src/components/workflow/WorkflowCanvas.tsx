@@ -32,7 +32,17 @@ function nodeLabel(node: WorkflowNode): string {
     return "Start";
   }
   if (node.type === "message") {
-    return String(node.data.text ?? "Message");
+    const text = String(node.data.text ?? "Message");
+    const buttons = Array.isArray(node.data.buttons) ? node.data.buttons.length : 0;
+    return buttons > 0 ? `${text} (${buttons} btn)` : text;
+  }
+  if (node.type === "input") {
+    const label = String(node.data.label ?? "Input");
+    if (node.data.input_mode === "multiselect") {
+      const count = Array.isArray(node.data.options) ? node.data.options.length : 0;
+      return `${label} (${count} opts)`;
+    }
+    return label;
   }
   if (node.type === "action") {
     return String(node.data.label ?? node.data.action_type ?? "Action");

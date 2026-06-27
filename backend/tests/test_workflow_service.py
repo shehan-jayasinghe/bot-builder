@@ -12,8 +12,13 @@ from app.domain.constants.workflow_constants import (
 from app.domain.models.current_user import CurrentUser
 from app.schemas.workflow import CreateWorkflowRequest, UpdateWorkflowRequest
 from app.services.workflow_service import WorkflowService
+from app.services.workflow_validator import validate_workflow_for_publish
 from app.shared.exceptions.agent import AgentNotFoundError
-from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
+from app.shared.exceptions.workflow import (
+    WorkflowLimitReachedError,
+    WorkflowNotFoundError,
+    WorkflowValidationError,
+)
 
 
 ORG_ID = "6a3b7c61d8139334274fbbfc"
@@ -271,6 +276,7 @@ def test_workflow_service_update_clears_agent_id() -> None:
         )
 
         agent_repo = type("AgentRepo", (), {})()
+        agent_repo.pull_workflow_id = AsyncMock(return_value=True)
         service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
         await service.update(
             current_user=_current_user(),
@@ -279,5 +285,100 @@ def test_workflow_service_update_clears_agent_id() -> None:
         )
 
         assert workflow_repo.update.await_args.kwargs["updates"] == {"agent_id": None}
+
+    asyncio.run(_run())
+
+
+def test_validate_workflow_for_publish_accepts_starter_graph() -> None:
+    validate_workflow_for_publish(nodes=DEFAULT_STARTER_NODES, edges=DEFAULT_STARTER_EDGES)
+
+
+def test_validate_workflow_for_publish_rejects_missing_start_edge() -> None:
+    with pytest.raises(WorkflowValidationError, match="Start node must connect"):
+        validate_workflow_for_publish(nodes=DEFAULT_STARTER_NODES, edges=[])
+
+
+def test_workflow_service_publish_sets_status() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.find_by_id_for_organization = AsyncMock(
+            return_value={
+                "_id": WORKFLOW_ID,
+                "name": "Welcome",
+                "status": "draft",
+                "nodes": DEFAULT_STARTER_NODES,
+                "edges": DEFAULT_STARTER_EDGES,
+                "organization_id": ORG_ID,
+                "created_at": NOW,
+                "updated_at": NOW,
+            }
+        )
+        workflow_repo.update = AsyncMock(
+            return_value={
+                "_id": WORKFLOW_ID,
+                "name": "Welcome",
+                "status": "published",
+                "nodes": DEFAULT_STARTER_NODES,
+                "edges": DEFAULT_STARTER_EDGES,
+                "organization_id": ORG_ID,
+                "created_at": NOW,
+                "updated_at": NOW,
+            }
+        )
+
+        agent_repo = type("AgentRepo", (), {})()
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+        result = await service.publish(current_user=_current_user(), workflow_id=WORKFLOW_ID)
+
+        assert result.status == "published"
+        workflow_repo.update.assert_awaited_once_with(
+            workflow_id=WORKFLOW_ID,
+            organization_id=ORG_ID,
+            updates={"status": "published"},
+        )
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_update_reverts_published_to_draft() -> None:
+    async def _run() -> None:
+        workflow_repo = type("Repo", (), {})()
+        workflow_repo.find_by_id_for_organization = AsyncMock(
+            return_value={
+                "_id": WORKFLOW_ID,
+                "name": "Welcome",
+                "status": "published",
+                "nodes": DEFAULT_STARTER_NODES,
+                "edges": DEFAULT_STARTER_EDGES,
+                "organization_id": ORG_ID,
+                "created_at": NOW,
+                "updated_at": NOW,
+            }
+        )
+        workflow_repo.update = AsyncMock(
+            return_value={
+                "_id": WORKFLOW_ID,
+                "name": "Updated",
+                "status": "draft",
+                "nodes": DEFAULT_STARTER_NODES,
+                "edges": DEFAULT_STARTER_EDGES,
+                "organization_id": ORG_ID,
+                "created_at": NOW,
+                "updated_at": NOW,
+            }
+        )
+
+        agent_repo = type("AgentRepo", (), {})()
+        service = WorkflowService(workflow_repository=workflow_repo, agent_repository=agent_repo)
+        await service.update(
+            current_user=_current_user(),
+            workflow_id=WORKFLOW_ID,
+            request=UpdateWorkflowRequest(name="Updated"),
+        )
+
+        assert workflow_repo.update.await_args.kwargs["updates"] == {
+            "name": "Updated",
+            "status": "draft",
+        }
 
     asyncio.run(_run())

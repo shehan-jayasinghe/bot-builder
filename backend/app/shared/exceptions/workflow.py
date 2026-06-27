@@ -11,3 +11,7 @@ class WorkflowLimitReachedError(WorkflowError):
 
 class WorkflowNotFoundError(WorkflowError):
     """Workflow does not exist or is not accessible for the caller's organization."""
+
+
+class WorkflowValidationError(WorkflowError):
+    """Workflow graph fails validation for publish."""

@@ -6,13 +6,15 @@ from app.domain.constants.chat_constants import (
     GENERIC_ERROR_MESSAGE,
     GUARDRAIL_REFUSAL_MESSAGE,
 )
+from app.domain.graph.chat_graph import ChatGraph
 from app.domain.graph.orchestrator import OrchestratorRunner
 from app.domain.pipeline.guardrails.runner import GuardrailRunner
 from app.domain.pipeline.observability.trace import TraceCollector
 from app.domain.pipeline.rag.retriever import RAGRetriever
 from app.domain.pipeline.sanitization.pii_redactor import redact_pii
+from app.infrastructure.ai.langsmith_tracing import LlmTracingContext
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
-from app.schemas.chat import ChatMessage, ChatRequest, ChatResponse
+from app.schemas.chat import ChatButton, ChatMessage, ChatRequest, ChatResponse
 from app.services.assistant_loader import AssistantLoader
 from app.services.runtime_bundle_loader import RuntimeBundleLoader
 from app.services.tracker_service import TrackerService
@@ -35,6 +37,7 @@ class ChatCompletionService:
         guardrails: GuardrailRunner | None = None,
         rag: RAGRetriever | None = None,
         orchestrator: OrchestratorRunner | None = None,
+        chat_graph: ChatGraph | None = None,
         trace: TraceCollector | None = None,
     ) -> None:
         self._assistant_loader = assistant_loader
@@ -44,6 +47,7 @@ class ChatCompletionService:
         self._guardrails = guardrails or GuardrailRunner()
         self._rag = rag or RAGRetriever()
         self._orchestrator = orchestrator or OrchestratorRunner()
+        self._chat_graph = chat_graph or ChatGraph(orchestrator=self._orchestrator)
         self._trace = trace or TraceCollector()
 
     async def complete(self, *, webhook_id: str, request: ChatRequest) -> ChatResponse:
@@ -110,16 +114,21 @@ class ChatCompletionService:
         )
         self._trace.bind_tracker(tracker)
 
-        if tracker.active_agent_kind == "sub_agent":
+        if tracker.active_agent_kind == "sub_agent" and tracker.active_flow_state is None:
             tracker.reset_to_orchestrator()
 
-        bundle = await self._runtime_bundle_loader.load(agent_doc=agent_doc)
+        bundle = await self._runtime_bundle_loader.load(
+            agent_doc=agent_doc,
+            for_preview=source == CHAT_SOURCE_PREVIEW,
+        )
         await self._trace.record(
             "bundle_loaded",
             {
                 "agent_id": agent_id,
                 "tool_count": len(bundle.orchestrator.tools),
                 "knowledge_base_count": len(bundle.orchestrator.knowledge_bases),
+                "sub_agent_count": len(bundle.orchestrator.sub_agents),
+                "workflow_count": len(bundle.orchestrator.workflows),
             },
         )
 
@@ -134,7 +143,10 @@ class ChatCompletionService:
             tracker.append_user_message(message=sanitized_message, metadata=request.metadata)
             routing = {"mode": "orchestrator", "blocked": True}
             tracker.set_routing_decision(agent_id=agent_id, kind="orchestrator", decision=routing)
-            await self._trace.record("output_message", {"message_count": len(replies)})
+            await self._trace.record(
+                "output_message",
+                _output_message_trace_data(replies),
+            )
             self._trace.finish_turn(routing_decision=routing)
             await self._tracker_service.persist(tracker, replies)
             return ChatResponse(
@@ -146,9 +158,37 @@ class ChatCompletionService:
         tracker.append_user_message(message=sanitized_message, metadata=request.metadata)
         await self._tracker_service.save_session(tracker)
 
-        kb_ids = [kb.id for kb in bundle.orchestrator.knowledge_bases]
-        rag_context = await self._rag.retrieve(query=sanitized_message, knowledge_base_ids=kb_ids)
-        await self._trace.record("rag_complete", {"context_length": len(rag_context)})
+        in_workflow = tracker.active_flow_state is not None
+        will_auto_start_workflow = (
+            not in_workflow
+            and bool(bundle.orchestrator.workflows)
+            and sum(1 for event in tracker.get_history() if event.get("role") == "user") == 1
+        )
+        skip_rag = in_workflow or will_auto_start_workflow
+
+        kb_list = bundle.orchestrator.knowledge_bases
+        if skip_rag or not kb_list:
+            await self._trace.record("rag_skipped", {})
+            rag_context = ""
+        else:
+            rag_result = await self._rag.retrieve(
+                query=sanitized_message,
+                knowledge_bases=kb_list,
+                organization_id=bundle.organization_id,
+            )
+            rag_context = rag_result.context
+            if rag_result.error and not rag_context:
+                await self._trace.record("rag_error", {"detail": rag_result.error})
+            else:
+                trace_data: dict[str, object] = {
+                    "context_length": len(rag_context),
+                    "kb_ids": rag_result.kb_ids,
+                    "chunk_count": rag_result.chunk_count,
+                    "storage_types": rag_result.storage_types,
+                }
+                if rag_result.error:
+                    trace_data["partial_error"] = rag_result.error
+                await self._trace.record("rag_complete", trace_data)
 
         guardrail_instructions = self._guardrails.build_instructions(bundle.orchestrator.guardrails)
         if guardrail_instructions:
@@ -158,26 +198,73 @@ class ChatCompletionService:
 
         connectors_by_id = await self._runtime_bundle_loader.load_connectors_for_tools(
             organization_id=bundle.organization_id,
-            tools=bundle.orchestrator.tools,
+            tools=bundle.all_runtime_tools(),
         )
 
-        replies = await self._orchestrator.run_turn(
+        llm_config = bundle.orchestrator.llm_config
+        tracing_context = LlmTracingContext(
+            agent_id=agent_id,
+            sender_id=request.sender_id,
+            source=source,
+            organization_id=str(agent_doc["organization_id"]),
+            model_id=llm_config.model_id if llm_config else None,
+            region=llm_config.region if llm_config else None,
+        )
+
+        turn_result = await self._chat_graph.run_turn(
             bundle=bundle,
             tracker=tracker,
             user_message=sanitized_message,
             rag_context=rag_context,
             connectors_by_id=connectors_by_id,
+            tracing_context=tracing_context,
+            rag=self._rag,
+            trace=self._trace.record,
         )
+        replies = turn_result.replies
+        routing = turn_result.routing
 
-        routing = {"mode": "orchestrator"}
-        tracker.set_routing_decision(agent_id=agent_id, kind="orchestrator", decision=routing)
-        await self._trace.record("output_message", {"message_count": len(replies)})
+        if routing.get("mode") == "delegate":
+            await self._trace.record(
+                "sub_agent_start",
+                {
+                    "sub_agent_id": routing.get("sub_agent_id"),
+                    "sub_agent_name": routing.get("sub_agent_name"),
+                    "args": routing.get("args"),
+                },
+            )
+            await self._trace.record("sub_agent_complete", {"reply_count": len(replies)})
+
+        tracker.set_routing_decision(
+            agent_id=str(routing.get("sub_agent_id", agent_id)),
+            kind=(
+                "sub_agent"
+                if routing.get("mode") == "delegate"
+                else "workflow"
+                if routing.get("mode") == "workflow"
+                else "orchestrator"
+            ),
+            decision=routing,
+        )
+        await self._trace.record(
+            "output_message",
+            _output_message_trace_data(replies),
+        )
         self._trace.finish_turn(routing_decision=routing)
-        await self._tracker_service.persist(tracker, replies)
+        reply_texts = [reply.text for reply in replies if reply.text]
+        await self._tracker_service.persist(tracker, reply_texts)
 
         return ChatResponse(
             messages=[
-                ChatMessage(recipient_id=request.sender_id, text=reply)
+                ChatMessage(
+                    recipient_id=request.sender_id,
+                    text=reply.text,
+                    buttons=(
+                        [ChatButton(**button) for button in reply.buttons]
+                        if reply.buttons
+                        else None
+                    ),
+                )
                 for reply in replies
             ],
         )
@@ -200,3 +287,13 @@ class ChatCompletionService:
                 ChatMessage(recipient_id=sender_id, text=GENERIC_ERROR_MESSAGE),
             ],
         )
+
+
+def _output_message_trace_data(replies: list[Any]) -> dict[str, object]:
+    texts = [reply.text for reply in replies if getattr(reply, "text", None)]
+    data: dict[str, object] = {"message_count": len(texts)}
+    if len(texts) == 1:
+        data["text"] = texts[0]
+    elif texts:
+        data["texts"] = texts
+    return data

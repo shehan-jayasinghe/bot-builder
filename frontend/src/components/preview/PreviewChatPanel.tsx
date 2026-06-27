@@ -13,7 +13,7 @@ type PreviewChatPanelProps = {
   messages: PreviewChatEntry[];
   draft: string;
   onDraftChange: (value: string) => void;
-  onSend: () => void;
+  onSend: (message?: string) => void;
   isSending?: boolean;
   agentName?: string;
 };
@@ -40,7 +40,7 @@ export function PreviewChatPanel({
     if (!draft.trim() || isSending) {
       return;
     }
-    onSend();
+    onSend(draft.trim());
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -49,8 +49,15 @@ export function PreviewChatPanel({
       if (!draft.trim() || isSending) {
         return;
       }
-      onSend();
+      onSend(draft.trim());
     }
+  }
+
+  function handleButtonClick(payload: string) {
+    if (!payload.trim() || isSending) {
+      return;
+    }
+    onSend(payload.trim());
   }
 
   return (
@@ -78,7 +85,13 @@ export function PreviewChatPanel({
               {message.buttons?.length ? (
                 <div className="preview-chat__buttons">
                   {message.buttons.map((button) => (
-                    <button key={button.payload} type="button" className="preview-chat__button-chip">
+                    <button
+                      key={button.payload}
+                      type="button"
+                      className="preview-chat__button-chip"
+                      disabled={isSending}
+                      onClick={() => handleButtonClick(button.payload)}
+                    >
                       {button.title}
                     </button>
                   ))}

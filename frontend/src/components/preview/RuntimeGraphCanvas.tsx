@@ -6,6 +6,10 @@ type RuntimeGraphCanvasProps = {
   edges: RuntimeGraphEdge[];
   highlightedNodeId?: string | null;
   zoom?: number;
+  orchestratorMeta?: {
+    status?: string | null;
+    description?: string | null;
+  };
 };
 
 function edgePath(
@@ -45,6 +49,7 @@ export function RuntimeGraphCanvas({
   edges,
   highlightedNodeId,
   zoom = 1,
+  orchestratorMeta,
 }: RuntimeGraphCanvasProps) {
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
 
@@ -95,7 +100,17 @@ export function RuntimeGraphCanvas({
             title={node.description ?? undefined}
           >
             <span className="runtime-graph-node__type">{nodeTypeLabel(node.type)}</span>
+            {isOrchestrator && orchestratorMeta?.status ? (
+              <span className={`runtime-graph-node__status runtime-graph-node__status--${orchestratorMeta.status}`}>
+                {orchestratorMeta.status}
+              </span>
+            ) : null}
             <span className="runtime-graph-node__label">{node.label}</span>
+            {(isOrchestrator ? orchestratorMeta?.description : node.description) ? (
+              <span className="runtime-graph-node__description">
+                {isOrchestrator ? orchestratorMeta?.description : node.description}
+              </span>
+            ) : null}
           </div>
         );
       })}

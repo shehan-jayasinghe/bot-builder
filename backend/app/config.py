@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     bedrock_embed_model_id: str = "amazon.titan-embed-text-v2:0"
     bedrock_embed_dimensions: int = 1024
 
+    # LangSmith / LangChain tracing (LLM observability in preview + webhook chat)
+    langchain_tracing_v2: bool = False
+    langchain_api_key: str = ""
+    langchain_project: str = "bot-builder"
+    langchain_endpoint: str = "https://api.smith.langchain.com"
+
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
 

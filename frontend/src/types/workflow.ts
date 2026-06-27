@@ -1,3 +1,8 @@
+export type WorkflowButton = {
+  title: string;
+  payload: string;
+};
+
 export type WorkflowNodeType =
   | "start"
   | "message"

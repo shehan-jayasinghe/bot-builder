@@ -7,7 +7,7 @@ import type {
 
 const NODE_WIDTH = 148;
 const NODE_HEIGHT = 52;
-const ORCHESTRATOR_SIZE = { width: 120, height: 56 };
+const ORCHESTRATOR_SIZE = { width: 168, height: 96 };
 const RADIUS = 220;
 const CENTER = { x: 360, y: 300 };
 
@@ -67,7 +67,11 @@ export function resolveHighlightedNodeId(
     return null;
   }
 
-  if (routing.mode === "orchestrator") {
+  if (routing.type === "workflow" && typeof routing.workflow_id === "string") {
+    return routing.workflow_id;
+  }
+
+  if (routing.mode === "orchestrator" && routing.workflow_exited !== true) {
     return orchestratorId;
   }
 

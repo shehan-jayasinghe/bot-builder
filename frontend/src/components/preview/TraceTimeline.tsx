@@ -1,7 +1,8 @@
 import type { PreviewTraceTurn } from "../../types/preview";
 import {
-  buildTraceTimeline,
+  buildTraceTurnGroups,
   formatTraceTimestamp,
+  formatTraceTurnTimestamp,
   type TraceTimelineItem,
 } from "../../utils/traceTimeline";
 
@@ -38,13 +39,13 @@ function TraceRow({ item }: { item: TraceTimelineItem }) {
 }
 
 export function TraceTimeline({ turns, isLoading }: TraceTimelineProps) {
-  const items = buildTraceTimeline(turns);
+  const groups = buildTraceTurnGroups(turns);
 
   if (isLoading) {
     return <div className="trace-timeline__state">Loading trace…</div>;
   }
 
-  if (items.length === 0) {
+  if (groups.length === 0) {
     return (
       <div className="trace-timeline__empty">
         <p>No trace yet</p>
@@ -55,8 +56,20 @@ export function TraceTimeline({ turns, isLoading }: TraceTimelineProps) {
 
   return (
     <div className="trace-timeline">
-      {items.map((item) => (
-        <TraceRow key={item.id} item={item} />
+      {groups.map((group, index) => (
+        <section key={group.turnId} className="trace-turn">
+          <header className="trace-turn__header">
+            <span className="trace-turn__title">Turn {index + 1}</span>
+            <time className="trace-turn__time" dateTime={group.startedAt}>
+              {formatTraceTurnTimestamp(group.startedAt)}
+            </time>
+          </header>
+          <div className="trace-turn__items">
+            {group.items.map((item) => (
+              <TraceRow key={item.id} item={item} />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

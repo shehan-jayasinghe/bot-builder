@@ -92,8 +92,8 @@ export function AgentPreviewPage() {
     );
   }, [traceQuery.data, graphQuery.data]);
 
-  function handleSend() {
-    const message = draft.trim();
+  function handleSend(messageText?: string) {
+    const message = (messageText ?? draft).trim();
     if (!message || chatMutation.isPending) {
       return;
     }
@@ -101,6 +101,9 @@ export function AgentPreviewPage() {
       ...prev,
       { id: `user-${Date.now()}`, role: "user", text: message },
     ]);
+    if (!messageText) {
+      setDraft("");
+    }
     chatMutation.mutate(message);
   }
 
@@ -175,6 +178,10 @@ export function AgentPreviewPage() {
                 edges={layout.edges}
                 highlightedNodeId={highlightedNodeId}
                 zoom={zoom}
+                orchestratorMeta={{
+                  status: graphQuery.data?.orchestrator.status ?? agent.status,
+                  description: graphQuery.data?.orchestrator.description ?? agent.description,
+                }}
               />
             ) : (
               <div className="agent-preview__panel-empty">No graph data.</div>

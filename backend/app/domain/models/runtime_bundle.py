@@ -66,6 +66,26 @@ class RuntimeOrchestrator(BaseModel):
     workflows: list[RuntimeWorkflow] = Field(default_factory=list)
     sub_agents: list[RuntimeSubAgent] = Field(default_factory=list)
 
+    def find_sub_agent_by_name(self, name: str) -> RuntimeSubAgent | None:
+        normalized = name.strip().lower()
+        for sub_agent in self.sub_agents:
+            if sub_agent.name == normalized or sub_agent.name == name:
+                return sub_agent
+        return None
+
+    def find_workflow_by_id(self, workflow_id: str) -> RuntimeWorkflow | None:
+        for workflow in self.workflows:
+            if workflow.id == workflow_id:
+                return workflow
+        return None
+
+    def find_workflow_by_name(self, name: str) -> RuntimeWorkflow | None:
+        normalized = name.strip().lower()
+        for workflow in self.workflows:
+            if workflow.name.strip().lower() == normalized or workflow.name == name:
+                return workflow
+        return None
+
     def build_system_prompt(self, *, rag_context: str | None = None) -> str:
         parts = [self.system_prompt]
         if self.personality:
@@ -80,3 +100,12 @@ class RuntimeOrchestrator(BaseModel):
 class RuntimeBundle(BaseModel):
     orchestrator: RuntimeOrchestrator
     organization_id: str
+
+    def all_runtime_tools(self) -> list[RuntimeTool]:
+        tools = list(self.orchestrator.tools)
+        for sub_agent in self.orchestrator.sub_agents:
+            tools.extend(sub_agent.tools)
+        return tools
+
+    def find_workflow_by_id(self, workflow_id: str) -> RuntimeWorkflow | None:
+        return self.orchestrator.find_workflow_by_id(workflow_id)

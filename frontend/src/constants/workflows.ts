@@ -1,6 +1,7 @@
 export const MAX_WORKFLOWS_PER_ORG = 5;
 
 export const WORKFLOW_TOOLBAR_ITEMS = [
+  { id: "message", label: "Message", nodeType: "message" as const },
   { id: "input", label: "Input", nodeType: "input" as const },
   { id: "output", label: "Output", nodeType: "output" as const },
   { id: "actions", label: "Actions", nodeType: null },

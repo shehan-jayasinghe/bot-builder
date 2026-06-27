@@ -127,6 +127,16 @@ class Tracker:
     def set_active_flow_state(self, state: dict[str, Any] | None) -> None:
         self._active_flow_state = state
 
+    def enter_workflow(self, *, state: dict[str, Any]) -> None:
+        self._active_flow_state = state
+        self._active_agent_id = self._assistant_id
+        self._active_agent_kind = "workflow"
+
+    def clear_flow_state(self) -> None:
+        self._active_flow_state = None
+        self._active_agent_id = self._assistant_id
+        self._active_agent_kind = "orchestrator"
+
     def reset_to_orchestrator(self) -> None:
         self._active_agent_id = self._assistant_id
         self._active_agent_kind = "orchestrator"

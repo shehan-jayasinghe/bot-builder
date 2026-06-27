@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from bson import ObjectId
 
+from app.domain.graph.turn_result import AgentTurnResult
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeOrchestrator
 from app.domain.models.tracker import Tracker
 from app.schemas.chat import ChatRequest
@@ -61,7 +62,7 @@ def test_chat_completion_runs_orchestrator_and_persists() -> None:
         )
         runtime_bundle_loader.load.return_value = bundle
         runtime_bundle_loader.load_connectors_for_tools.return_value = {}
-        orchestrator.run_turn.return_value = ["Hello there"]
+        orchestrator.run_turn.return_value = AgentTurnResult(replies=["Hello there"])
 
         service = ChatCompletionService(
             assistant_loader=assistant_loader,
@@ -131,7 +132,7 @@ def test_preview_chat_runs_orchestrator() -> None:
         )
         runtime_bundle_loader.load.return_value = bundle
         runtime_bundle_loader.load_connectors_for_tools.return_value = {}
-        orchestrator.run_turn.return_value = ["Preview reply"]
+        orchestrator.run_turn.return_value = AgentTurnResult(replies=["Preview reply"])
 
         service = ChatCompletionService(
             assistant_loader=AsyncMock(),

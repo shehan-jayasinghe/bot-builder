@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Any
 
 from qdrant_client.http.models import PointStruct
 
@@ -71,3 +72,41 @@ class QdrantVectorIndex:
     @staticmethod
     def _collection_name(*, organization_id: str, knowledgebase_id: str) -> str:
         return f"kb_{organization_id}_{knowledgebase_id}"
+
+    def search(
+        self,
+        *,
+        organization_id: str,
+        knowledgebase_id: str,
+        query: str,
+        top_k: int = 5,
+        min_score: float = 0.7,
+    ) -> list[dict[str, Any]]:
+        collection_name = self._collection_name(
+            organization_id=organization_id,
+            knowledgebase_id=knowledgebase_id,
+        )
+        query_vector = self._embeddings.embed_query(query)
+        raw_hits = self._qdrant.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=top_k,
+        )
+
+        hits: list[dict[str, Any]] = []
+        for hit in raw_hits:
+            score = float(getattr(hit, "score", 0.0))
+            if score < min_score:
+                continue
+            payload = getattr(hit, "payload", None) or {}
+            text = str(payload.get("text", "")).strip()
+            if not text:
+                continue
+            hits.append(
+                {
+                    "text": text,
+                    "score": score,
+                    "chunk_id": payload.get("chunk_id"),
+                },
+            )
+        return hits

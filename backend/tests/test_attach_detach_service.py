@@ -19,6 +19,7 @@ AGENT_ID = "6a3b7c61d8139334274fbbf1"
 OTHER_AGENT_ID = "6a3b7c61d8139334274fbbf2"
 KB_ID = "6a3f9012d8139334274fbc01"
 TOOL_ID = "6a3f9012d8139334274fbc00"
+WORKFLOW_ID = "6a3e780bcc2c2bdca82118c2"
 NOW = datetime(2026, 6, 26, 10, 0, 0, tzinfo=UTC)
 
 
@@ -374,5 +375,114 @@ def test_tool_service_attach_agent_not_found() -> None:
                 tool_id=TOOL_ID,
                 request=UpdateToolRequest(agent_id=AGENT_ID),
             )
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_attach_updates_agent_ids() -> None:
+    workflow_repo = MagicMock()
+    agent_repo = MagicMock()
+
+    workflow_repo.find_by_id_for_organization = AsyncMock(
+        return_value={
+            "_id": WORKFLOW_ID,
+            "name": "hello",
+            "description": None,
+            "organization_id": ORG_ID,
+            "agent_id": None,
+            "status": "draft",
+            "nodes": [],
+            "edges": [],
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    workflow_repo.update = AsyncMock(
+        return_value={
+            "_id": WORKFLOW_ID,
+            "name": "hello",
+            "description": None,
+            "organization_id": ORG_ID,
+            "agent_id": AGENT_ID,
+            "status": "draft",
+            "nodes": [],
+            "edges": [],
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    agent_repo.find_by_id_for_organization = AsyncMock(return_value={"_id": AGENT_ID})
+    agent_repo.push_workflow_id = AsyncMock(return_value=True)
+
+    from app.schemas.workflow import UpdateWorkflowRequest
+    from app.services.workflow_service import WorkflowService
+
+    service = WorkflowService(
+        workflow_repository=workflow_repo,
+        agent_repository=agent_repo,
+    )
+
+    async def _run() -> None:
+        result = await service.update(
+            current_user=_current_user(),
+            workflow_id=WORKFLOW_ID,
+            request=UpdateWorkflowRequest(agent_id=AGENT_ID),
+        )
+        assert result.agent_id == AGENT_ID
+        agent_repo.push_workflow_id.assert_awaited_once()
+
+    asyncio.run(_run())
+
+
+def test_workflow_service_detach_pulls_agent_ids() -> None:
+    workflow_repo = MagicMock()
+    agent_repo = MagicMock()
+
+    workflow_repo.find_by_id_for_organization = AsyncMock(
+        return_value={
+            "_id": WORKFLOW_ID,
+            "name": "hello",
+            "description": None,
+            "organization_id": ORG_ID,
+            "agent_id": AGENT_ID,
+            "status": "draft",
+            "nodes": [],
+            "edges": [],
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    workflow_repo.update = AsyncMock(
+        return_value={
+            "_id": WORKFLOW_ID,
+            "name": "hello",
+            "description": None,
+            "organization_id": ORG_ID,
+            "agent_id": None,
+            "status": "draft",
+            "nodes": [],
+            "edges": [],
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    agent_repo.pull_workflow_id = AsyncMock(return_value=True)
+
+    from app.schemas.workflow import UpdateWorkflowRequest
+    from app.services.workflow_service import WorkflowService
+
+    service = WorkflowService(
+        workflow_repository=workflow_repo,
+        agent_repository=agent_repo,
+    )
+
+    async def _run() -> None:
+        result = await service.update(
+            current_user=_current_user(),
+            workflow_id=WORKFLOW_ID,
+            request=UpdateWorkflowRequest(agent_id=None),
+        )
+        assert result.agent_id is None
+        agent_repo.pull_workflow_id.assert_awaited_once()
 
     asyncio.run(_run())

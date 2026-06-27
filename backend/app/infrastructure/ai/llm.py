@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.config import settings
+from app.infrastructure.ai.langsmith_tracing import build_llm_run_config, LlmTracingContext
 
 
 class BedrockLLM:
@@ -11,11 +12,13 @@ class BedrockLLM:
         region: str | None = None,
         temperature: float = 0.7,
         max_output_tokens: int = 1024,
+        tracing_context: LlmTracingContext | None = None,
     ) -> None:
         self._model_id = model_id or settings.bedrock_model_id
         self._region = region or settings.aws_region
         self._temperature = temperature
         self._max_output_tokens = max_output_tokens
+        self._tracing_context = tracing_context
         self._client = None
 
     def _get_client(self):
@@ -33,6 +36,9 @@ class BedrockLLM:
 
     def get_client(self):
         return self._get_client()
+
+    def _run_config(self) -> dict[str, Any] | None:
+        return build_llm_run_config(self._tracing_context)
 
     async def chat_from_history(
         self,
@@ -53,7 +59,11 @@ class BedrockLLM:
             elif role == "assistant":
                 messages.append(AIMessage(content=str(content)))
 
-        response = await self._get_client().ainvoke(messages)
+        run_config = self._run_config()
+        if run_config:
+            response = await self._get_client().ainvoke(messages, config=run_config)
+        else:
+            response = await self._get_client().ainvoke(messages)
         return str(response.content)
 
     async def chat(
@@ -69,7 +79,6 @@ class BedrockLLM:
             SystemMessage(content=system_prompt),
         ]
 
-        # TODO: convert tracker history to LangChain messages with proper typing
         for turn in history:
             role = turn.get("role")
             content = turn.get("content", "")
@@ -80,7 +89,9 @@ class BedrockLLM:
 
         messages.append(HumanMessage(content=user_message))
 
-        # TODO: add streaming support for real-time chat UIs
-        # TODO: add Langfuse / CloudWatch tracing and token cost logging
-        response = await self._get_client().ainvoke(messages)
+        run_config = self._run_config()
+        if run_config:
+            response = await self._get_client().ainvoke(messages, config=run_config)
+        else:
+            response = await self._get_client().ainvoke(messages)
         return str(response.content)

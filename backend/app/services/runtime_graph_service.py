@@ -1,5 +1,5 @@
 from app.domain.models.current_user import CurrentUser
-from app.domain.models.runtime_bundle import RuntimeBundle
+from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeWorkflow
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.schemas.preview import (
     RuntimeGraphEdge,
@@ -36,20 +36,26 @@ class RuntimeGraphService:
         if agent_doc is None:
             raise AgentNotFoundError(f"Agent not found: {agent_id}")
 
-        bundle = await self._runtime_bundle_loader.load(agent_doc=agent_doc)
-        return _bundle_to_graph_response(bundle)
+        bundle = await self._runtime_bundle_loader.load(agent_doc=agent_doc, for_preview=True)
+        return _bundle_to_graph_response(bundle, agent_doc=agent_doc)
 
 
-def _bundle_to_graph_response(bundle: RuntimeBundle) -> RuntimeGraphResponse:
+def _bundle_to_graph_response(
+    bundle: RuntimeBundle,
+    *,
+    agent_doc: dict | None = None,
+) -> RuntimeGraphResponse:
     orchestrator = bundle.orchestrator
     agent_id = orchestrator.id
+    agent_status = str(agent_doc.get("status")) if agent_doc and agent_doc.get("status") else None
+    agent_description = str(agent_doc["description"]) if agent_doc and agent_doc.get("description") else None
 
     nodes: list[RuntimeGraphNode] = [
         RuntimeGraphNode(
             id=agent_id,
             type=RuntimeGraphNodeType.ORCHESTRATOR,
             label=orchestrator.name,
-            description=None,
+            description=agent_description,
         ),
     ]
     edges: list[RuntimeGraphEdge] = []
@@ -78,7 +84,7 @@ def _bundle_to_graph_response(bundle: RuntimeBundle) -> RuntimeGraphResponse:
                 id=workflow.id,
                 type=RuntimeGraphNodeType.WORKFLOW,
                 label=workflow.name,
-                description=workflow.description,
+                description=_workflow_node_description(workflow),
             ),
         )
         edges.append(
@@ -132,7 +138,18 @@ def _bundle_to_graph_response(bundle: RuntimeBundle) -> RuntimeGraphResponse:
         orchestrator=RuntimeGraphOrchestrator(
             id=agent_id,
             name=orchestrator.name,
+            status=agent_status,
+            description=agent_description,
         ),
         nodes=nodes,
         edges=edges,
     )
+
+
+def _workflow_node_description(workflow: RuntimeWorkflow) -> str | None:
+    parts: list[str] = []
+    if workflow.description:
+        parts.append(workflow.description)
+    if workflow.status:
+        parts.append(f"Status: {workflow.status}")
+    return " · ".join(parts) if parts else None

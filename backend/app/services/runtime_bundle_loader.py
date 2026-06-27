@@ -3,7 +3,7 @@ from typing import Any
 from app.domain.constants.knowledgebase_constants import KB_STATUS_READY
 from app.domain.constants.sub_agent_constants import SUB_AGENT_STATUS_ACTIVE
 from app.domain.constants.tool_constants import TOOL_STATUS_ACTIVE
-from app.domain.constants.workflow_constants import WORKFLOW_STATUS_PUBLISHED
+from app.domain.constants.workflow_constants import WORKFLOW_STATUS_DRAFT, WORKFLOW_STATUS_PUBLISHED
 from app.domain.models.assistant import LLMConfig
 from app.domain.models.runtime_bundle import (
     RuntimeBundle,
@@ -37,7 +37,7 @@ class RuntimeBundleLoader:
         self._sub_agent_repository = sub_agent_repository
         self._connector_repository = connector_repository
 
-    async def load(self, *, agent_doc: dict[str, Any]) -> RuntimeBundle:
+    async def load(self, *, agent_doc: dict[str, Any], for_preview: bool = False) -> RuntimeBundle:
         organization_id = str(agent_doc["organization_id"])
         agent_id = str(agent_doc["_id"])
 
@@ -57,9 +57,16 @@ class RuntimeBundleLoader:
             _string_list(agent_doc.get("knowledge_base_ids"))
             + _collect_ids(sub_agent_docs, "knowledge_base_ids"),
         )
+
+        attached_workflow_docs = await self._workflow_repository.find_all_by_organization(
+            organization_id=organization_id,
+            agent_id=agent_id,
+            status=None if for_preview else WORKFLOW_STATUS_PUBLISHED,
+        )
         workflow_ids = _unique(
             _string_list(agent_doc.get("workflow_ids"))
-            + _collect_ids(sub_agent_docs, "workflow_ids"),
+            + _collect_ids(sub_agent_docs, "workflow_ids")
+            + [str(doc["_id"]) for doc in attached_workflow_docs],
         )
 
         tool_docs = await self._tool_repository.find_by_ids_for_organization(
@@ -76,8 +83,8 @@ class RuntimeBundleLoader:
         workflow_docs = await self._workflow_repository.find_by_ids_for_organization(
             organization_id=organization_id,
             workflow_ids=workflow_ids,
-            status=WORKFLOW_STATUS_PUBLISHED,
-            agent_id=agent_id,
+            status=None if for_preview else WORKFLOW_STATUS_PUBLISHED,
+            agent_id=None if for_preview else agent_id,
         )
 
         tools_by_id = {str(doc["_id"]): _to_runtime_tool(doc) for doc in tool_docs}
@@ -96,7 +103,7 @@ class RuntimeBundleLoader:
         ]
         orchestrator_workflows = [
             workflows_by_id[workflow_id]
-            for workflow_id in _string_list(agent_doc.get("workflow_ids"))
+            for workflow_id in workflow_ids
             if workflow_id in workflows_by_id
         ]
 
@@ -182,7 +189,7 @@ def _to_runtime_workflow(doc: dict[str, Any]) -> RuntimeWorkflow:
         description=_optional_str(doc.get("description")),
         nodes=list(doc.get("nodes") or []),
         edges=list(doc.get("edges") or []),
-        status=str(doc.get("status", WORKFLOW_STATUS_PUBLISHED)),
+        status=str(doc.get("status", WORKFLOW_STATUS_DRAFT)),
     )
 
 

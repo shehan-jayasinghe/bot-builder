@@ -143,6 +143,9 @@ def test_get_runtime_graph_loads_bundle() -> None:
         )
 
         assert response.orchestrator.id == AGENT_ID
-        runtime_bundle_loader.load.assert_awaited_once()
+        runtime_bundle_loader.load.assert_awaited_once_with(
+            agent_doc=agent_repository.find_by_id_for_organization.return_value,
+            for_preview=True,
+        )
 
     asyncio.run(_run())

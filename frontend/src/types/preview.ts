@@ -11,6 +11,8 @@ export type RuntimeGraphOrchestrator = {
   id: string;
   name: string;
   kind: string;
+  status?: string | null;
+  description?: string | null;
 };
 
 export type RuntimeGraphNode = {

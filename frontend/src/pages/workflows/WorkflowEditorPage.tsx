@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getWorkflow, updateWorkflow } from "../../api/workflows";
+import { getWorkflow, publishWorkflow, updateWorkflow } from "../../api/workflows";
 import { WorkflowCanvas } from "../../components/workflow/WorkflowCanvas";
 import { WorkflowIcon } from "../../components/workflow/WorkflowIcon";
 import { WORKFLOW_ACTION_ITEMS, WORKFLOW_TOOLBAR_ITEMS } from "../../constants/workflows";
-import type { WorkflowEdge, WorkflowNode } from "../../types/workflow";
+import type { WorkflowButton, WorkflowEdge, WorkflowNode } from "../../types/workflow";
 import { getApiError } from "../../utils/apiError";
 
 function formatRelativeTime(iso: string): string {
@@ -47,7 +47,10 @@ function getTailNode(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode
 
 function defaultNodeData(type: string, label?: string): Record<string, unknown> {
   if (type === "message") {
-    return { text: label ?? "Message" };
+    return { text: label ?? "Message", buttons: [] };
+  }
+  if (type === "input") {
+    return { label: label ?? "Input", slot: "user_input", input_mode: "text", options: [] };
   }
   if (type === "action") {
     return { label: label ?? "Action", action_type: label?.toLowerCase().replace(/\s+/g, "_") ?? "action" };
@@ -68,7 +71,9 @@ export function WorkflowEditorPage() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState("draft");
 
   const workflowQuery = useQuery({
     queryKey: ["workflow", workflowId],
@@ -83,8 +88,10 @@ export function WorkflowEditorPage() {
     setName(workflowQuery.data.name);
     setNodes(workflowQuery.data.nodes);
     setEdges(workflowQuery.data.edges);
+    setStatus(workflowQuery.data.status);
     setDirty(false);
     setSaveError(null);
+    setPublishError(null);
   }, [workflowQuery.data]);
 
   useEffect(() => {
@@ -107,10 +114,22 @@ export function WorkflowEditorPage() {
     onSuccess: (workflow) => {
       queryClient.setQueryData(["workflow", workflowId], workflow);
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
+      setStatus(workflow.status);
       setDirty(false);
       setSaveError(null);
     },
     onError: (error) => setSaveError(getApiError(error)),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: () => publishWorkflow(workflowId),
+    onSuccess: (workflow) => {
+      queryClient.setQueryData(["workflow", workflowId], workflow);
+      queryClient.invalidateQueries({ queryKey: ["workflows"] });
+      setStatus(workflow.status);
+      setPublishError(null);
+    },
+    onError: (error) => setPublishError(getApiError(error)),
   });
 
   const selectedNode = useMemo(
@@ -161,6 +180,87 @@ export function WorkflowEditorPage() {
     markDirty();
   }
 
+  function messageButtons(node: WorkflowNode): WorkflowButton[] {
+    const raw = node.data.buttons;
+    return Array.isArray(raw) ? (raw as WorkflowButton[]) : [];
+  }
+
+  function updateMessageButton(index: number, patch: Partial<WorkflowButton>) {
+    if (!selectedNode || selectedNode.type !== "message") {
+      return;
+    }
+    const buttons = messageButtons(selectedNode).map((button, i) =>
+      i === index ? { ...button, ...patch } : button,
+    );
+    updateSelectedNodeData({ buttons });
+  }
+
+  function addMessageButton() {
+    if (!selectedNode || selectedNode.type !== "message") {
+      return;
+    }
+    const buttons = [...messageButtons(selectedNode), { title: "Button", payload: `btn_${Date.now()}` }];
+    updateSelectedNodeData({ buttons });
+  }
+
+  function removeMessageButton(index: number) {
+    if (!selectedNode || selectedNode.type !== "message") {
+      return;
+    }
+    const buttons = messageButtons(selectedNode).filter((_, i) => i !== index);
+    updateSelectedNodeData({ buttons });
+  }
+
+  function inputOptions(node: WorkflowNode): string[] {
+    const raw = node.data.options;
+    return Array.isArray(raw) ? raw.map(String) : [];
+  }
+
+  function updateInputOption(index: number, value: string) {
+    if (!selectedNode || selectedNode.type !== "input") {
+      return;
+    }
+    const options = inputOptions(selectedNode).map((option, i) => (i === index ? value : option));
+    updateSelectedNodeData({ options });
+  }
+
+  function addInputOption() {
+    if (!selectedNode || selectedNode.type !== "input") {
+      return;
+    }
+    const options = [...inputOptions(selectedNode), `Option ${inputOptions(selectedNode).length + 1}`];
+    updateSelectedNodeData({ options });
+  }
+
+  function removeInputOption(index: number) {
+    if (!selectedNode || selectedNode.type !== "input") {
+      return;
+    }
+    const options = inputOptions(selectedNode).filter((_, i) => i !== index);
+    updateSelectedNodeData({ options });
+  }
+
+  async function handlePublish() {
+    setPublishError(null);
+    if (dirty) {
+      try {
+        const saved = await saveMutation.mutateAsync();
+        setStatus(saved.status);
+      } catch {
+        return;
+      }
+    }
+    publishMutation.mutate();
+  }
+
+  function handlePreview() {
+    const agentId = workflowQuery.data?.agent_id;
+    if (!agentId) {
+      return;
+    }
+    navigate(`/agent/${agentId}/preview`);
+  }
+
   if (!workflowId) {
     return null;
   }
@@ -185,21 +285,43 @@ export function WorkflowEditorPage() {
   return (
     <div className="workflow-editor">
       <div className="workflow-editor__topbar">
-        <input
-          className="workflow-editor__title"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            markDirty();
-          }}
-          aria-label="Workflow name"
-        />
+        <div className="workflow-editor__title-wrap">
+          <input
+            className="workflow-editor__title"
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              markDirty();
+            }}
+            aria-label="Workflow name"
+          />
+          <span
+            className={[
+              "workflow-editor__status",
+              status === "published" ? "workflow-editor__status--published" : "workflow-editor__status--draft",
+            ].join(" ")}
+          >
+            {status}
+          </span>
+        </div>
         <div className="workflow-editor__topbar-actions">
-          <button type="button" className="workflow-editor__btn workflow-editor__btn--ghost" disabled>
+          {publishError ? <span className="workflow-editor__publish-error">{publishError}</span> : null}
+          <button
+            type="button"
+            className="workflow-editor__btn workflow-editor__btn--ghost"
+            disabled={!workflow.agent_id}
+            title={workflow.agent_id ? "Open agent preview" : "Attach this workflow to an agent to preview"}
+            onClick={handlePreview}
+          >
             Preview
           </button>
-          <button type="button" className="workflow-editor__btn workflow-editor__btn--primary" disabled>
-            Publish
+          <button
+            type="button"
+            className="workflow-editor__btn workflow-editor__btn--primary"
+            disabled={publishMutation.isPending || saveMutation.isPending}
+            onClick={() => void handlePublish()}
+          >
+            {publishMutation.isPending ? "Publishing…" : status === "published" ? "Republish" : "Publish"}
           </button>
         </div>
       </div>
@@ -276,17 +398,113 @@ export function WorkflowEditorPage() {
           onSelectNode={setSelectedNodeId}
         />
 
-        {selectedNode && (selectedNode.type === "message" || selectedNode.type === "action") ? (
+        {selectedNode &&
+        (selectedNode.type === "message" ||
+          selectedNode.type === "action" ||
+          selectedNode.type === "input") ? (
           <aside className="workflow-editor__inspector">
             <h3>Step settings</h3>
             {selectedNode.type === "message" ? (
-              <label className="workflow-editor__field">
-                <span>Message</span>
-                <input
-                  value={String(selectedNode.data.text ?? "")}
-                  onChange={(event) => updateSelectedNodeData({ text: event.target.value })}
-                />
-              </label>
+              <>
+                <label className="workflow-editor__field">
+                  <span>Message</span>
+                  <input
+                    value={String(selectedNode.data.text ?? "")}
+                    onChange={(event) => updateSelectedNodeData({ text: event.target.value })}
+                  />
+                </label>
+                <div className="workflow-editor__field">
+                  <div className="workflow-editor__field-header">
+                    <span>Buttons</span>
+                    <button type="button" className="workflow-editor__inline-btn" onClick={addMessageButton}>
+                      + Add
+                    </button>
+                  </div>
+                  {messageButtons(selectedNode).length === 0 ? (
+                    <p className="workflow-editor__inspector-hint">No quick-reply buttons yet.</p>
+                  ) : (
+                    <div className="workflow-editor__button-list">
+                      {messageButtons(selectedNode).map((button, index) => (
+                        <div key={`${button.payload}-${index}`} className="workflow-editor__button-row">
+                          <input
+                            value={button.title}
+                            placeholder="Label"
+                            onChange={(event) => updateMessageButton(index, { title: event.target.value })}
+                          />
+                          <input
+                            value={button.payload}
+                            placeholder="Payload"
+                            onChange={(event) => updateMessageButton(index, { payload: event.target.value })}
+                          />
+                          <button
+                            type="button"
+                            className="workflow-editor__inline-btn workflow-editor__inline-btn--danger"
+                            onClick={() => removeMessageButton(index)}
+                            aria-label="Remove button"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : selectedNode.type === "input" ? (
+              <>
+                <label className="workflow-editor__field">
+                  <span>Label</span>
+                  <input
+                    value={String(selectedNode.data.label ?? "")}
+                    onChange={(event) => updateSelectedNodeData({ label: event.target.value })}
+                  />
+                </label>
+                <label className="workflow-editor__field">
+                  <span>Slot name</span>
+                  <input
+                    value={String(selectedNode.data.slot ?? "")}
+                    onChange={(event) => updateSelectedNodeData({ slot: event.target.value })}
+                  />
+                </label>
+                <label className="workflow-editor__field">
+                  <span>Input mode</span>
+                  <select
+                    value={String(selectedNode.data.input_mode ?? "text")}
+                    onChange={(event) => updateSelectedNodeData({ input_mode: event.target.value })}
+                  >
+                    <option value="text">Text</option>
+                    <option value="multiselect">Multiselect</option>
+                  </select>
+                </label>
+                {selectedNode.data.input_mode === "multiselect" ? (
+                  <div className="workflow-editor__field">
+                    <div className="workflow-editor__field-header">
+                      <span>Options</span>
+                      <button type="button" className="workflow-editor__inline-btn" onClick={addInputOption}>
+                        + Add
+                      </button>
+                    </div>
+                    <div className="workflow-editor__button-list">
+                      {inputOptions(selectedNode).map((option, index) => (
+                        <div key={`option-${index}`} className="workflow-editor__button-row">
+                          <input
+                            value={option}
+                            onChange={(event) => updateInputOption(index, event.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="workflow-editor__inline-btn workflow-editor__inline-btn--danger"
+                            onClick={() => removeInputOption(index)}
+                            aria-label="Remove option"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <p className="workflow-editor__inspector-meta">
                 Action type: <strong>{String(selectedNode.data.action_type ?? "")}</strong>

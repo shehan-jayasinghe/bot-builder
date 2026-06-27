@@ -1,16 +1,29 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import BaseTool
 
 from app.domain.constants.chat_constants import MAX_HISTORY_TURNS
-from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeOrchestrator, RuntimeTool
-from app.domain.models.tracker import Tracker
 from app.domain.executors.langgraph_tools import build_langgraph_tools
+from app.domain.graph.sub_agent_delegate import (
+    SubAgentRunner,
+    build_delegate_langgraph_tools,
+)
+from app.domain.graph.turn_result import AgentTurnResult, DelegationRequest, WorkflowEnterRequest
+from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeOrchestrator, RuntimeSubAgent, RuntimeTool, RuntimeWorkflow
+from app.domain.models.tracker import Tracker
+from app.domain.workflow.workflow_delegate import build_workflow_delegate_tools
+from app.infrastructure.ai.langsmith_tracing import build_llm_run_config, LlmTracingContext
 from app.infrastructure.ai.llm import BedrockLLM
+
+if TYPE_CHECKING:
+    from app.domain.pipeline.rag.retriever import RAGRetriever
 
 MAX_TOOL_ITERATIONS = 5
 
 
 class OrchestratorRunner:
-    """Runs orchestrator LLM turns with optional tool calling."""
+    """Runs orchestrator LLM turns with optional tool calling and sub-agent delegation."""
 
     async def run_turn(
         self,
@@ -20,65 +33,100 @@ class OrchestratorRunner:
         user_message: str,
         rag_context: str,
         connectors_by_id: dict[str, dict[str, Any]],
-    ) -> list[str]:
+        tracing_context: LlmTracingContext | None = None,
+        rag: "RAGRetriever | None" = None,
+    ) -> AgentTurnResult:
         orchestrator = bundle.orchestrator
         system_prompt = self._build_system_prompt(orchestrator, rag_context=rag_context)
         history = _cap_history(tracker.get_history())
 
-        if not orchestrator.tools:
+        reserved_names = {tool.name for tool in orchestrator.tools}
+        delegate_tools, delegates_by_name = build_delegate_langgraph_tools(
+            orchestrator.sub_agents,
+            reserved_names=reserved_names,
+        )
+        reserved_names.update(delegates_by_name)
+        workflow_tools, workflows_by_name = build_workflow_delegate_tools(
+            orchestrator.workflows,
+            reserved_names=reserved_names,
+        )
+        has_executor_tools = bool(orchestrator.tools)
+        has_delegates = bool(delegate_tools)
+        has_workflows = bool(workflow_tools)
+
+        if not has_executor_tools and not has_delegates and not has_workflows:
             reply = await self._simple_chat(
                 orchestrator=orchestrator,
                 system_prompt=system_prompt,
                 history=history,
+                tracing_context=tracing_context,
             )
-            return [reply]
+            return AgentTurnResult(replies=[reply])
 
-        return await self._chat_with_tools(
+        result = await self.execute_tool_turn(
             orchestrator=orchestrator,
             system_prompt=system_prompt,
             history=history,
             tools=orchestrator.tools,
+            delegate_tools=delegate_tools,
+            delegates_by_name=delegates_by_name,
+            workflow_tools=workflow_tools,
+            workflows_by_name=workflows_by_name,
             connectors_by_id=connectors_by_id,
+            tracing_context=tracing_context,
         )
+        if result.workflow_enter is not None:
+            return result
+        if result.delegation is None:
+            return result
 
-    @staticmethod
-    def _build_system_prompt(
-        orchestrator: RuntimeOrchestrator,
-        *,
-        rag_context: str,
-    ) -> str:
-        return orchestrator.build_system_prompt(rag_context=rag_context or None)
+        delegation = result.delegation
+        sub_rag_context = ""
+        if rag is not None and delegation.sub_agent.knowledge_bases:
+            sub_rag_result = await rag.retrieve(
+                query=user_message,
+                knowledge_bases=delegation.sub_agent.knowledge_bases,
+                organization_id=bundle.organization_id,
+            )
+            sub_rag_context = sub_rag_result.context
 
-    @staticmethod
-    def _build_llm(orchestrator: RuntimeOrchestrator) -> BedrockLLM:
-        llm_config = orchestrator.llm_config
-        return BedrockLLM(
-            model_id=llm_config.model_id if llm_config else None,
-            region=llm_config.region if llm_config else None,
-            temperature=orchestrator.temperature,
-            max_output_tokens=orchestrator.max_output_tokens,
+        sub_runner = SubAgentRunner(tool_executor=self)
+        replies = await sub_runner.run_turn(
+            sub_agent=delegation.sub_agent,
+            orchestrator=orchestrator,
+            tracker=tracker,
+            delegate_args=delegation.args,
+            rag_context=sub_rag_context,
+            connectors_by_id=connectors_by_id,
+            tracing_context=tracing_context,
         )
+        routing = {
+            "mode": "delegate",
+            "type": "delegate",
+            "sub_agent_id": delegation.sub_agent.id,
+            "sub_agent_name": delegation.sub_agent.name,
+            "args": delegation.args,
+        }
+        return AgentTurnResult(replies=replies, routing=routing)
 
-    async def _simple_chat(
-        self,
-        *,
-        orchestrator: RuntimeOrchestrator,
-        system_prompt: str,
-        history: list[dict[str, Any]],
-    ) -> str:
-        llm = self._build_llm(orchestrator)
-        return await llm.chat_from_history(system_prompt=system_prompt, history=history)
-
-    async def _chat_with_tools(
+    async def execute_tool_turn(
         self,
         *,
         orchestrator: RuntimeOrchestrator,
         system_prompt: str,
         history: list[dict[str, Any]],
         tools: list[RuntimeTool],
+        delegate_tools: list[BaseTool] | None = None,
+        delegates_by_name: dict[str, RuntimeSubAgent] | None = None,
+        workflow_tools: list[BaseTool] | None = None,
+        workflows_by_name: dict[str, RuntimeWorkflow] | None = None,
         connectors_by_id: dict[str, dict[str, Any]],
-    ) -> list[str]:
-        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+        tracing_context: LlmTracingContext | None = None,
+    ) -> AgentTurnResult:
+        delegate_tools = delegate_tools or []
+        delegates_by_name = delegates_by_name or {}
+        workflow_tools = workflow_tools or []
+        workflows_by_name = workflows_by_name or {}
 
         pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
         for tool in tools:
@@ -97,17 +145,21 @@ class OrchestratorRunner:
                 ),
             )
 
-        if not pairs:
+        langgraph_tools = build_langgraph_tools(pairs) + delegate_tools + workflow_tools
+        if not langgraph_tools:
             reply = await self._simple_chat(
                 orchestrator=orchestrator,
                 system_prompt=system_prompt,
                 history=history,
+                tracing_context=tracing_context,
             )
-            return [reply]
+            return AgentTurnResult(replies=[reply])
 
-        langgraph_tools = build_langgraph_tools(pairs)
         tools_by_name = {tool.name: tool for tool in langgraph_tools}
-        llm = self._build_llm(orchestrator).get_client().bind_tools(langgraph_tools)
+        llm = self._build_llm(orchestrator, tracing_context=tracing_context).get_client().bind_tools(
+            langgraph_tools,
+        )
+        run_config = build_llm_run_config(tracing_context)
 
         messages: list[SystemMessage | HumanMessage | AIMessage | ToolMessage] = [
             SystemMessage(content=system_prompt),
@@ -121,28 +173,87 @@ class OrchestratorRunner:
                 messages.append(AIMessage(content=content))
 
         for _ in range(MAX_TOOL_ITERATIONS):
-            response = await llm.ainvoke(messages)
+            if run_config:
+                response = await llm.ainvoke(messages, config=run_config)
+            else:
+                response = await llm.ainvoke(messages)
             tool_calls = getattr(response, "tool_calls", None) or []
             if not tool_calls:
-                return [str(response.content)]
+                return AgentTurnResult(replies=[str(response.content)])
 
             messages.append(response)
             for tool_call in tool_calls:
                 tool_name = tool_call.get("name")
+                tool_args = tool_call.get("args") or {}
+                tool_call_id = str(tool_call.get("id") or tool_name)
+
+                if tool_name and tool_name in delegates_by_name:
+                    return AgentTurnResult(
+                        replies=[],
+                        delegation=DelegationRequest(
+                            sub_agent=delegates_by_name[tool_name],
+                            args=tool_args,
+                            function_name=tool_name,
+                        ),
+                    )
+
+                if tool_name and tool_name in workflows_by_name:
+                    return AgentTurnResult(
+                        replies=[],
+                        workflow_enter=WorkflowEnterRequest(
+                            workflow=workflows_by_name[tool_name],
+                            function_name=tool_name,
+                            args=tool_args,
+                        ),
+                    )
+
                 if not tool_name or tool_name not in tools_by_name:
                     tool_result = f"Unknown tool: {tool_name}"
                 else:
-                    tool_result = await tools_by_name[tool_name].ainvoke(
-                        tool_call.get("args") or {},
-                    )
+                    tool_result = await tools_by_name[tool_name].ainvoke(tool_args)
+
                 messages.append(
                     ToolMessage(
                         content=str(tool_result),
-                        tool_call_id=str(tool_call.get("id") or tool_name),
+                        tool_call_id=tool_call_id,
                     ),
                 )
 
-        return ["I couldn't complete that request. Please try again."]
+        return AgentTurnResult(replies=["I couldn't complete that request. Please try again."])
+
+    @staticmethod
+    def _build_system_prompt(
+        orchestrator: RuntimeOrchestrator,
+        *,
+        rag_context: str,
+    ) -> str:
+        return orchestrator.build_system_prompt(rag_context=rag_context or None)
+
+    @staticmethod
+    def _build_llm(
+        orchestrator: RuntimeOrchestrator,
+        *,
+        tracing_context: LlmTracingContext | None = None,
+    ) -> BedrockLLM:
+        llm_config = orchestrator.llm_config
+        return BedrockLLM(
+            model_id=llm_config.model_id if llm_config else None,
+            region=llm_config.region if llm_config else None,
+            temperature=orchestrator.temperature,
+            max_output_tokens=orchestrator.max_output_tokens,
+            tracing_context=tracing_context,
+        )
+
+    async def _simple_chat(
+        self,
+        *,
+        orchestrator: RuntimeOrchestrator,
+        system_prompt: str,
+        history: list[dict[str, Any]],
+        tracing_context: LlmTracingContext | None = None,
+    ) -> str:
+        llm = self._build_llm(orchestrator, tracing_context=tracing_context)
+        return await llm.chat_from_history(system_prompt=system_prompt, history=history)
 
 
 def _cap_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:

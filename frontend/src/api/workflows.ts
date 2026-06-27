@@ -28,3 +28,8 @@ export async function updateWorkflow(workflowId: string, payload: UpdateWorkflow
   const { data } = await api.patch<Workflow>(`/workflows/${workflowId}`, payload);
   return data;
 }
+
+export async function publishWorkflow(workflowId: string): Promise<Workflow> {
+  const { data } = await api.post<Workflow>(`/workflows/${workflowId}/publish`);
+  return data;
+}

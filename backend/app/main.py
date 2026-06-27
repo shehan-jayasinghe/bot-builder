@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_v1_router
 from app.config import settings
+from app.infrastructure.ai.langsmith_tracing import configure_langsmith
 from app.infrastructure.db.mongo import connect_mongo, disconnect_mongo
 from app.infrastructure.db.redis import connect_redis, disconnect_redis
 from app.shared.exceptions.agent import AgentNotFoundError
@@ -26,7 +27,7 @@ from app.shared.exceptions.sub_agent import (
     SubAgentNameExistsError,
     SubAgentNotFoundError,
 )
-from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
+from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError, WorkflowValidationError
 from app.shared.exceptions.knowledgebase import KnowledgebaseNotFoundError
 from app.shared.exceptions.auth import (
     AuthError,
@@ -53,6 +54,7 @@ def setup_logging() -> None:
 
 
 setup_logging()
+configure_langsmith()
 
 
 @asynccontextmanager
@@ -136,6 +138,11 @@ async def workflow_limit_reached_handler(_request: Request, exc: WorkflowLimitRe
 @app.exception_handler(WorkflowNotFoundError)
 async def workflow_not_found_handler(_request: Request, exc: WorkflowNotFoundError) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(WorkflowValidationError)
+async def workflow_validation_handler(_request: Request, exc: WorkflowValidationError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.exception_handler(KnowledgebaseNotFoundError)

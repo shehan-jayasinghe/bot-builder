@@ -5,6 +5,7 @@ from app.domain.constants.workflow_constants import (
     DEFAULT_STARTER_NODES,
     MAX_WORKFLOWS_PER_ORGANIZATION,
     WORKFLOW_STATUS_DRAFT,
+    WORKFLOW_STATUS_PUBLISHED,
 )
 from app.domain.models.current_user import CurrentUser
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
@@ -21,6 +22,7 @@ from app.schemas.workflow import (
 )
 from app.shared.exceptions.agent import AgentNotFoundError
 from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError
+from app.services.workflow_validator import validate_workflow_for_publish
 
 
 class WorkflowService:
@@ -76,6 +78,15 @@ class WorkflowService:
             "organization_id": current_user.organization_id,
         }
         saved = await self._workflow_repository.create(document=document)
+        workflow_id = str(saved["_id"])
+        if request.agent_id is not None:
+            pushed = await self._agent_repository.push_workflow_id(
+                agent_id=request.agent_id,
+                organization_id=current_user.organization_id,
+                workflow_id=workflow_id,
+            )
+            if not pushed:
+                raise AgentNotFoundError("Agent not found")
         return self._document_to_response(saved)
 
     async def list_by_organization(
@@ -121,16 +132,77 @@ class WorkflowService:
         if existing is None:
             raise WorkflowNotFoundError("Workflow not found")
 
-        await self._ensure_agent_if_needed(
-            request=request,
-            organization_id=current_user.organization_id,
-        )
+        if "agent_id" not in request.model_fields_set:
+            updates = self._build_update_fields(request)
+            if not updates:
+                return self._document_to_response(existing)
+            self._maybe_revert_published_to_draft(existing=existing, updates=updates)
+            updated = await self._workflow_repository.update(
+                workflow_id=workflow_id,
+                organization_id=current_user.organization_id,
+                updates=updates,
+            )
+            if updated is None:
+                raise WorkflowNotFoundError("Workflow not found")
+            return self._document_to_response(updated)
+
+        new_agent_id = request.agent_id
+        previous_agent_id = existing.get("agent_id")
+
+        if new_agent_id is not None:
+            await self._ensure_agent_if_needed(
+                request=request,
+                organization_id=current_user.organization_id,
+            )
+
+        if previous_agent_id and previous_agent_id != new_agent_id:
+            await self._agent_repository.pull_workflow_id(
+                agent_id=str(previous_agent_id),
+                organization_id=current_user.organization_id,
+                workflow_id=workflow_id,
+            )
+
+        if new_agent_id is not None and new_agent_id != previous_agent_id:
+            pushed = await self._agent_repository.push_workflow_id(
+                agent_id=new_agent_id,
+                organization_id=current_user.organization_id,
+                workflow_id=workflow_id,
+            )
+            if not pushed:
+                raise AgentNotFoundError("Agent not found")
 
         updates = self._build_update_fields(request)
+        self._maybe_revert_published_to_draft(existing=existing, updates=updates)
         updated = await self._workflow_repository.update(
             workflow_id=workflow_id,
             organization_id=current_user.organization_id,
             updates=updates,
+        )
+        if updated is None:
+            raise WorkflowNotFoundError("Workflow not found")
+        return self._document_to_response(updated)
+
+    async def publish(
+        self,
+        *,
+        current_user: CurrentUser,
+        workflow_id: str,
+    ) -> UpdateWorkflowResponse:
+        existing = await self._workflow_repository.find_by_id_for_organization(
+            workflow_id=workflow_id,
+            organization_id=current_user.organization_id,
+        )
+        if existing is None:
+            raise WorkflowNotFoundError("Workflow not found")
+
+        nodes = list(existing.get("nodes") or [])
+        edges = list(existing.get("edges") or [])
+        validate_workflow_for_publish(nodes=nodes, edges=edges)
+
+        updated = await self._workflow_repository.update(
+            workflow_id=workflow_id,
+            organization_id=current_user.organization_id,
+            updates={"status": WORKFLOW_STATUS_PUBLISHED},
         )
         if updated is None:
             raise WorkflowNotFoundError("Workflow not found")
@@ -151,6 +223,18 @@ class WorkflowService:
             updates["edges"] = [edge.model_dump() for edge in request.edges]
 
         return updates
+
+    def _maybe_revert_published_to_draft(
+        self,
+        *,
+        existing: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> None:
+        if existing.get("status") != WORKFLOW_STATUS_PUBLISHED:
+            return
+        content_fields = {"name", "description", "nodes", "edges"}
+        if content_fields.intersection(updates):
+            updates["status"] = WORKFLOW_STATUS_DRAFT
 
     async def _ensure_agent_if_needed(
         self,

@@ -43,9 +43,29 @@ class ChatPipeline:
         if not guardrail_result.allowed:
             return [guardrail_result.refusal_message or "I can't help with that request."]
 
-        kb_ids = [kb.id for kb in bundle.orchestrator.knowledge_bases]
-        rag_context = await self._rag.retrieve(query=sanitized_message, knowledge_base_ids=kb_ids)
-        await self._trace.record("rag_complete", {"context_length": len(rag_context)})
+        kb_list = bundle.orchestrator.knowledge_bases
+        if not kb_list:
+            await self._trace.record("rag_skipped", {})
+            rag_context = ""
+        else:
+            rag_result = await self._rag.retrieve(
+                query=sanitized_message,
+                knowledge_bases=kb_list,
+                organization_id=bundle.organization_id,
+            )
+            rag_context = rag_result.context
+            if rag_result.error and not rag_context:
+                await self._trace.record("rag_error", {"detail": rag_result.error})
+            else:
+                await self._trace.record(
+                    "rag_complete",
+                    {
+                        "context_length": len(rag_context),
+                        "kb_ids": rag_result.kb_ids,
+                        "chunk_count": rag_result.chunk_count,
+                        "storage_types": rag_result.storage_types,
+                    },
+                )
 
         guardrail_instructions = self._guardrails.build_instructions(bundle.orchestrator.guardrails)
         if guardrail_instructions:
@@ -53,13 +73,15 @@ class ChatPipeline:
                 bundle.orchestrator.system_prompt + "\n\n" + guardrail_instructions
             )
 
-        replies = await self._orchestrator.run_turn(
+        turn_result = await self._orchestrator.run_turn(
             bundle=bundle,
             tracker=tracker,
             user_message=sanitized_message,
             rag_context=rag_context,
             connectors_by_id=connectors_by_id,
+            rag=self._rag,
         )
+        replies = turn_result.replies
         await self._trace.record("output_message", {"message_count": len(replies)})
         return replies
 

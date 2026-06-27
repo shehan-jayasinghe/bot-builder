@@ -66,3 +66,12 @@ async def update_workflow(
         workflow_id=workflow_id,
         request=body,
     )
+
+
+@router.post("/{workflow_id}/publish", response_model=UpdateWorkflowResponse)
+async def publish_workflow(
+    workflow_id: WorkflowIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: WorkflowService = Depends(get_workflow_service),
+) -> UpdateWorkflowResponse:
+    return await service.publish(current_user=current_user, workflow_id=workflow_id)

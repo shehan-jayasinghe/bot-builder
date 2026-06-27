@@ -45,3 +45,39 @@ class TfidfIndex:
         if not index_path.exists():
             raise FileNotFoundError(f"TF-IDF index not found: {index_path}")
         return joblib.load(index_path)
+
+    def search(
+        self,
+        *,
+        organization_id: str,
+        knowledgebase_id: str,
+        query: str,
+        top_k: int = 5,
+    ) -> list[dict[str, Any]]:
+        index = self.load(
+            organization_id=organization_id,
+            knowledgebase_id=knowledgebase_id,
+        )
+        vectorizer: TfidfVectorizer = index["vectorizer"]
+        matrix = index["matrix"]
+        texts: list[str] = index["texts"]
+        chunk_ids: list[str] = index.get("chunk_ids") or []
+
+        if not texts:
+            return []
+
+        query_vec = vectorizer.transform([query])
+        scores = (matrix * query_vec.T).toarray().flatten()
+        ranked_indices = scores.argsort()[::-1][:top_k]
+
+        hits: list[dict[str, Any]] = []
+        for idx in ranked_indices:
+            score = float(scores[idx])
+            if score <= 0:
+                continue
+            text = str(texts[idx]).strip()
+            if not text:
+                continue
+            chunk_id = chunk_ids[idx] if idx < len(chunk_ids) else None
+            hits.append({"text": text, "score": score, "chunk_id": chunk_id})
+        return hits

@@ -23,6 +23,8 @@ class RuntimeGraphOrchestrator(BaseModel):
     id: str
     name: str
     kind: str = "orchestrator"
+    status: str | None = None
+    description: str | None = None
 
 
 class RuntimeGraphNode(BaseModel):
