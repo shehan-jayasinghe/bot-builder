@@ -7,6 +7,7 @@ import { AgentKnowledgeBasePanel } from "../../components/agent/AgentKnowledgeBa
 import { AgentSubAgentsPanel } from "../../components/agent/AgentSubAgentsPanel";
 import { AgentToolsPanel } from "../../components/agent/AgentToolsPanel";
 import { AgentWorkflowsPanel } from "../../components/agent/AgentWorkflowsPanel";
+import { CapabilityCatalogPanel } from "../../components/agent/CapabilityCatalogPanel";
 import { AGENT_DETAIL_TABS } from "../../constants/navigation";
 import { getAgentTypeOption, getIndustryLabel } from "../../constants/agents";
 import { NavIcon } from "../../components/ui/NavIcon";
@@ -154,6 +155,7 @@ export function AgentDetailPage() {
           </div>
 
           <aside className="agent-detail__aside">
+            <CapabilityCatalogPanel agentId={agent.id} />
             <AgentToolsPanel agentId={agent.id} />
             <AgentWorkflowsPanel agentId={agent.id} />
             <AgentKnowledgeBasePanel agentId={agent.id} />

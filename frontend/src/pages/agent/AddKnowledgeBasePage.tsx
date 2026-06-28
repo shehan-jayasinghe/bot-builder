@@ -46,6 +46,7 @@ export function AddKnowledgeBasePage() {
     mutationFn: createKnowledgebase,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["knowledgebases", agentId] });
+      await queryClient.invalidateQueries({ queryKey: ["capability-catalog-preview", agentId] });
       navigate(`/agent/${agentId}`);
     },
     onError: (err) => {

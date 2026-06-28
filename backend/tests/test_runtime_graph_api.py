@@ -111,3 +111,24 @@ def test_get_runtime_graph_invalid_agent_id(client: TestClient) -> None:
 
     assert response.status_code == 422
     mock_service.get_runtime_graph.assert_not_called()
+
+
+def test_get_capability_catalog_preview_returns_text(client: TestClient) -> None:
+    from app.schemas.preview import CapabilityCatalogPreviewResponse
+
+    mock_service = AsyncMock(spec=RuntimeGraphService)
+    mock_service.get_capability_catalog_preview.return_value = CapabilityCatalogPreviewResponse(
+        agent_id=AGENT_ID,
+        text="## Capability catalog\n\n### Tools\n- get_balance: Use when user asks about balance",
+        has_capabilities=True,
+    )
+    app.dependency_overrides[get_current_user] = _current_user
+    app.dependency_overrides[get_runtime_graph_service] = lambda: mock_service
+
+    response = client.get(f"/api/v1/agents/{AGENT_ID}/capability-catalog-preview")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["has_capabilities"] is True
+    assert "get_balance" in body["text"]
+    mock_service.get_capability_catalog_preview.assert_awaited_once()

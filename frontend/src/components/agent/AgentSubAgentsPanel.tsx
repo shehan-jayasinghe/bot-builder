@@ -45,6 +45,7 @@ export function AgentSubAgentsPanel({ agentId }: AgentSubAgentsPanelProps) {
 
   function handleCreated() {
     queryClient.invalidateQueries({ queryKey: ["sub-agents", agentId] });
+    queryClient.invalidateQueries({ queryKey: ["capability-catalog-preview", agentId] });
   }
 
   return (

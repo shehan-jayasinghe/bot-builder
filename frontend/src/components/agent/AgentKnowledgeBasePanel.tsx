@@ -42,6 +42,7 @@ export function AgentKnowledgeBasePanel({ agentId }: AgentKnowledgeBasePanelProp
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["knowledgebases"] });
+      queryClient.invalidateQueries({ queryKey: ["capability-catalog-preview", agentId] });
       setAttachTarget(null);
     },
   });

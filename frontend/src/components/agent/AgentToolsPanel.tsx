@@ -46,6 +46,7 @@ export function AgentToolsPanel({ agentId }: AgentToolsPanelProps) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["capability-catalog-preview", agentId] });
       setAttachTarget(null);
     },
   });

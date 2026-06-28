@@ -843,6 +843,39 @@ button {
   text-overflow: ellipsis;
 }
 
+.agent-panel--catalog {
+  border-color: #c7d7fe;
+  background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+}
+
+.agent-catalog-preview {
+  margin: 0;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.agent-detail__empty-panel--compact {
+  padding: 16px 12px;
+  text-align: left;
+}
+
+.agent-detail__empty-panel--compact p {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.agent-detail__empty-panel--compact span {
+  font-size: 12px;
+}
+
 .agent-kb-list__meta {
   font-size: 11px;
   color: var(--text-muted);

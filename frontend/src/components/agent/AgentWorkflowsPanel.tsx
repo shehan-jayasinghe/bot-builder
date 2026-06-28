@@ -41,6 +41,7 @@ export function AgentWorkflowsPanel({ agentId }: AgentWorkflowsPanelProps) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
+      queryClient.invalidateQueries({ queryKey: ["capability-catalog-preview", agentId] });
       setAttachTarget(null);
     },
   });

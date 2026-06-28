@@ -19,7 +19,7 @@ from app.schemas.agent import (
 )
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
-from app.schemas.preview import PreviewTraceResponse, RuntimeGraphResponse
+from app.schemas.preview import CapabilityCatalogPreviewResponse, PreviewTraceResponse, RuntimeGraphResponse
 from app.schemas.sub_agent import (
     CreateSubAgentRequest,
     CreateSubAgentResponse,
@@ -193,6 +193,21 @@ async def get_agent_runtime_graph(
     service: RuntimeGraphService = Depends(get_runtime_graph_service),
 ) -> RuntimeGraphResponse:
     return await service.get_runtime_graph(current_user=current_user, agent_id=agent_id)
+
+
+@router.get(
+    "/{agent_id}/capability-catalog-preview",
+    response_model=CapabilityCatalogPreviewResponse,
+)
+async def get_capability_catalog_preview(
+    agent_id: AgentIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RuntimeGraphService = Depends(get_runtime_graph_service),
+) -> CapabilityCatalogPreviewResponse:
+    return await service.get_capability_catalog_preview(
+        current_user=current_user,
+        agent_id=agent_id,
+    )
 
 
 @router.post("/{agent_id}/preview/chat", response_model=ChatResponse)

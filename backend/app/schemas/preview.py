@@ -49,6 +49,12 @@ class RuntimeGraphResponse(BaseModel):
     edges: list[RuntimeGraphEdge] = Field(default_factory=list)
 
 
+class CapabilityCatalogPreviewResponse(BaseModel):
+    agent_id: str
+    text: str = ""
+    has_capabilities: bool = False
+
+
 class PreviewTraceEvent(BaseModel):
     type: str
     at: str

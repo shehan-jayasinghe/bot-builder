@@ -17,6 +17,19 @@ export async function getAgent(agentId: string): Promise<Agent> {
   return data;
 }
 
+export type CapabilityCatalogPreview = {
+  agent_id: string;
+  text: string;
+  has_capabilities: boolean;
+};
+
+export async function getCapabilityCatalogPreview(agentId: string): Promise<CapabilityCatalogPreview> {
+  const { data } = await api.get<CapabilityCatalogPreview>(
+    `/agents/${agentId}/capability-catalog-preview`,
+  );
+  return data;
+}
+
 export async function createAgent(payload: CreateAgentRequest): Promise<Agent> {
   const { data } = await api.post<Agent>("/agents", payload);
   return data;

@@ -172,6 +172,7 @@ export function AddToolPage() {
     mutationFn: (payload: Parameters<typeof createTool>[1]) => createTool(agentId!, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["tools", agentId] });
+      await queryClient.invalidateQueries({ queryKey: ["capability-catalog-preview", agentId] });
       navigate(`/agent/${agentId}`);
     },
     onError: (err) => {

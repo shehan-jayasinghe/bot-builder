@@ -1,7 +1,9 @@
 from app.domain.models.current_user import CurrentUser
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeWorkflow
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
+from app.domain.pipeline.prompt.capability_catalog_builder import CapabilityCatalogBuilder
 from app.schemas.preview import (
+    CapabilityCatalogPreviewResponse,
     RuntimeGraphEdge,
     RuntimeGraphEdgeKind,
     RuntimeGraphNode,
@@ -38,6 +40,27 @@ class RuntimeGraphService:
 
         bundle = await self._runtime_bundle_loader.load(agent_doc=agent_doc, for_preview=True)
         return _bundle_to_graph_response(bundle, agent_doc=agent_doc)
+
+    async def get_capability_catalog_preview(
+        self,
+        *,
+        current_user: CurrentUser,
+        agent_id: str,
+    ) -> CapabilityCatalogPreviewResponse:
+        agent_doc = await self._agent_repository.find_by_id_for_organization(
+            agent_id=agent_id,
+            organization_id=current_user.organization_id,
+        )
+        if agent_doc is None:
+            raise AgentNotFoundError(f"Agent not found: {agent_id}")
+
+        bundle = await self._runtime_bundle_loader.load(agent_doc=agent_doc, for_preview=True)
+        text = CapabilityCatalogBuilder().build(bundle=bundle)
+        return CapabilityCatalogPreviewResponse(
+            agent_id=agent_id,
+            text=text,
+            has_capabilities=bool(text),
+        )
 
 
 def _bundle_to_graph_response(
