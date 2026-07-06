@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from langchain_core.messages import AIMessage, HumanMessage
 
 from app.domain.graph.langchain.agent_factory import FALLBACK_REPLY, create_bot_agent
+from app.domain.graph.langchain.pii_middleware import PII_BLOCKED_USER_MESSAGE
 from app.domain.graph.langchain.tool_router import ToolRouterContext, build_executor_langgraph_tools
 from app.domain.graph.turn_result import AgentTurnResult
 from app.domain.models.runtime_bundle import RuntimeOrchestrator, RuntimeTool
@@ -82,10 +83,15 @@ async def run_tool_agent_turn(
 
     messages = _history_to_messages(history)
     run_config = build_llm_run_config(tracing_context)
-    if run_config:
-        result = await agent.ainvoke({"messages": messages}, config=run_config)
-    else:
-        result = await agent.ainvoke({"messages": messages})
+    try:
+        if run_config:
+            result = await agent.ainvoke({"messages": messages}, config=run_config)
+        else:
+            result = await agent.ainvoke({"messages": messages})
+    except Exception as exc:
+        if _is_pii_detection_error(exc):
+            return AgentTurnResult(replies=[PII_BLOCKED_USER_MESSAGE])
+        raise
 
     if router.delegation is not None:
         return AgentTurnResult(replies=[], delegation=router.delegation)
@@ -122,6 +128,15 @@ def _extract_final_reply(messages: list[Any]) -> str:
         if content:
             return str(content)
     return ""
+
+
+def _is_pii_detection_error(exc: BaseException) -> bool:
+    from langchain.agents.middleware import PIIDetectionError
+
+    if isinstance(exc, PIIDetectionError):
+        return True
+    cause = exc.__cause__
+    return isinstance(cause, PIIDetectionError)
 
 
 async def _simple_chat(

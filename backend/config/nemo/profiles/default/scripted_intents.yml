@@ -1,0 +1,28 @@
+# Single source of truth for fast-path scripted intents (no orchestrator LLM).
+# Phrases are matched after trim + lower-case + trailing punctuation strip.
+# Reply templates support: {agent_name}, {industry}
+
+intents:
+  - id: greeting
+    phrases:
+      - hello
+      - hi
+      - hey
+      - good morning
+      - good afternoon
+      - good evening
+    reply: "Hello! I'm {agent_name}. How can I help you with your account or payments today?"
+
+  - id: help
+    phrases:
+      - help
+      - what can you do
+      - how can you help
+    reply: "I can help with payment reminders, account questions, and guided workflows. What do you need?"
+
+  - id: bye
+    phrases:
+      - bye
+      - goodbye
+      - see you
+    reply: "Goodbye! Reach out anytime if you need help with your account."

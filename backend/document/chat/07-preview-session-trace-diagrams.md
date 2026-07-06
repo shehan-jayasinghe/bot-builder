@@ -152,22 +152,24 @@ Authorization: Bearer <clerk_jwt>
 | `type` | When | Trace UI label |
 |--------|------|----------------|
 | `input_message` | User message received | **Input Message** |
-| `guardrail_complete` | Policy check passed | **LLM Request** → `guardrail_complete` |
-| `nemo_scripted_reply` | NeMo on; greeting/help/bye — no orchestrator LLM | **Output Message** (early return) |
-| `nemo_intent_blocked` | NeMo on; input rail refused message | **LLM Request** → blocked |
-| `guardrail_blocked` | Generic hard-block when NeMo off (reserved — not emitted today) | **LLM Request** → blocked |
+| `nemo_scripted_reply` | NeMo on; `scripted_intents.yml` match | **Output Message** — payload: `intent`, `matched_phrase` |
+| `nemo_intent_blocked` | NeMo on; input rail refused | **LLM Request** → blocked — payload: `intent`, `rail` |
+| `nemo_output_complete` | NeMo on; output self-check passed | **LLM Request** → `nemo_output_complete` |
+| `nemo_output_blocked` | NeMo on; output rail blocked | **Output Message** — payload: `rail` |
+| `guardrail_complete` | Policy check passed | **LLM Request** → `guardrail_complete` (payload: `gate: proceed` when NeMo on) |
 | `bundle_loaded` | RuntimeBundle ready | *(optional — dev detail)* |
 | `rag_skipped` | No KBs on agent or turn is in active workflow | **LLM Request** → `rag_skipped` |
-| `tool_start` | Tool invoked (`search_knowledge` or executor — executor trace planned) | **Tool Start** → tool name |
+| `tool_start` | Tool invoked (`search_knowledge` or executor) | **Tool Start** → tool name |
 | `tool_complete` | Tool finished — for `search_knowledge` includes `kb_ids`, `chunk_count`, `context_length` | *(nested under tool)* |
-| `tool_error` | Tool failed | **Tool Start** → error state |
 | `sub_agent_start` | First delegate from orchestrator | *(feeds graph highlight)* |
 | `sub_agent_continue` | Sticky follow-up on same sub-agent (Phase D **Done**) | *(feeds graph highlight)* |
 | `sub_agent_complete` | Sub-agent turn finished | *(nested)* |
-| `routing_decision` | Agent/workflow switch | *(feeds graph highlight)* |
+| `workflow_enter` / `workflow_step` / `slot_captured` / `workflow_exit` | Workflow runtime | *(feeds graph highlight)* |
 | `output_message` | Assistant reply | **Output Message** |
 
 Nested **LLM Request** rows in the UI = group `guardrail_complete` + `rag_skipped` (when applicable) under one turn step (same timestamp bucket). RAG retrieval stats appear on `tool_complete` when the LLM calls `search_knowledge`.
+
+**Turn metadata** (stored on each turn, not a `type` in `events[]`): `routing_decision` — see below.
 
 ---
 

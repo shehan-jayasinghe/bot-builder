@@ -9,6 +9,8 @@ from app.domain.constants.chat_constants import (
 )
 from app.domain.graph.chat_graph import ChatGraph
 from app.domain.graph.orchestrator import OrchestratorRunner
+from app.domain.pipeline.guardrails.nemo_intent_gate import build_gate_context
+from app.domain.pipeline.guardrails.nemo_output_gate import apply_nemo_output_gate
 from app.domain.pipeline.guardrails.runner import GuardrailRunner
 from app.domain.pipeline.observability.trace import TraceCollector
 from app.domain.pipeline.prompt.final_prompt_builder import FinalPromptBuilder
@@ -132,13 +134,25 @@ class ChatCompletionService:
             },
         )
 
+        gate_context = build_gate_context(
+            agent_name=bundle.orchestrator.name,
+            industry=str(agent_doc.get("industry") or "") or None,
+            description=str(agent_doc.get("description") or "") or None,
+        )
         guardrail_result = await self._guardrails.check(
             user_message=request.message,
             guardrails=bundle.orchestrator.guardrails,
             skip_nemo=tracker.active_flow_state is not None,
+            gate_context=gate_context,
         )
         if guardrail_result.scripted_reply:
-            await self._trace.record("nemo_scripted_reply", {})
+            await self._trace.record(
+                "nemo_scripted_reply",
+                {
+                    "intent": guardrail_result.intent.value,
+                    "matched_phrase": guardrail_result.matched_phrase,
+                },
+            )
             replies = [guardrail_result.scripted_reply]
             tracker.append_user_message(message=request.message, metadata=request.metadata)
             routing = {"mode": "orchestrator", "scripted": True}
@@ -154,10 +168,10 @@ class ChatCompletionService:
             )
 
         if not guardrail_result.allowed:
-            blocked_event = (
-                "nemo_intent_blocked" if settings.nemo_guardrails_enabled else "guardrail_blocked"
-            )
-            await self._trace.record(blocked_event, {})
+            await self._trace.record("nemo_intent_blocked", {
+                "intent": guardrail_result.intent.value,
+                "rail": guardrail_result.rail,
+            })
             replies = [guardrail_result.refusal_message or GUARDRAIL_REFUSAL_MESSAGE]
             tracker.append_user_message(message=request.message, metadata=request.metadata)
             routing = {"mode": "orchestrator", "blocked": True}
@@ -172,7 +186,10 @@ class ChatCompletionService:
                 messages=[ChatMessage(recipient_id=request.sender_id, text=replies[0])],
             )
 
-        await self._trace.record("guardrail_complete", {})
+        await self._trace.record(
+            "guardrail_complete",
+            {"gate": guardrail_result.intent.value} if settings.nemo_guardrails_enabled else {},
+        )
 
         tracker.append_user_message(message=request.message, metadata=request.metadata)
         await self._tracker_service.save_session(tracker)
@@ -220,6 +237,20 @@ class ChatCompletionService:
             )
         replies = turn_result.replies
         routing = turn_result.routing
+
+        replies, output_check = await apply_nemo_output_gate(
+            user_message=request.message,
+            replies=replies,
+            context=gate_context,
+        )
+        if settings.nemo_guardrails_enabled:
+            if output_check.allowed:
+                await self._trace.record("nemo_output_complete", {})
+            else:
+                await self._trace.record(
+                    "nemo_output_blocked",
+                    {"rail": output_check.rail},
+                )
 
         if routing.get("mode") == "delegate":
             if routing.get("sticky"):

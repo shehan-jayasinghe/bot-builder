@@ -30,7 +30,7 @@ Move the **chat runtime** from hand-built Python loops to **LangChain + LangGrap
 
 ## Honest stack — before vs after
 
-### Before (current code)
+### Before (legacy manual runtime)
 
 ```text
 ChatCompletionService._complete_turn()
@@ -43,18 +43,19 @@ ChatCompletionService._complete_turn()
   → Tracker persist + TraceCollector
 ```
 
-LangGraph package is used for **tool shape only** (`StructuredTool`, unused `ToolNode` helper).
+LangGraph package was used for **tool shape only** (`StructuredTool`, unused `ToolNode` helper).
 
-### After (current)
+### After (migrated — current)
 
 ```text
 ChatCompletionService._complete_turn()
-  → GuardrailRunner.build_instructions()
+  → GuardrailRunner (intent gate optional)
   → FinalPromptBuilder
   → ChatGraph → chat_router_compiler.py (LangGraph session router)
        → WorkflowGraphRunner.run_turn()  ← LangGraph StateGraph from workflow JSON
        → SubAgentRunner.run_turn()       ← create_agent() + PIIMiddleware
        → OrchestratorRunner.run_turn()   ← create_agent() + PIIMiddleware + middleware
+  → NeMo output gate (optional)
   → Tracker persist + TraceCollector
   → LangSmith parent run (LLM + tools + agent spans)
 ```
@@ -228,10 +229,13 @@ backend/app/domain/workflow/
 
 | File | Action |
 |------|--------|
-| `domain/graph/langchain/pii_middleware.py` | **Create** — built-in `email` redact, `credit_card` mask via `PIIMiddleware` |
+| `domain/graph/langchain/pii_middleware.py` | `build_agent_pii_middleware()` — email/credit_card/ip/url + regex api_key/password/otp |
+| `domain/graph/langchain/orchestrator_agent.py` | `PIIDetectionError` → `PII_BLOCKED_USER_MESSAGE` |
 | `langchain/agent_factory.py` | `middleware=[*build_agent_pii_middleware(), ...]` on `create_agent()` |
 
-No chat-boundary regex — PII runs inside the agent via LangChain built-in detectors.
+No chat-boundary regex — PII runs inside the agent via LangChain `PIIMiddleware` (built-in + regex `detector=`).
+
+**Scope:** orchestrator/sub-agent `create_agent()` only. Tool-less `_simple_chat` and workflow slot capture do not use `PIIMiddleware`.
 
 #### LangSmith proper
 
@@ -266,6 +270,7 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 | `pyproject.toml` | 2 | Upgrade deps |
 | `tests/test_langchain_runtime.py` | 3 | **Create** |
 | `tests/test_pii_middleware.py` | 4 | **Create** |
+| `tests/test_pii_blocked_turn.py` | 4 | **Create** — `PIIDetectionError` friendly reply |
 
 **Do not change for this migration:** `api/v1/*`, Mongo repositories, frontend, `RuntimeBundleLoader`, builder attach/detach APIs.
 
@@ -281,7 +286,7 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 ☑ Executor tools run through agent ToolNode (Step 3 Done)
 ☑ Workflows run through compiled LangGraph (`workflow_graph_runner.py`)
 ☑ Chat session router is LangGraph (`chat_router_compiler.py`) — [migration-chat-router-langgraph.md](./migration-chat-router-langgraph.md)
-☑ PIIMiddleware on `create_agent()` — built-in email + credit_card only (no custom regex)
+☑ PIIMiddleware on `create_agent()` — email redact, credit_card mask, ip/url redact, api_key/password/otp block
 ☑ LangSmith parent run per chat turn (chat_turn_tracing + turn_id in metadata)
 ☑ Webhook + preview + sticky sub-agent + workflow slots — all pass
 ☑ Dead aliases removed — see **Removed files** below
@@ -305,11 +310,11 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 ## Out of scope (separate future work)
 
 - RAGAS agent evaluation
-- Per-agent PII config on Mongo agent doc (optional follow-up)
+- Per-agent PII config on Mongo agent doc (optional follow-up — detectors are global today)
 - LangSmith data in preview UI
 - Frontend changes
 
-**NeMo Guardrails (Phase 0 done, off by default):** see [migration-nemo-guardrails.md](./migration-nemo-guardrails.md).
+**NeMo Guardrails (Phases 0–3 done, off by default):** see [migration-nemo-guardrails.md](./migration-nemo-guardrails.md).
 
 ---
 
@@ -318,8 +323,9 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 | Layer | Implementation |
 |-------|----------------|
 | HTTP entry | `ChatCompletionService` |
-| Intent gate (optional) | NeMo `check_async` + local scripted intents — [migration-nemo-guardrails.md](./migration-nemo-guardrails.md) |
-| Safety (PII) | LangChain `PIIMiddleware` on `create_agent()` |
+| Intent gate (optional) | `scripted_intents.yml` + NeMo input `check_async` — [migration-nemo-guardrails.md](./migration-nemo-guardrails.md) |
+| Output gate (optional) | NeMo `self check output` after graph turn — same flag |
+| Safety (PII) | LangChain `PIIMiddleware` on `create_agent()` — email, credit_card, ip, url; block api_key/password/otp |
 | Prompt | `FinalPromptBuilder` layers [1]–[4] |
 | Outer router | LangGraph `StateGraph` via `chat_router_compiler.py` |
 | Orchestrator / sub-agent | LangChain `create_agent()` (LangGraph compiled) |

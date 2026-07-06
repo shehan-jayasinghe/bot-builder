@@ -52,7 +52,7 @@ Related config docs:
 | **D** | 8 | **Done** | Sticky sub-agent — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
 | **LangChain** | 6–7, 8, 10, 11 | **Done** | [migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) — `create_agent()` orchestrator/sub-agent; compiled workflow graph |
 
-**Current runtime path:** `chat.py` → `ChatCompletionService` → guardrails → `RuntimeBundleLoader` → `ChatGraph` (LangGraph router) → `OrchestratorRunner` / `WorkflowGraphRunner` / `SubAgentRunner` → `TrackerService.persist`.
+**Current runtime path:** `chat.py` → `ChatCompletionService` → guardrails (intent) → `RuntimeBundleLoader` → `ChatGraph` (LangGraph router) → `OrchestratorRunner` / `WorkflowGraphRunner` / `SubAgentRunner` → NeMo output gate (optional) → `TrackerService.persist`.
 
 ---
 
@@ -251,8 +251,8 @@ flowchart TB
 ```
 
 - **Prompt policy:** `GuardrailRunner.build_instructions()` → `FinalPromptBuilder` layer [2] (includes `no_secrets` and other Mongo guardrails as instructions).
-- **PII / secrets in message:** LangChain `PIIMiddleware` on orchestrator/sub-agent `create_agent()` — not at this step.
-- **NeMo intent gate (optional):** when `NEMO_GUARDRAILS_ENABLED=true`, `evaluate_nemo_intent()` runs before the graph — local scripted greeting/help/bye (no orchestrator LLM), NeMo `self check input` for jailbreak/off-topic, skipped during active workflow. See [migration-nemo-guardrails.md](../agentic/updets/migration-nemo-guardrails.md).
+- **PII / secrets in message:** LangChain `PIIMiddleware` on orchestrator/sub-agent `create_agent()` (email redact, credit_card mask, ip/url redact; block api_key/password/otp) — not at Flow 5. See [migration-nemo-guardrails.md](../agentic/updets/migration-nemo-guardrails.md#phase-2--langchain-pii-expand-done).
+- **NeMo intent gate (optional):** when `NEMO_GUARDRAILS_ENABLED=true`, `evaluate_nemo_intent()` runs before the graph — `scripted_intents.yml` for greeting/help/bye (no orchestrator LLM), NeMo `self check input` for jailbreak/off-topic, skipped during active workflow. See [migration-nemo-guardrails.md](../agentic/updets/migration-nemo-guardrails.md).
 - **Default (flag off):** `check()` pass-through; policy in prompt layer [2] only.
 - Slot extractor **not** used here — only Flow 11 (workflow `input` nodes).
 
@@ -417,13 +417,20 @@ Normal orchestrator / sub-agent / tool chat does **not** use slot extractor.
 ```mermaid
 flowchart TB
     REPLIES[Assistant reply text]
-    REPLIES --> TRK[tracker.append_assistant_replies]
+    REPLIES --> OUTGATE{NeMo output gate?}
+    OUTGATE -->|NEMO on| CHECK[self check output per reply]
+    OUTGATE -->|off| TRK[tracker.append_assistant_replies]
+    CHECK -->|blocked| REFUSE[Replace with refusal]
+    CHECK -->|pass| TRK
+    REFUSE --> TRK
     TRK --> STATE[Save routing + active_flow_state]
     STATE --> REDIS[Redis set]
     STATE --> MONGO[Mongo persist]
-    MONGO --> TRACE[TraceCollector — routing_decision, output_message]
+    MONGO --> TRACE[TraceCollector — turn metadata + output_message]
     TRACE --> RES[200 ChatResponse]
 ```
+
+- **NeMo output gate (optional):** when `NEMO_GUARDRAILS_ENABLED=true`, `apply_nemo_output_gate()` runs after `ChatGraph.run_turn()` — skipped on scripted/input-blocked early returns. See [migration-nemo-guardrails.md](../agentic/updets/migration-nemo-guardrails.md#phase-3--output-rails-done).
 
 ### Response `200`
 
@@ -446,17 +453,19 @@ flowchart TB
 | Event | When |
 |-------|------|
 | `input_message` | Turn start |
-| `guardrail_complete` | Flow 5 — check passed; policy also in prompt layer [2] |
-| `nemo_scripted_reply` | Flow 5 — NeMo on; greeting/help/bye scripted (no orchestrator LLM) |
-| `nemo_intent_blocked` | Flow 5 — NeMo on; input rail blocked (jailbreak/off-topic) |
-| `guardrail_blocked` | Generic hard-block when NeMo off (reserved — not emitted today) |
+| `guardrail_complete` | Flow 5 — check passed; `gate: proceed` when NeMo on; policy also in prompt layer [2] |
+| `nemo_scripted_reply` | Flow 5 — NeMo on; `scripted_intents.yml` match (`intent`, `matched_phrase` in trace) |
+| `nemo_intent_blocked` | Flow 5 — NeMo on; input rail blocked (`intent`, `rail` in trace) |
+| `nemo_output_complete` | Flow 12 — NeMo on; output self-check passed |
+| `nemo_output_blocked` | Flow 12 — NeMo on; output rail blocked (`rail` in trace) |
 | `bundle_loaded` | Flow 4 |
-| `routing_decision` | Agent/workflow switch |
 | `rag_skipped` | Flow 9 — in workflow or no KBs |
 | `tool_start` / `tool_complete` | Flow 9 (`search_knowledge`) · Flow 10 (executors via agent `ToolNode`) |
-| `tool_start` / `tool_complete` / `tool_error` | Flow 10 |
-| `workflow_step` / `slot_captured` | Flow 11 |
+| `sub_agent_start` / `sub_agent_continue` / `sub_agent_complete` | Flow 8 |
+| `workflow_enter` / `workflow_step` / `slot_captured` / `workflow_exit` | Flow 11 |
 | `output_message` | Flow 12 |
+
+**Turn metadata** (not `TraceCollector.record()` events): `routing_decision` on each finished turn — used for graph highlight in preview UI.
 
 ---
 
@@ -538,8 +547,8 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | Assistant resolve | [assistant_loader.py](../../app/services/assistant_loader.py) | Done |
 | Tracker | [tracker.py](../../app/domain/models/tracker.py) · [tracker_service.py](../../app/services/tracker_service.py) | Done |
 | LLM | [llm.py](../../app/infrastructure/ai/llm.py) | Done |
-| PII (agent) | [pii_middleware.py](../../app/domain/graph/langchain/pii_middleware.py) via [agent_factory.py](../../app/domain/graph/langchain/agent_factory.py) | Done |
-| Guardrails | [guardrails/runner.py](../../app/domain/pipeline/guardrails/runner.py) · [nemo_intent_gate.py](../../app/domain/pipeline/guardrails/nemo_intent_gate.py) (optional) | Done |
+| PII (agent) | [pii_middleware.py](../../app/domain/graph/langchain/pii_middleware.py) · [agent_factory.py](../../app/domain/graph/langchain/agent_factory.py) · [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py) (block handling) | Done |
+| Guardrails | [runner.py](../../app/domain/pipeline/guardrails/runner.py) · [nemo_intent_gate.py](../../app/domain/pipeline/guardrails/nemo_intent_gate.py) · [nemo_output_gate.py](../../app/domain/pipeline/guardrails/nemo_output_gate.py) · [scripted_intents.py](../../app/domain/pipeline/guardrails/scripted_intents.py) | Done |
 | Final prompt | [final_prompt_builder.py](../../app/domain/pipeline/prompt/final_prompt_builder.py) · [capability_catalog_builder.py](../../app/domain/pipeline/prompt/capability_catalog_builder.py) | Done |
 | Agent create prompt | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) — base layer only | Done |
 | Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) (LangChain `StructuredTool`) · [registry.py](../../app/domain/executors/registry.py) | Done — via agent `ToolNode` in `create_agent()` |

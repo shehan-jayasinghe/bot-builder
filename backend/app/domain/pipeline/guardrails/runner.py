@@ -1,13 +1,5 @@
-from dataclasses import dataclass
-
 from app.domain.constants.agent_defaults import GuardrailDef
-
-
-@dataclass(frozen=True)
-class GuardrailCheckResult:
-    allowed: bool
-    refusal_message: str | None = None
-    scripted_reply: str | None = None
+from app.domain.pipeline.guardrails.nemo_gate_models import GuardrailCheckResult, NeMoGateContext, NeMoGateIntent
 
 
 class GuardrailRunner:
@@ -17,18 +9,21 @@ class GuardrailRunner:
         user_message: str,
         guardrails: list[GuardrailDef] | list[dict],
         skip_nemo: bool = False,
+        gate_context: NeMoGateContext | None = None,
     ) -> GuardrailCheckResult:
         from app.domain.pipeline.guardrails.nemo_intent_gate import evaluate_nemo_intent
 
-        nemo_result = await evaluate_nemo_intent(
-            user_message=user_message,
-            skip_nemo=skip_nemo,
-        )
-        if nemo_result is not None:
-            return nemo_result
+        if gate_context is not None:
+            nemo_result = await evaluate_nemo_intent(
+                user_message=user_message,
+                context=gate_context,
+                skip_nemo=skip_nemo,
+            )
+            if nemo_result is not None:
+                return nemo_result
 
         _ = guardrails
-        return GuardrailCheckResult(allowed=True)
+        return GuardrailCheckResult(allowed=True, intent=NeMoGateIntent.PROCEED)
 
     def build_instructions(self, guardrails: list[GuardrailDef] | list[dict]) -> str:
         lines: list[str] = []

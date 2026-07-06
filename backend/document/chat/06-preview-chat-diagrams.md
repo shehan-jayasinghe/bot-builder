@@ -76,10 +76,10 @@ flowchart TB
 | Step | Same as webhook? |
 |------|------------------|
 | RuntimeBundle | yes |
-| Sanitize + guardrails | guardrails only — PII via agent `PIIMiddleware` |
+| Guardrails + optional NeMo | guardrails at Flow 5; PII via agent `PIIMiddleware` (7 detectors on `create_agent()` — no Mongo trace event); NeMo output gate at Flow 12 when enabled |
 | ChatGraph routing | yes — same LangGraph session router as webhook |
 | Orchestrator + tools | yes — LangChain `create_agent()` |
-| RAG | yes when Phase 3 done |
+| RAG | yes — agentic `search_knowledge` tool (Phase C **Done**) |
 | Channel / webhook resolve | **no** — agent from path |
 | Friendly 200 on missing agent | **no** — return `404` for admin |
 

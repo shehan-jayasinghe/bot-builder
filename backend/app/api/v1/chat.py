@@ -20,7 +20,7 @@ async def chat_webhook(
       1. Validate request (Pydantic)
       2. Resolve channel + published agent (friendly 200 fallback)
       3. Load tracker + RuntimeBundle
-      4. Sanitize + guardrails + orchestrator LLM (+ tools when attached)
+      4. Guardrails (prompt + optional NeMo intent gate) → ChatGraph → optional NeMo output gate
       5. Persist session and return JSON replies
     """
     return await chat_service.complete(webhook_id=webhook_id, request=body)
