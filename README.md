@@ -44,7 +44,7 @@ Full product includes: applications, onboarding, agent config (personality/tone)
 | Chat inference + graph routing | Done |
 | Assistant loader from MongoDB | Done |
 | Guardrails | Done |
-| RAG (Qdrant) | Done |
+| RAG (Qdrant + keyword + graph) | Done — LlamaIndex (`infrastructure/ai/llamaindex/`) |
 | Tool execution via orchestrator | Done |
 | Trace events | Done |
 | Workflows runtime | Done |
@@ -93,3 +93,4 @@ curl -X POST http://localhost:8000/api/v1/chat/webhook/demo-webhook-id \
 ## Documentation
 
 - Agentic system (API + runtime migration): [backend/document/agentic/00-overview.md](backend/document/agentic/00-overview.md)
+- LlamaIndex RAG migration: [backend/document/agentic/updets/migration-llamaindex-rag.md](backend/document/agentic/updets/migration-llamaindex-rag.md) — **Done**

@@ -2,15 +2,9 @@ import asyncio
 import logging
 from typing import Any
 
-from app.domain.constants.knowledgebase_constants import (
-    STORAGE_TYPE_GRAPH,
-    STORAGE_TYPE_KEYWORD,
-    STORAGE_TYPE_VECTOR,
-)
 from app.domain.models.runtime_bundle import RuntimeKnowledgeBase
-from app.domain.pipeline.rag.keyword_search import KeywordSearch
 from app.domain.pipeline.rag.rag_result import RagChunk, RagRetrieveResult
-from app.domain.pipeline.rag.vector_search import VectorSearch
+from app.infrastructure.ai.llamaindex.retriever_factory import RetrieverFactory
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +25,9 @@ class RAGRetriever:
     def __init__(
         self,
         *,
-        vector_search: VectorSearch | None = None,
-        keyword_search: KeywordSearch | None = None,
+        retriever_factory: RetrieverFactory | None = None,
     ) -> None:
-        self._vector_search = vector_search or VectorSearch()
-        self._keyword_search = keyword_search or KeywordSearch()
+        self._retriever_factory = retriever_factory or RetrieverFactory()
 
     async def retrieve(
         self,
@@ -120,33 +112,10 @@ class RAGRetriever:
         query: str,
         organization_id: str,
     ) -> list[dict[str, Any]]:
-        if kb.storage_type == STORAGE_TYPE_VECTOR:
-            hits = await asyncio.to_thread(
-                self._vector_search.search,
-                organization_id=organization_id,
-                knowledgebase_id=kb.id,
-                query=query,
-            )
-            return [
-                {"text": hit.text, "score": hit.score, "chunk_id": hit.chunk_id}
-                for hit in hits
-            ]
-
-        if kb.storage_type == STORAGE_TYPE_KEYWORD:
-            hits = await asyncio.to_thread(
-                self._keyword_search.search,
-                organization_id=organization_id,
-                knowledgebase_id=kb.id,
-                query=query,
-            )
-            return [
-                {"text": hit.text, "score": hit.score, "chunk_id": hit.chunk_id}
-                for hit in hits
-            ]
-
-        if kb.storage_type == STORAGE_TYPE_GRAPH:
-            logger.info("Graph RAG not implemented for knowledge_base_id=%s", kb.id)
-            return []
-
-        logger.warning("Unsupported storage_type=%s for knowledge_base_id=%s", kb.storage_type, kb.id)
-        return []
+        return await asyncio.to_thread(
+            self._retriever_factory.search,
+            storage_type=kb.storage_type,
+            organization_id=organization_id,
+            knowledgebase_id=kb.id,
+            query=query,
+        )

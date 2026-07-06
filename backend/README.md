@@ -17,7 +17,7 @@ app/
     pipeline/          # Guardrails, RAG, trace
   infrastructure/
     db/                # mongo, redis, repositories/mongo, repositories/redis
-    ai/                # Bedrock LLM, embeddings
+    ai/                # Bedrock LLM, LlamaIndex RAG (llamaindex/)
   shared/              # exceptions, utils
   main.py, config.py
 ```
@@ -40,7 +40,7 @@ app/
 |--------|------|-------------|
 | Guardrails (prompt layer [2]) | `domain/pipeline/guardrails/runner.py` — `build_instructions`; NeMo via `nemo_intent_gate.py`, `nemo_output_gate.py`, `scripted_intents.yml` | `guardrail_complete`; `nemo_scripted_reply` / `nemo_intent_blocked` / `nemo_output_complete` / `nemo_output_blocked` when `NEMO_GUARDRAILS_ENABLED=true` |
 | PII | `domain/graph/langchain/pii_middleware.py` → `agent_factory.py`; block errors in `orchestrator_agent.py` | (LangChain middleware — no Mongo trace event) |
-| RAG | `domain/graph/search_knowledge_delegate.py` + routing middleware | `tool_start` / `tool_complete` for `search_knowledge`; `rag_skipped` when no KBs or in workflow |
+| RAG | `domain/graph/search_knowledge_delegate.py` + routing middleware | `tool_start` / `tool_complete` for `search_knowledge`; `rag_skipped` when no KBs or in workflow — LlamaIndex ingest/query ([plan](document/agentic/updets/migration-llamaindex-rag.md) **Done**) |
 | Builder trace | `domain/pipeline/observability/trace.py` | all events |
 | RAG evaluation | `domain/evaluation/` + Eval Lab UI at `/agent/:id/evaluation` | RAGAS on-demand eval — [document/evaluation/00-overview.md](document/evaluation/00-overview.md) **Done** |
 
@@ -75,3 +75,4 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - LangChain proper migration (single plan): [document/agentic/updets/migration-langchain-proper.md](document/agentic/updets/migration-langchain-proper.md) — **Done**
 - NeMo Guardrails (Phases 0–3): [document/agentic/updets/migration-nemo-guardrails.md](document/agentic/updets/migration-nemo-guardrails.md) — **Done** (off by default)
 - RAG evaluation (RAGAS): [document/evaluation/00-overview.md](document/evaluation/00-overview.md) — Phases 1–3 **Done**
+- LlamaIndex RAG migration: [document/agentic/updets/migration-llamaindex-rag.md](document/agentic/updets/migration-llamaindex-rag.md) — **Done** (vector + keyword + graph)

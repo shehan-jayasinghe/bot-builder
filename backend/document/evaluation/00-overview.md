@@ -36,6 +36,7 @@ User / dataset question
 |-------|-------|-------|
 | Turn evidence | LangGraph `ChatRouterState.turn_evidence` | Single source for eval input |
 | RAG retrieval | `RAGRetriever` + `search_knowledge` | Append ranked chunks to evidence |
+| RAG infrastructure | LlamaIndex — vector (Qdrant), keyword (BM25), graph (Neo4j) | [../agentic/updets/migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md) — eval API unchanged; re-index before score comparisons |
 | Metrics | RAGAS library + judge LLM | Computed **after** turn — not in graph state |
 | Storage | Mongo `eval_runs`, `eval_datasets` | Per agent + org |
 | UI | Eval Lab page (`/agent/:agentId/evaluation`) | All four metric tabs |

@@ -314,6 +314,8 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 
 **RAG evaluation (RAGAS):** **Done** — [../../evaluation/00-overview.md](../../evaluation/00-overview.md) (turn evidence, Eval API, Eval Lab UI).
 
+**LlamaIndex RAG (vector + keyword + graph):** **Done** — [migration-llamaindex-rag.md](./migration-llamaindex-rag.md) (ingest + retrieval only; LangChain chat runtime unchanged).
+
 **NeMo Guardrails (Phases 0–3 done, off by default):** see [migration-nemo-guardrails.md](./migration-nemo-guardrails.md).
 
 ---

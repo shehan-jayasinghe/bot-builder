@@ -148,8 +148,8 @@ Layer [4] remains supported for explicit `rag_context` but chat passes empty str
 
 | File | Why |
 |------|-----|
-| `retriever.py` | Reused by tool handler |
-| `vector_search.py` / `keyword_search.py` | Unchanged |
+| `retriever.py` | Reused by tool handler — delegates to `RetrieverFactory` |
+| `retriever_factory.py` | LlamaIndex vector / BM25 / graph query — [migration-llamaindex-rag.md](./migration-llamaindex-rag.md) **Done** |
 | `capability_catalog_builder.py` | Layer [3] already lists KBs + hints |
 | `knowledgebase_service.py` | REST/catalog already Phase A |
 | `workflow_graph_runner.py` | Workflows unchanged |

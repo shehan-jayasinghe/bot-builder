@@ -170,12 +170,12 @@ flowchart TB
 | Celery app | Broker + queue config | [celery_app.py](../../app/workers/celery_app.py) *(planned)* |
 | Ingest task | Worker entry — Flow 4 + 5 | [ingest.py](../../app/workers/tasks/ingest.py) *(planned)* |
 | Web scrape | LangChain `RecursiveUrlLoader` / `SitemapLoader` | [web_scraper.py](../../app/infrastructure/ai/web_scraper.py) *(planned)* |
-| Chunk + tokenize | LangChain `TokenTextSplitter` | [chunker.py](../../app/infrastructure/ai/chunker.py) *(planned)* |
-| LlamaIndex pipeline | Index by `storage_type` | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) *(planned)* |
-| Bedrock embed | Titan embeddings — vector only | [bedrock_embeddings.py](../../app/infrastructure/ai/bedrock_embeddings.py) *(planned)* |
-| Qdrant | Vector upsert | [qdrant_client.py](../../app/infrastructure/vectorstores/qdrant_client.py) *(planned)* |
-| TF-IDF | Keyword index | [tfidf_index.py](../../app/infrastructure/keyword/tfidf_index.py) *(planned)* |
-| Neo4j | Graph save | [neo4j_client.py](../../app/infrastructure/graph/neo4j_client.py) *(planned)* |
+| Chunk + tokenize | LangChain `RecursiveCharacterTextSplitter` | [chunker.py](../../app/infrastructure/ai/chunker.py) |
+| LlamaIndex pipeline | Index by `storage_type` | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) → [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
+| Bedrock embed | Titan via LlamaIndex adapter | [bedrock_embedding.py](../../app/infrastructure/ai/llamaindex/bedrock_embedding.py) |
+| Qdrant | Vector store | `QdrantVectorStore` in [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
+| Keyword | BM25 persist + load | [persistence.py](../../app/infrastructure/ai/llamaindex/persistence.py) + `BM25Retriever` |
+| Neo4j graph | Property graph index | [graph_store.py](../../app/infrastructure/ai/llamaindex/graph_store.py) + [bedrock_llm.py](../../app/infrastructure/ai/llamaindex/bedrock_llm.py) |
 | Redis / Celery env | `CELERY_BROKER_URL`, `REDIS_URL` | [config.py](../../app/config.py) |
 
 ---
@@ -538,7 +538,9 @@ flowchart TB
 
 # Flow 5 — Index by storage_type (LlamaIndex)
 
-Runs after Flow 4 chunks exist. Branch on `storage_type` — each type uses a different backend.
+Runs after Flow 4 chunks exist. Branch on `storage_type` — each type uses LlamaIndex adapters (**Done**).
+
+**Migration plan:** [../agentic/updets/migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md)
 
 ## Flow
 
@@ -561,16 +563,15 @@ flowchart TB
     end
 
     subgraph KEY["STORAGE_TYPE_KEYWORD"]
-        K1[sklearn TfidfVectorizer]
-        K2[Fit on chunk texts]
-        K3[Save sparse index to volume]
-        K1 --> K2 --> K3
+        K1[LlamaIndex KeywordTableIndex or BM25Retriever]
+        K2[Persist docstore per KB]
+        K1 --> K2
     end
 
     subgraph GRA["STORAGE_TYPE_GRAPH"]
-        G1[LlamaIndex — LLM extract entities + relations]
+        G1[LlamaIndex PropertyGraphIndex + LLMPathExtractor]
         G2[Bedrock LLM]
-        G3[Save graph to Neo4j]
+        G3[Neo4jPropertyGraphStore]
         G1 --> G2 --> G3
     end
 
@@ -588,21 +589,24 @@ flowchart TB
 
 | Flow step | What happens | Open file |
 |-----------|--------------|-----------|
-| LlamaIndex pipeline | Route index by `storage_type` | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) *(planned)* |
-| Bedrock embed | Titan embeddings — vector only | [bedrock_embeddings.py](../../app/infrastructure/ai/bedrock_embeddings.py) *(planned)* |
-| Qdrant upsert | Dense vector storage | [qdrant_client.py](../../app/infrastructure/vectorstores/qdrant_client.py) *(planned)* |
-| TF-IDF index | Keyword search — no embeddings | [tfidf_index.py](../../app/infrastructure/keyword/tfidf_index.py) *(planned)* |
-| Neo4j graph | Entity + relation storage | [neo4j_client.py](../../app/infrastructure/graph/neo4j_client.py) *(planned)* |
-| Update KB status | `indexing` → `ready` or `failed` | [knowledgebase_repository.py](../../app/infrastructure/db/repositories/mongo/knowledgebase_repository.py) *(planned)* |
-| Update job log | `running` → `completed` or `failed` | [job_log_repository.py](../../app/infrastructure/db/repositories/mongo/job_log_repository.py) *(planned)* |
+| LlamaIndex pipeline | Route index by `storage_type` | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) → [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
+| LlamaIndex adapters | Bedrock embed/LLM, Qdrant, BM25 persist, graph store | [llamaindex/](../../app/infrastructure/ai/llamaindex/) — [migration plan](../agentic/updets/migration-llamaindex-rag.md) **Done** |
+| Bedrock embed | Titan embeddings — vector | [bedrock_embedding.py](../../app/infrastructure/ai/llamaindex/bedrock_embedding.py) |
+| Qdrant upsert | Dense vector storage | `QdrantVectorStore` in [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
+| Keyword index | BM25 search | `BM25Retriever` in index/retriever factories + [persistence.py](../../app/infrastructure/ai/llamaindex/persistence.py) |
+| Neo4j graph | Entity + relation storage + query | [graph_store.py](../../app/infrastructure/ai/llamaindex/graph_store.py) + `PropertyGraphIndex` |
+| Update KB status | `indexing` → `ready` or `failed` | [knowledgebase_repository.py](../../app/infrastructure/db/repositories/mongo/knowledgebase_repository.py) |
+| Update job log | `running` → `completed` or `failed` | [job_log_repository.py](../../app/infrastructure/db/repositories/mongo/job_log_repository.py) |
 
 ## Index backend by storage_type
 
 | `storage_type` | Backend | Library |
 |----------------|---------|---------|
-| `vector` | Qdrant | LlamaIndex + Bedrock embed |
-| `keyword` | TF-IDF volume | sklearn — not embeddings |
-| `graph` | Neo4j | LlamaIndex + Bedrock LLM |
+| `vector` | Qdrant | LlamaIndex `VectorStoreIndex` + `BedrockLlamaEmbedding` |
+| `keyword` | `{RAG_INDEX_DIR}/{org}/{kb}/bm25/` | LlamaIndex `BM25Retriever` |
+| `graph` | Neo4j + `graph.ready` marker | LlamaIndex `PropertyGraphIndex` + `BedrockLlamaLLM` |
+
+**Deploy note:** Re-ingest KBs after deploy if upgrading from pre-LlamaIndex indexes (old `.joblib` keyword files incompatible). No REST API change.
 
 ---
 

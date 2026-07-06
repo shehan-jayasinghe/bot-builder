@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,7 +63,15 @@ class Settings(BaseSettings):
     neo4j_password: str = "changeme"
     neo4j_database: str = "neo4j"
 
-    tfidf_index_dir: str = "data/tfidf_indexes"
+    rag_index_dir: str = Field(
+        default="data/rag_indexes",
+        validation_alias=AliasChoices("RAG_INDEX_DIR", "TFIDF_INDEX_DIR"),
+    )
+
+    rag_graph_max_chunks: int = Field(
+        default=20,
+        validation_alias=AliasChoices("RAG_GRAPH_MAX_CHUNKS"),
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:

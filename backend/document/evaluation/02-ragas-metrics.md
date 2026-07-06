@@ -155,6 +155,8 @@ Parent: [00-overview.md](./00-overview.md) · Evidence: [01-turn-evidence-runtim
 | **full_bot** | Preview chat → read `turn_evidence` | End-to-end quality |
 | **rag_only** | `RAGRetriever.retrieve()` + optional LLM answer | Isolate retrieval |
 
+**Note:** LlamaIndex RAG migration ([migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md)) changes ingest/query internals only — `RAGRetriever` API and eval modes stay the same. Re-index KBs before comparing scores across deploys.
+
 ---
 
 ## Mongo `eval_runs` document

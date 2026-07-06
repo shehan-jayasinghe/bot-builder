@@ -12,6 +12,8 @@ KB REST (attach + `routing_hint`): [../knowledgebase/01-create-knowledgebase-dia
 
 **Status:** Implemented — LLM-driven RAG via `search_knowledge` tool in LangChain `create_agent()` (orchestrator/sub-agent). Layer `[4] rag_context` is empty at turn start; chunks arrive as `ToolMessage` content after the model calls the tool.
 
+**LlamaIndex RAG (Done):** Vector, keyword (BM25), and graph ingest/query via `infrastructure/ai/llamaindex/` — **no** chat API or tool contract change. See [../agentic/updets/migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md).
+
 ---
 
 ## Current flow (tool-driven)
@@ -22,21 +24,25 @@ flowchart TB
     TURN --> TOOLS[search_knowledge + executor + delegate + workflow_*]
     TOOLS -->|LLM calls search_knowledge| RET[RAGRetriever.retrieve]
     RET --> TYPE{storage_type}
-    TYPE -->|vector| Q[Qdrant similarity]
-    TYPE -->|keyword| K[TF-IDF search]
+    TYPE -->|vector| Q[LlamaIndex VectorStoreIndex + Qdrant]
+    TYPE -->|keyword| K[LlamaIndex BM25Retriever]
+    TYPE -->|graph| G[LlamaIndex PropertyGraphIndex + Neo4j]
     Q --> TM[ToolMessage with formatted context]
     K --> TM
+    G --> TM
     TM --> TURN
 ```
 
 | Component | File |
 |-----------|------|
 | Tool registration | [search_knowledge_delegate.py](../../app/domain/graph/search_knowledge_delegate.py) |
-| Tool handler | [orchestrator.py](../../app/domain/graph/orchestrator.py) — `execute_tool_turn` |
-| Retriever | [retriever.py](../../app/domain/pipeline/rag/retriever.py) |
+| Tool handler | LangChain routing middleware — [tool_router.py](../../app/domain/graph/langchain/tool_router.py) |
+| Retriever facade | [retriever.py](../../app/domain/pipeline/rag/retriever.py) → `RetrieverFactory.search()` |
+| LlamaIndex query | [retriever_factory.py](../../app/infrastructure/ai/llamaindex/retriever_factory.py) — vector / BM25 / graph |
 | Chat wiring | [chat_completion_service.py](../../app/services/chat_completion_service.py) — passes `rag` into graph; no pre-turn retrieve |
 | Sub-agent scope | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) — `search_knowledge` when sub-agent has KBs |
-| Ingest | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) |
+| Ingest router | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) → [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
+| LlamaIndex adapters | `infrastructure/ai/llamaindex/` — Bedrock embed/LLM, Qdrant, BM25 persist, Neo4j graph store |
 
 **Scope:** orchestrator KBs on orchestrator turns; sub-agent KBs on delegated sub-agent turns. Optional `knowledge_base_names` arg narrows which KBs to search.
 

@@ -335,21 +335,25 @@ MVP: follow-up messages stay on sub-agent until workflow enter, `return_to_orche
 
 # Flow 9 — RAG retrieval (knowledge bases)
 
-**Status: done** — LLM calls `search_knowledge` tool; `RAGRetriever` runs inside `execute_tool_turn`. Spec: [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md).
+**Status: done** — LLM calls `search_knowledge` tool; `RAGRetriever` runs via LangChain tool routing. Spec: [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md).
+
+**Infrastructure:** LlamaIndex vector / BM25 / graph via [migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md) (**Done**). Chat tool contract unchanged.
 
 ```mermaid
 flowchart TB
     LLM[Orchestrator or sub-agent LLM]
-    LLM -->|tool_use search_knowledge| RET[RAGRetriever]
+    LLM -->|tool_use search_knowledge| RET[RAGRetriever facade]
     RET --> TYPE{storage_type}
-    TYPE -->|vector| Q[Qdrant similarity]
-    TYPE -->|keyword| T[TF-IDF search]
+    TYPE -->|vector| Q[LlamaIndex VectorStoreIndex + Qdrant]
+    TYPE -->|keyword| T[LlamaIndex BM25Retriever]
+    TYPE -->|graph| G[LlamaIndex PropertyGraphIndex + Neo4j]
     Q --> TM[ToolMessage — formatted chunks]
     T --> TM
+    G --> TM
     TM --> LLM
 ```
 
-Ingest: [LlamaIndexPipeline](../../app/infrastructure/ai/indexers/llama_index_pipeline.py). Query: [RAGRetriever](../../app/domain/pipeline/rag/retriever.py). Tool: [search_knowledge_delegate.py](../../app/domain/graph/search_knowledge_delegate.py).
+Ingest: [LlamaIndexPipeline](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) → [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py). Query: [RAGRetriever](../../app/domain/pipeline/rag/retriever.py) → [retriever_factory.py](../../app/infrastructure/ai/llamaindex/retriever_factory.py). Tool: [search_knowledge_delegate.py](../../app/domain/graph/search_knowledge_delegate.py).
 
 Layer `[4] rag_context` in `FinalPromptBuilder` is empty at turn start. Scope: orchestrator KBs or sub-agent KBs on the active turn.
 
