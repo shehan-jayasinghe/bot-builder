@@ -16,7 +16,7 @@ from app.domain.models.runtime_bundle import (
     RuntimeOrchestrator,
     RuntimeWorkflow,
 )
-from app.domain.pipeline.rag.rag_result import RagRetrieveResult
+from app.domain.pipeline.rag.rag_result import RagChunk, RagRetrieveResult
 from app.schemas.chat import ChatRequest
 from app.services.chat_completion_service import ChatCompletionService
 
@@ -107,6 +107,16 @@ def test_orchestrator_search_knowledge_tool_invokes_retriever() -> None:
             kb_ids=["kb-1"],
             chunk_count=1,
             storage_types=["vector"],
+            chunks=[
+                RagChunk(
+                    text="refund within 30 days",
+                    rank=1,
+                    score=0.88,
+                    chunk_id="c1",
+                    kb_id="kb-1",
+                    kb_name="FAQ",
+                ),
+            ],
         )
         trace_events: list[tuple[str, dict]] = []
 
@@ -136,6 +146,8 @@ def test_orchestrator_search_knowledge_tool_invokes_retriever() -> None:
         assert tool_complete["tool_name"] == SEARCH_KNOWLEDGE_TOOL_NAME
         assert tool_complete["chunk_count"] == 1
         assert tool_complete["kb_ids"] == ["kb-1"]
+        assert tool_complete["query"] == "refund policy"
+        assert tool_complete["chunks"][0]["text"] == "refund within 30 days"
 
     asyncio.run(_run())
 

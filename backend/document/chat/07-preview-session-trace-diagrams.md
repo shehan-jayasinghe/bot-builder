@@ -124,9 +124,13 @@ Authorization: Bearer <clerk_jwt>
           "at": "2026-06-20T21:34:19.800Z",
           "data": {
             "tool_name": "search_knowledge",
+            "query": "top spendings February",
             "kb_ids": ["6a3f9012d8139334274fbc01"],
             "chunk_count": 3,
-            "context_length": 420
+            "context_length": 420,
+            "chunks": [
+              { "rank": 1, "text": "...", "score": 0.91, "kb_id": "6a3f9012d8139334274fbc01" }
+            ]
           }
         },
         {
@@ -139,6 +143,13 @@ Authorization: Bearer <clerk_jwt>
         "mode": "orchestrator",
         "type": "tool",
         "name": "search_knowledge"
+      },
+      "turn_evidence": {
+        "user_message": "I want to know my top three spendings in Feb?",
+        "assistant_replies": ["Your top 3 spendings in February were:..."],
+        "rag_retrievals": [{ "query": "top spendings February", "chunks": [] }],
+        "tool_calls": [],
+        "routing": { "mode": "orchestrator" }
       }
     }
   ]
@@ -160,7 +171,7 @@ Authorization: Bearer <clerk_jwt>
 | `bundle_loaded` | RuntimeBundle ready | *(optional — dev detail)* |
 | `rag_skipped` | No KBs on agent or turn is in active workflow | **LLM Request** → `rag_skipped` |
 | `tool_start` | Tool invoked (`search_knowledge` or executor) | **Tool Start** → tool name |
-| `tool_complete` | Tool finished — for `search_knowledge` includes `kb_ids`, `chunk_count`, `context_length` | *(nested under tool)* |
+| `tool_complete` | Tool finished — for `search_knowledge` includes `query`, `kb_ids`, `chunk_count`, `context_length`, ranked `chunks` | *(nested under tool)* |
 | `sub_agent_start` | First delegate from orchestrator | *(feeds graph highlight)* |
 | `sub_agent_continue` | Sticky follow-up on same sub-agent (Phase D **Done**) | *(feeds graph highlight)* |
 | `sub_agent_complete` | Sub-agent turn finished | *(nested)* |
@@ -169,7 +180,7 @@ Authorization: Bearer <clerk_jwt>
 
 Nested **LLM Request** rows in the UI = group `guardrail_complete` + `rag_skipped` (when applicable) under one turn step (same timestamp bucket). RAG retrieval stats appear on `tool_complete` when the LLM calls `search_knowledge`.
 
-**Turn metadata** (stored on each turn, not a `type` in `events[]`): `routing_decision` — see below.
+**Turn metadata** (stored on each turn, not a `type` in `events[]`): `routing_decision`, `turn_evidence` (RAG eval input — Phase 1 **Done**) — see [../evaluation/01-turn-evidence-runtime.md](../evaluation/01-turn-evidence-runtime.md).
 
 ---
 
@@ -202,7 +213,8 @@ Trace stored **with** session — not a separate public API for webhook users:
       "turn_id": "...",
       "started_at": "...",
       "events": [],
-      "routing_decision": {}
+      "routing_decision": {},
+      "turn_evidence": {}
     }
   ],
   "active_agent_id": "67agent001",

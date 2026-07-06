@@ -7,6 +7,7 @@ from app.domain.graph.search_knowledge_delegate import (
     SEARCH_KNOWLEDGE_TOOL_NAME,
     execute_search_knowledge,
 )
+from app.domain.graph.turn_evidence import TurnEvidence
 from app.domain.graph.turn_result import DelegationRequest, WorkflowEnterRequest
 from app.domain.models.runtime_bundle import RuntimeSubAgent, RuntimeTool, RuntimeWorkflow
 
@@ -26,6 +27,7 @@ class ToolRouterContext:
     organization_id: str = ""
     rag: RAGRetriever | None = None
     trace: TraceCallback | None = None
+    turn_evidence: TurnEvidence | None = None
     handle_return_to_orchestrator: bool = False
     delegation: DelegationRequest | None = None
     workflow_enter: WorkflowEnterRequest | None = None
@@ -39,6 +41,7 @@ async def run_search_knowledge_tool(
     organization_id: str,
     rag: RAGRetriever | None,
     trace: TraceCallback | None,
+    turn_evidence: TurnEvidence | None = None,
 ) -> str:
     query = str(tool_args.get("query") or "")
     kb_names = tool_args.get("knowledge_base_names")
@@ -55,14 +58,22 @@ async def run_search_knowledge_tool(
 
     if rag is None or not knowledge_bases:
         result_text = "Knowledge search is not available."
+        if turn_evidence is not None:
+            turn_evidence.record_tool_call(
+                name=SEARCH_KNOWLEDGE_TOOL_NAME,
+                arguments=tool_args,
+                status="unavailable",
+            )
         if trace is not None:
             await trace(
                 "tool_complete",
                 {
                     "tool_name": SEARCH_KNOWLEDGE_TOOL_NAME,
+                    "query": query,
                     "context_length": 0,
                     "kb_ids": [],
                     "chunk_count": 0,
+                    "chunks": [],
                 },
             )
         return result_text
@@ -79,13 +90,33 @@ async def run_search_knowledge_tool(
     else:
         result_text = rag_result.context or "No relevant knowledge found."
 
+    if turn_evidence is not None:
+        turn_evidence.record_rag_retrieval(query=query, chunks=rag_result.chunks)
+        turn_evidence.record_tool_call(
+            name=SEARCH_KNOWLEDGE_TOOL_NAME,
+            arguments=tool_args,
+            status="complete",
+        )
+
     if trace is not None:
         trace_data: dict[str, object] = {
             "tool_name": SEARCH_KNOWLEDGE_TOOL_NAME,
+            "query": query,
             "context_length": len(rag_result.context),
             "kb_ids": rag_result.kb_ids,
             "chunk_count": rag_result.chunk_count,
             "storage_types": rag_result.storage_types,
+            "chunks": [
+                {
+                    "rank": chunk.rank,
+                    "text": chunk.text,
+                    "score": chunk.score,
+                    "chunk_id": chunk.chunk_id,
+                    "kb_id": chunk.kb_id,
+                    "kb_name": chunk.kb_name,
+                }
+                for chunk in rag_result.chunks
+            ],
         }
         if rag_result.error:
             trace_data["partial_error"] = rag_result.error

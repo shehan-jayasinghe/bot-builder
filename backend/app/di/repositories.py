@@ -6,6 +6,8 @@ from app.infrastructure.db.redis import get_redis
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.infrastructure.db.repositories.mongo.channel_repository import ChannelRepository
 from app.infrastructure.db.repositories.mongo.connector_repository import ConnectorRepository
+from app.infrastructure.db.repositories.mongo.eval_dataset_repository import EvalDatasetRepository
+from app.infrastructure.db.repositories.mongo.eval_run_repository import EvalRunRepository
 from app.infrastructure.db.repositories.mongo.job_log_repository import JobLogRepository
 from app.infrastructure.db.repositories.mongo.knowledgebase_repository import KnowledgebaseRepository
 from app.infrastructure.db.repositories.mongo.organization_repository import OrganizationRepository
@@ -63,3 +65,11 @@ def get_workflow_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) ->
 
 def get_sub_agent_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> SubAgentRepository:
     return SubAgentRepository(db=db)
+
+
+def get_eval_run_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> EvalRunRepository:
+    return EvalRunRepository(db=db)
+
+
+def get_eval_dataset_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> EvalDatasetRepository:
+    return EvalDatasetRepository(db=db)

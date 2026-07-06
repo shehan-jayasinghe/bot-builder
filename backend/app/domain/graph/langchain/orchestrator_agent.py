@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from app.domain.graph.langchain.agent_factory import FALLBACK_REPLY, create_bot_agent
 from app.domain.graph.langchain.pii_middleware import PII_BLOCKED_USER_MESSAGE
 from app.domain.graph.langchain.tool_router import ToolRouterContext, build_executor_langgraph_tools
+from app.domain.graph.turn_evidence import TurnEvidence
 from app.domain.graph.turn_result import AgentTurnResult
 from app.domain.models.runtime_bundle import RuntimeOrchestrator, RuntimeTool
 from app.infrastructure.ai.langsmith_tracing import build_llm_run_config, LlmTracingContext
@@ -37,6 +38,7 @@ async def run_tool_agent_turn(
     tracing_context: LlmTracingContext | None = None,
     rag: RAGRetriever | None = None,
     trace: Any = None,
+    turn_evidence: TurnEvidence | None = None,
 ) -> AgentTurnResult:
     delegate_tools = delegate_tools or []
     delegates_by_name = delegates_by_name or {}
@@ -71,6 +73,7 @@ async def run_tool_agent_turn(
         organization_id=organization_id,
         rag=rag,
         trace=trace,
+        turn_evidence=turn_evidence,
         handle_return_to_orchestrator=return_to_orchestrator_tool is not None,
     )
     agent = create_bot_agent(

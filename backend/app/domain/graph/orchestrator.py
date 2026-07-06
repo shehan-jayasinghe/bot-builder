@@ -12,6 +12,7 @@ from app.domain.graph.sub_agent_delegate import (
     SubAgentRunner,
     build_delegate_langgraph_tools,
 )
+from app.domain.graph.turn_evidence import TurnEvidence
 from app.domain.graph.turn_result import AgentTurnResult
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeOrchestrator, RuntimeSubAgent, RuntimeTool, RuntimeWorkflow
 from app.domain.models.tracker import Tracker
@@ -38,6 +39,7 @@ class OrchestratorRunner:
         tracing_context: LlmTracingContext | None = None,
         rag: "RAGRetriever | None" = None,
         trace: TraceCallback | None = None,
+        turn_evidence: TurnEvidence | None = None,
     ) -> AgentTurnResult:
         orchestrator = bundle.orchestrator
         history = _cap_history(tracker.get_history())
@@ -75,6 +77,7 @@ class OrchestratorRunner:
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
+            turn_evidence=turn_evidence,
         )
         if result.workflow_enter is not None:
             return result
@@ -93,6 +96,7 @@ class OrchestratorRunner:
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
+            turn_evidence=turn_evidence,
         )
         if sub_result.orchestrator_return:
             return sub_result
@@ -124,6 +128,7 @@ class OrchestratorRunner:
         tracing_context: LlmTracingContext | None = None,
         rag: "RAGRetriever | None" = None,
         trace: TraceCallback | None = None,
+        turn_evidence: TurnEvidence | None = None,
     ) -> AgentTurnResult:
         from app.domain.graph.langchain.orchestrator_agent import run_tool_agent_turn
 
@@ -144,6 +149,7 @@ class OrchestratorRunner:
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
+            turn_evidence=turn_evidence,
         )
 
     _run_search_knowledge_tool = staticmethod(run_search_knowledge_tool)

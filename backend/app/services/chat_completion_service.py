@@ -237,6 +237,7 @@ class ChatCompletionService:
             )
         replies = turn_result.replies
         routing = turn_result.routing
+        turn_evidence = turn_result.turn_evidence
 
         replies, output_check = await apply_nemo_output_gate(
             user_message=request.message,
@@ -287,7 +288,11 @@ class ChatCompletionService:
             "output_message",
             _output_message_trace_data(replies),
         )
-        self._trace.finish_turn(routing_decision=routing)
+        if turn_evidence is not None:
+            turn_evidence = dict(turn_evidence)
+            turn_evidence["assistant_replies"] = [reply.text for reply in replies if reply.text]
+            turn_evidence["routing"] = routing
+        self._trace.finish_turn(routing_decision=routing, turn_evidence=turn_evidence)
         reply_texts = [reply.text for reply in replies if reply.text]
         await self._tracker_service.persist(tracker, reply_texts)
 

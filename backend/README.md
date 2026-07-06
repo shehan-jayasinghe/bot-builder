@@ -42,7 +42,7 @@ app/
 | PII | `domain/graph/langchain/pii_middleware.py` → `agent_factory.py`; block errors in `orchestrator_agent.py` | (LangChain middleware — no Mongo trace event) |
 | RAG | `domain/graph/search_knowledge_delegate.py` + routing middleware | `tool_start` / `tool_complete` for `search_knowledge`; `rag_skipped` when no KBs or in workflow |
 | Builder trace | `domain/pipeline/observability/trace.py` | all events |
-| RAG evaluation | `domain/evaluation/` (planned) | Mongo `eval_runs` — see [document/evaluation/00-overview.md](document/evaluation/00-overview.md) |
+| RAG evaluation | `domain/evaluation/` + Eval Lab UI at `/agent/:id/evaluation` | RAGAS on-demand eval — [document/evaluation/00-overview.md](document/evaluation/00-overview.md) **Done** |
 
 ## Runtime stack
 
@@ -74,4 +74,4 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Agentic migration (API + runtime): [document/agentic/00-overview.md](document/agentic/00-overview.md) — Phases A–D **Done**
 - LangChain proper migration (single plan): [document/agentic/updets/migration-langchain-proper.md](document/agentic/updets/migration-langchain-proper.md) — **Done**
 - NeMo Guardrails (Phases 0–3): [document/agentic/updets/migration-nemo-guardrails.md](document/agentic/updets/migration-nemo-guardrails.md) — **Done** (off by default)
-- RAG evaluation (RAGAS): [document/evaluation/00-overview.md](document/evaluation/00-overview.md) — **Planned**
+- RAG evaluation (RAGAS): [document/evaluation/00-overview.md](document/evaluation/00-overview.md) — Phases 1–3 **Done**

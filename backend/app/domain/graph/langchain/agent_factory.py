@@ -95,6 +95,7 @@ def _build_routing_middleware(router: ToolRouterContext) -> Any:
                 organization_id=self._router.organization_id,
                 rag=self._router.rag,
                 trace=self._router.trace,
+                turn_evidence=self._router.turn_evidence,
             )
             return ToolMessage(content=str(result_text), tool_call_id=tool_call_id)
 

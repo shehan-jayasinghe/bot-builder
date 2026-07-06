@@ -2,7 +2,7 @@
 
 Metric definitions, inputs, outputs, and judge behavior for the evaluation service.
 
-**Status:** Planned.
+**Status:** Done.
 
 Parent: [00-overview.md](./00-overview.md) · Evidence: [01-turn-evidence-runtime.md](./01-turn-evidence-runtime.md)
 
@@ -10,8 +10,9 @@ Parent: [00-overview.md](./00-overview.md) · Evidence: [01-turn-evidence-runtim
 
 ## Library
 
-- **Package:** `ragas` (add to `pyproject.toml`)
-- **Judge LLM:** AWS Bedrock (Haiku for cost, or agent model for parity)
+- **Package:** `ragas` (`pyproject.toml`)
+- **Judge LLM:** AWS Bedrock via `infrastructure/ai/ragas_llm.py` (`RAG_EVAL_JUDGE_MODEL_ID` or `BEDROCK_MODEL_ID`)
+- **Embeddings:** Bedrock Titan via same module (answer relevancy)
 - **Invocation:** On demand from Eval API — not per webhook chat turn
 
 ---
@@ -156,7 +157,7 @@ Parent: [00-overview.md](./00-overview.md) · Evidence: [01-turn-evidence-runtim
 
 ---
 
-## Mongo `eval_runs` document (planned)
+## Mongo `eval_runs` document
 
 ```json
 {
@@ -184,20 +185,37 @@ Parent: [00-overview.md](./00-overview.md) · Evidence: [01-turn-evidence-runtim
 
 ---
 
-## Service layout (planned)
+## Service layout (implemented)
 
 ```text
 app/domain/evaluation/
-  turn_evidence_models.py   # shared with graph (or import from graph)
-  ragas_runner.py             # wrap ragas.evaluate()
-  faithfulness_breakdown.py   # claim JSON for UI
-  dataset_loader.py           # YAML dummy + custom datasets
+  ragas_runner.py           # ragas.aevaluate() + faithfulness claim detail
+  metric_breakdown.py       # P@k / recall UI JSON from turn_evidence + scores
+  dataset_loader.py         # YAML builtin datasets
+app/domain/graph/
+  turn_evidence.py          # shared evidence model (Phase 1)
 app/services/
   rag_evaluation_service.py
+app/infrastructure/ai/
+  ragas_llm.py              # Bedrock LLM + embeddings wrappers for RAGAS
 app/infrastructure/db/repositories/mongo/
   eval_run_repository.py
   eval_dataset_repository.py
+app/schemas/
+  evaluation.py             # Pydantic request/response models
+app/di/
+  evaluation.py             # RagEvaluationService DI
 ```
+
+---
+
+## Tests (implemented)
+
+| Test file | Covers |
+|-----------|--------|
+| `tests/test_ragas_runner.py` | Evidence helpers, metric breakdown, mocked `aevaluate` |
+| `tests/test_evaluation_api.py` | REST routes (mocked service) |
+| `tests/test_dataset_loader.py` | Builtin YAML load + fallback |
 
 ---
 

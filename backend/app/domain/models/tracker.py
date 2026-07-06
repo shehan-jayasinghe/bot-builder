@@ -177,13 +177,15 @@ class Tracker:
         turn_id: str,
         started_at: str,
         routing_decision: dict[str, Any] | None,
+        turn_evidence: dict[str, Any] | None = None,
     ) -> None:
-        self._turns.append(
-            {
-                "turn_id": turn_id,
-                "started_at": started_at,
-                "events": list(self._current_turn_events),
-                "routing_decision": routing_decision,
-            },
-        )
+        turn: dict[str, Any] = {
+            "turn_id": turn_id,
+            "started_at": started_at,
+            "events": list(self._current_turn_events),
+            "routing_decision": routing_decision,
+        }
+        if turn_evidence is not None:
+            turn["turn_evidence"] = turn_evidence
+        self._turns.append(turn)
         self._current_turn_events = []

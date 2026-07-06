@@ -29,6 +29,7 @@ from app.shared.exceptions.sub_agent import (
 )
 from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError, WorkflowValidationError
 from app.shared.exceptions.knowledgebase import KnowledgebaseNotFoundError
+from app.shared.exceptions.evaluation import EvaluationDisabledError, EvalRunNotFoundError
 from app.shared.exceptions.auth import (
     AuthError,
     ClerkUserCreationError,
@@ -196,6 +197,16 @@ async def clerk_user_creation_handler(_request: Request, exc: ClerkUserCreationE
 @app.exception_handler(RegistrationFailedError)
 async def registration_failed_handler(_request: Request, exc: RegistrationFailedError) -> JSONResponse:
     return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(EvaluationDisabledError)
+async def evaluation_disabled_handler(_request: Request, exc: EvaluationDisabledError) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(EvalRunNotFoundError)
+async def eval_run_not_found_handler(_request: Request, exc: EvalRunNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 
 @app.exception_handler(AuthError)

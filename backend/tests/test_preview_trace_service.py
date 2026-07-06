@@ -43,6 +43,13 @@ def test_map_turns_parses_events() -> None:
                     },
                 ],
                 "routing_decision": {"mode": "orchestrator"},
+                "turn_evidence": {
+                    "user_message": "Hi",
+                    "assistant_replies": ["Hello"],
+                    "rag_retrievals": [],
+                    "tool_calls": [],
+                    "routing": {"mode": "orchestrator"},
+                },
             },
         ],
     )
@@ -50,6 +57,8 @@ def test_map_turns_parses_events() -> None:
     assert len(turns) == 1
     assert turns[0].events[0].type == "input_message"
     assert turns[0].routing_decision == {"mode": "orchestrator"}
+    assert turns[0].turn_evidence is not None
+    assert turns[0].turn_evidence["user_message"] == "Hi"
 
 
 def test_get_session_trace_returns_empty_when_no_session() -> None:

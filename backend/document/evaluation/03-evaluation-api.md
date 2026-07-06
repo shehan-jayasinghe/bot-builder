@@ -2,7 +2,7 @@
 
 REST endpoints for RAGAS eval runs and datasets. **Admin / builder UI only** — same auth as agent preview.
 
-**Status:** Planned — routes not implemented yet.
+**Status:** Done — routes on `api/v1/agents.py`.
 
 Parent: [00-overview.md](./00-overview.md) · Metrics: [02-ragas-metrics.md](./02-ragas-metrics.md)
 
@@ -17,7 +17,7 @@ Parent: [00-overview.md](./00-overview.md) · Metrics: [02-ragas-metrics.md](./0
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `.../evaluations/run` | Run single eval (sync) |
-| `POST` | `.../evaluations/batch` | Run dataset (async Celery) |
+| `POST` | `.../evaluations/batch` | Run dataset (async Celery) — **deferred 2.11b** |
 | `GET` | `.../evaluations/runs` | List runs for agent |
 | `GET` | `.../evaluations/runs/{run_id}` | Full run + metric breakdown |
 | `GET` | `.../evaluations/datasets` | List custom + built-in datasets |
@@ -101,7 +101,7 @@ flowchart TB
 
 ---
 
-# `POST /evaluations/batch`
+# `POST /evaluations/batch` *(deferred 2.11b — not implemented)*
 
 Run all cases in a dataset. Returns immediately; poll runs list or use webhook later (v2).
 
@@ -330,26 +330,37 @@ Fixture path: `config/eval/datasets/{industry}/{agent_type}.yml`
 
 ---
 
-## Pydantic schemas (planned)
+## Pydantic schemas
 
 | Schema | File |
 |--------|------|
 | `EvalRunRequest` | `schemas/evaluation.py` |
 | `EvalRunSummary` | `schemas/evaluation.py` |
-| `EvalRunDetail` | `schemas/evaluation.py` |
+| `EvalRunDetailResponse` | `schemas/evaluation.py` |
 | `EvalDatasetCreate` | `schemas/evaluation.py` |
 | `EvalDatasetResponse` | `schemas/evaluation.py` |
-| `EvalBatchRequest` | `schemas/evaluation.py` |
 
 ---
 
-## Router wiring (planned)
+## Router wiring
 
 | File | Role |
 |------|------|
-| `api/v1/agents.py` or `api/v1/evaluations.py` | Route handlers |
+| `api/v1/agents.py` | Route handlers under `/{agent_id}/evaluations/...` |
 | `di/evaluation.py` | `RagEvaluationService` DI |
 | `services/rag_evaluation_service.py` | Orchestrate chat + RAGAS + persist |
+
+---
+
+## Eval Lab UI usage
+
+| UI action | Endpoints |
+|-----------|-----------|
+| Load dummy cases | `GET .../datasets/dummy` |
+| Run test case | `POST .../run` then `GET .../runs/{run_id}` |
+| Metric panels | Response fields on run detail (`faithfulness_detail`, etc.) |
+
+Frontend route: `/agent/{agentId}/evaluation` — see [04-eval-lab-ui.md](./04-eval-lab-ui.md).
 
 ---
 

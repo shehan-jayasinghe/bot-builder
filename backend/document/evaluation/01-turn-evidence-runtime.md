@@ -2,32 +2,35 @@
 
 Single structured blob per chat turn for RAGAS input. Replaces scattering RAG data across `ToolRouterContext` and trace aggregates.
 
-**Status:** Planned.
+**Status:** Done.
 
 Parent: [00-overview.md](./00-overview.md)
 
 ---
 
-## Current LangGraph state (today)
+## LangGraph state (Phase 1)
 
 | Graph | State keys |
 |-------|------------|
-| **Chat router** (`ChatRouterState`) | `finished`, `needs_workflow_enter`, `result` |
+| **Chat router** (`ChatRouterState`) | `finished`, `needs_workflow_enter`, `result`, `turn_evidence` (dict snapshot) |
+| **Chat turn context** (`_ChatTurnContext`) | Mutable `TurnEvidence` object — source of truth during the turn |
 | **Workflow** (`WorkflowGraphState`) | `current_node_id`, `slots`, `awaiting_slot`, `user_message`, `replies`, `steps`, `exited`, `should_continue` |
 | **Orchestrator agent** (`create_agent`) | `messages` only |
 
-**Not in state today:** RAG chunks, tool metadata, delegation signals (those use `ToolRouterContext` sidecar).
+**Still on `ToolRouterContext` sidecar:** delegation, workflow-enter signals (not eval evidence).
+
+RAG chunks and tool calls are recorded on **`TurnEvidence`** during `search_knowledge`, then attached to `ChatGraphResult` and persisted on each trace turn.
 
 ---
 
-## Target: `turn_evidence` on `ChatRouterState`
+## Target → implemented: `turn_evidence` on `ChatRouterState`
 
 ```python
 class ChatRouterState(TypedDict, total=False):
     finished: bool
     needs_workflow_enter: bool
     result: Any
-    turn_evidence: TurnEvidence  # NEW
+    turn_evidence: dict[str, Any] | None = None
 ```
 
 ### `TurnEvidence` shape
@@ -86,50 +89,41 @@ flowchart TB
     APPEND --> REPLY[LLM final reply]
     REPLY --> MERGE[Merge assistant_replies + routing]
     MERGE --> TRACE[Mirror key fields to TraceCollector]
-    TRACE --> PERSIST[Optional: snapshot on preview tracker]
+    TRACE --> PERSIST[Snapshot on tracker turn — preview + webhook]
 ```
 
 ---
 
-## Code changes (planned)
+## Code changes (implemented)
 
 | File | Change |
 |------|--------|
-| `domain/graph/turn_evidence.py` | **New** — `TurnEvidence`, `RagRetrieval`, `RagChunk` dataclasses |
-| `domain/graph/chat_router_compiler.py` | Add `turn_evidence` to `ChatRouterState` |
-| `domain/graph/chat_graph.py` | Init evidence at turn start; merge on path exit |
-| `domain/pipeline/rag/rag_result.py` | Add `chunks: list[RagChunk]` to `RagRetrieveResult` |
-| `domain/pipeline/rag/retriever.py` | Populate ranked chunks from vector/keyword hits |
-| `domain/graph/langchain/tool_router.py` | Append retrieval to evidence ref (not only trace) |
-| `domain/graph/langchain/agent_factory.py` | Pass evidence writer into routing middleware |
-| `services/chat_completion_service.py` | Read evidence for preview persist / eval handoff |
+| `domain/graph/turn_evidence.py` | **New** — `TurnEvidence` |
+| `domain/pipeline/rag/rag_result.py` | **New** — `RagChunk`; `chunks` on `RagRetrieveResult` |
+| `domain/graph/chat_router_compiler.py` | `turn_evidence` on `ChatRouterState` |
+| `domain/graph/chat_graph.py` | Init evidence; `_attach_turn_evidence()` on result |
+| `domain/pipeline/rag/retriever.py` | Populate ranked chunks |
+| `domain/graph/langchain/tool_router.py` | Append to evidence + trace `chunks` |
+| `domain/graph/langchain/agent_factory.py` | Pass `turn_evidence` into middleware |
+| `domain/graph/orchestrator.py`, `sub_agent_delegate.py`, `orchestrator_agent.py` | Thread `turn_evidence` |
+| `domain/models/tracker.py`, `trace.py` | `turn_evidence` on finished turn |
+| `services/chat_completion_service.py` | Persist evidence after output gate |
 
 ---
 
 ## `RagRetrieveResult` extension
 
-Today:
+`RagChunk` lives in `domain/pipeline/rag/rag_result.py`:
 
 ```python
-@dataclass
-class RagRetrieveResult:
-    context: str
-    chunk_count: int
-    kb_ids: list[str]
-    ...
-```
-
-Add:
-
-```python
-@dataclass
+@dataclass(frozen=True)
 class RagChunk:
     text: str
     rank: int
-    score: float | None
-    chunk_id: str | None
     kb_id: str
     kb_name: str
+    score: float | None = None
+    chunk_id: str | None = None
 ```
 
 `context` stays — formatted string for `ToolMessage`. `chunks` is structured evidence for eval.
@@ -164,10 +158,12 @@ Preview trace UI can show chunks without parsing eval DB.
 
 ---
 
-## Tests (planned)
+## Tests (implemented)
 
-| Test | Covers |
-|------|--------|
-| `test_rag_retriever_returns_chunks` | Ranked chunk list from retriever |
-| `test_search_knowledge_appends_turn_evidence` | Middleware writes evidence |
-| `test_chat_turn_evidence_on_preview` | End-to-end preview turn snapshot |
+| Test file | Covers |
+|-----------|--------|
+| `tests/test_turn_evidence.py` | `TurnEvidence` recording, retriever chunks, `search_knowledge` + trace |
+| `tests/test_orchestrator_search_knowledge.py` | `chunks` + `query` on `tool_complete` trace |
+| `tests/test_ragas_runner.py` | RAGAS runner helpers + metric breakdown (Phase 2) |
+| `tests/test_evaluation_api.py` | Eval REST routes (Phase 2) |
+| `tests/test_dataset_loader.py` | Builtin YAML datasets (Phase 2) |

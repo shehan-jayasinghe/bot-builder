@@ -35,13 +35,19 @@ class TraceCollector:
         if self._tracker is not None:
             self._tracker.append_trace_event(event)
 
-    def finish_turn(self, *, routing_decision: dict[str, Any] | None) -> None:
+    def finish_turn(
+        self,
+        *,
+        routing_decision: dict[str, Any] | None,
+        turn_evidence: dict[str, Any] | None = None,
+    ) -> None:
         if self._tracker is None or self._turn_id is None or self._started_at is None:
             return
         self._tracker.finish_trace_turn(
             turn_id=self._turn_id,
             started_at=self._started_at,
             routing_decision=routing_decision,
+            turn_evidence=turn_evidence,
         )
         self._turn_id = None
         self._started_at = None

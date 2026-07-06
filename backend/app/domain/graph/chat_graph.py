@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 from app.domain.graph.chat_router_compiler import compile_chat_router_graph
 from app.domain.graph.orchestrator import OrchestratorRunner
 from app.domain.graph.sub_agent_delegate import SubAgentRunner
+from app.domain.graph.turn_evidence import TurnEvidence
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeWorkflow
 from app.domain.models.tracker import Tracker
 from app.domain.workflow.workflow_graph_runner import (
@@ -23,6 +24,7 @@ TraceCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 class ChatGraphResult:
     replies: list[WorkflowReply] = field(default_factory=list)
     routing: dict[str, Any] = field(default_factory=lambda: {"mode": "orchestrator"})
+    turn_evidence: dict[str, Any] | None = None
 
 
 @dataclass
@@ -35,6 +37,7 @@ class _ChatTurnContext:
     tracing_context: LlmTracingContext | None
     rag: "RAGRetriever | None"
     trace: TraceCallback | None
+    turn_evidence: TurnEvidence
     workflow_enter: RuntimeWorkflow | None = None
     workflow_enter_reason: str = "orchestrator_tool"
 
@@ -63,6 +66,7 @@ class ChatGraph:
         rag: "RAGRetriever | None" = None,
         trace: TraceCallback | None = None,
     ) -> ChatGraphResult:
+        turn_evidence = TurnEvidence(user_message=user_message)
         self._turn = _ChatTurnContext(
             bundle=bundle,
             tracker=tracker,
@@ -72,17 +76,32 @@ class ChatGraph:
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
+            turn_evidence=turn_evidence,
         )
         try:
             final_state = await self._compiled_router.ainvoke(
-                {"finished": False, "needs_workflow_enter": False},
+                {
+                    "finished": False,
+                    "needs_workflow_enter": False,
+                    "turn_evidence": turn_evidence.to_dict(),
+                },
             )
             result = final_state.get("result")
             if isinstance(result, ChatGraphResult):
-                return result
-            return ChatGraphResult()
+                return self._attach_turn_evidence(result)
+            return self._attach_turn_evidence(ChatGraphResult())
         finally:
             self._turn = None
+
+    def _attach_turn_evidence(self, result: ChatGraphResult) -> ChatGraphResult:
+        turn = self._turn
+        if turn is None:
+            return result
+        evidence = turn.turn_evidence
+        evidence.set_assistant_replies([reply.text for reply in result.replies if reply.text])
+        evidence.set_routing(result.routing)
+        result.turn_evidence = evidence.to_dict()
+        return result
 
     def route_session(self) -> str:
         turn = self._require_turn()
@@ -127,6 +146,7 @@ class ChatGraph:
             tracing_context=turn.tracing_context,
             rag=turn.rag,
             trace=turn.trace,
+            turn_evidence=turn.turn_evidence,
         )
         if sticky_result is None:
             return {"finished": False}
@@ -143,6 +163,7 @@ class ChatGraph:
             tracing_context=turn.tracing_context,
             rag=turn.rag,
             trace=turn.trace,
+            turn_evidence=turn.turn_evidence,
         )
 
         if turn_result.workflow_enter is not None:
@@ -196,6 +217,7 @@ class ChatGraph:
         tracing_context: LlmTracingContext | None,
         rag: "RAGRetriever | None",
         trace: TraceCallback | None,
+        turn_evidence: TurnEvidence,
     ) -> ChatGraphResult | None:
         sub_agent = bundle.orchestrator.find_sub_agent_by_id(tracker.active_agent_id)
         if sub_agent is None:
@@ -216,6 +238,7 @@ class ChatGraph:
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
+            turn_evidence=turn_evidence,
         )
 
         if sub_result.orchestrator_return:

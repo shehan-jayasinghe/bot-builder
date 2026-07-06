@@ -24,7 +24,7 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | **LangChain proper** | Replace manual orchestrator, tools, workflows; PIIMiddleware (Phase 2 expand **Done**); LangSmith | **Done** — [migration-langchain-proper.md](./updets/migration-langchain-proper.md) |
 | **Chat router LangGraph** | `ChatGraph` session router → compiled `StateGraph` | **Done** — [migration-chat-router-langgraph.md](./updets/migration-chat-router-langgraph.md) |
 | **NeMo Guardrails** | Intent + output gates — `scripted_intents.yml` + input/output self-check | **Phases 0–3 Done** — [migration-nemo-guardrails.md](./updets/migration-nemo-guardrails.md) |
-| **RAG evaluation (RAGAS)** | `turn_evidence` + Eval Lab + metrics API | **Planned** — [../evaluation/00-overview.md](../evaluation/00-overview.md) |
+| **RAG evaluation (RAGAS)** | `turn_evidence` + Eval API + Eval Lab UI | **Done** — [../evaluation/00-overview.md](../evaluation/00-overview.md) |
 
 ## Runtime stack (after migration)
 
@@ -57,7 +57,7 @@ See [migration-langchain-proper.md](./updets/migration-langchain-proper.md) for 
 | [updets/migration-langchain-proper.md](./updets/migration-langchain-proper.md) | **Single plan** — manual runtime → LangChain/LangGraph proper |
 | [updets/migration-chat-router-langgraph.md](./updets/migration-chat-router-langgraph.md) | **Chat router** — `ChatGraph` → LangGraph conditional router |
 | [updets/migration-nemo-guardrails.md](./updets/migration-nemo-guardrails.md) | **NeMo Guardrails** — intent + output gates (Phases 0–3 **Done**, off by default) |
-| [../evaluation/00-overview.md](../evaluation/00-overview.md) | **RAG evaluation (RAGAS)** — turn evidence, metrics API, Eval Lab UI (**Planned**) |
+| [../evaluation/00-overview.md](../evaluation/00-overview.md) | **RAG evaluation (RAGAS)** — turn evidence, metrics API, Eval Lab UI **Done** |
 
 ## API docs by resource
 
@@ -69,5 +69,5 @@ See [migration-langchain-proper.md](./updets/migration-langchain-proper.md) for 
 | Workflows | [../workflows/01-create-workflow-diagrams.md](../workflows/01-create-workflow-diagrams.md) · [../workflows/04-update-workflow-diagrams.md](../workflows/04-update-workflow-diagrams.md) |
 | Sub-agents | [../sub-agents/01-create-sub-agent-diagrams.md](../sub-agents/01-create-sub-agent-diagrams.md) · [../sub-agents/04-update-sub-agent-diagrams.md](../sub-agents/04-update-sub-agent-diagrams.md) |
 | Chat / preview | [../chat/01-chat-completion-diagrams.md](../chat/01-chat-completion-diagrams.md) — **no REST change** |
-| RAG evaluation | [../evaluation/03-evaluation-api.md](../evaluation/03-evaluation-api.md) — **new endpoints** (planned) |
+| RAG evaluation | [../evaluation/03-evaluation-api.md](../evaluation/03-evaluation-api.md) · [../evaluation/04-eval-lab-ui.md](../evaluation/04-eval-lab-ui.md) — **Done** |
 | Sub-agent / RAG / workflow runtime | [../chat/02-sub-agent-delegation-at-chat-diagrams.md](../chat/02-sub-agent-delegation-at-chat-diagrams.md) · [../chat/03-rag-at-chat-diagrams.md](../chat/03-rag-at-chat-diagrams.md) · [../chat/04-workflow-runtime-at-chat-diagrams.md](../chat/04-workflow-runtime-at-chat-diagrams.md) |

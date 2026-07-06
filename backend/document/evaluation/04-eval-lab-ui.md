@@ -2,7 +2,7 @@
 
 Frontend for RAG evaluation — test cases, run eval, metric breakdown panels.
 
-**Status:** Planned.
+**Status:** Done.
 
 Parent: [00-overview.md](./00-overview.md) · API: [03-evaluation-api.md](./03-evaluation-api.md)
 
@@ -11,10 +11,10 @@ Parent: [00-overview.md](./00-overview.md) · API: [03-evaluation-api.md](./03-e
 ## Route
 
 ```text
-/agents/:agentId/evaluation
+/agent/:agentId/evaluation
 ```
 
-Alternative: tab on existing [AgentPreviewPage](../../frontend/src/pages/agent/AgentPreviewPage.tsx) — **Eval** next to Chat / Graph / Trace.
+Implemented as a **standalone page** (not a tab on Preview). Links from [AgentDetailPage](../../frontend/src/pages/agent/AgentDetailPage.tsx) topbar and [AgentPreviewPage](../../frontend/src/pages/agent/AgentPreviewPage.tsx) header.
 
 ---
 
@@ -36,12 +36,12 @@ Alternative: tab on existing [AgentPreviewPage](../../frontend/src/pages/agent/A
 
 ## Left panel — test cases
 
-| Action | API |
-|--------|-----|
-| Add row manually | Local state → `POST .../datasets` on save |
+| Action | API / behavior |
+|--------|----------------|
+| Add row manually | Local state only (v1 — no **Save dataset** button) |
 | Load dummy | `GET .../datasets/dummy` |
-| Run one row | `POST .../evaluations/run` |
-| Run all | `POST .../evaluations/batch` |
+| Run one row | `POST .../evaluations/run` → `GET .../runs/{run_id}` |
+| Run all | Sequential `POST .../run` per row (batch API deferred 2.11b) |
 
 **Table columns:** Question · Ground truth (optional) · KB scope · Last score · Actions
 
@@ -76,8 +76,8 @@ Data: `answer_relevancy_detail`
 ### Context Precision
 
 - Ranked chunks list (rank #1, #2, …)
-- Toggle **relevant** / **noise** (v2: persist labels)
-- P@k mini chart per rank
+- **Relevant** / **noise** labels from backend breakdown (display only in v1)
+- P@k mini bar per rank
 - Avg precision score + threshold
 
 Data: `context_precision_detail` + `turn_evidence.rag_retrievals`
@@ -94,26 +94,31 @@ Data: `context_recall_detail` — requires `ground_truth` on test case.
 
 ---
 
-## API client (planned)
+## API client
 
 ```text
 frontend/src/api/evaluation.ts
   runEvaluation(agentId, body)
   listEvalRuns(agentId, params)
   getEvalRun(agentId, runId)
-  listDatasets(agentId)
-  createDataset(agentId, body)
-  getDummyDataset(agentId)
+  listEvalDatasets(agentId)
+  createEvalDataset(agentId, body)
+  getDummyEvalDataset(agentId)
 ```
 
-Use React Query — same pattern as [preview.ts](../../frontend/src/api/preview.ts).
+Uses React Query — same pattern as [preview.ts](../../frontend/src/api/preview.ts).
+
+**Used by Eval Lab v1:** `runEvaluation`, `getEvalRun`, `getDummyEvalDataset`.
+
+**In API client, not used by UI yet:** `listEvalRuns`, `listEvalDatasets`, `createEvalDataset`.
 
 ---
 
-## Components (planned)
+## Components (implemented)
 
 ```text
 frontend/src/pages/agent/AgentEvaluationPage.tsx
+frontend/src/types/evaluation.ts
 frontend/src/components/evaluation/
   EvalCaseTable.tsx
   FaithfulnessPanel.tsx
@@ -123,19 +128,18 @@ frontend/src/components/evaluation/
   MetricScoreBar.tsx
 ```
 
-Reuse dark card styling from `TraceTimeline` / `PreviewChatPanel`.
+Reuse nested card styling (`#f7f8fa` panels) consistent with `TraceTimeline` / preview panels.
 
 ---
 
-## Navigation
+## Navigation (implemented)
 
-Add to agent sidebar or agent detail sub-nav:
+| Location | Link |
+|----------|------|
+| Agent detail topbar | **Preview** · **Evaluation** → `/agent/{agentId}/evaluation` |
+| Preview header | **Eval Lab** button |
 
-```text
-Preview | Evaluation | Settings ...
-```
-
-Update [constants/navigation.ts](../../frontend/src/constants/navigation.ts) if global nav entry needed.
+Global sidebar (`MAIN_NAV`) unchanged — eval is per-agent, not a top-level nav item.
 
 ---
 
@@ -159,10 +163,11 @@ Update [constants/navigation.ts](../../frontend/src/constants/navigation.ts) if 
 
 ---
 
-## Implementation order
+## Deferred (post–v1 UI)
 
-1. API client + `AgentEvaluationPage` shell
-2. Test case table + `POST /run`
-3. Faithfulness panel (richest UI)
-4. Answer Relevancy + Context Precision
-5. Context Recall + batch run + run history list
+| Item | Notes |
+|------|-------|
+| `POST .../evaluations/batch` | Celery async batch (2.11b) |
+| Run history panel | `GET .../evaluations/runs` |
+| Save custom dataset | `POST .../evaluations/datasets` |
+| Chunk label editing | Persist relevant/noise per chunk |

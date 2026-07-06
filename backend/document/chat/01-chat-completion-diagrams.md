@@ -465,7 +465,7 @@ flowchart TB
 | `workflow_enter` / `workflow_step` / `slot_captured` / `workflow_exit` | Flow 11 |
 | `output_message` | Flow 12 |
 
-**Turn metadata** (not `TraceCollector.record()` events): `routing_decision` on each finished turn — used for graph highlight in preview UI.
+**Turn metadata** (not `TraceCollector.record()` events): `routing_decision` and `turn_evidence` on each finished turn — graph highlight + RAG eval input ([../evaluation/01-turn-evidence-runtime.md](../evaluation/01-turn-evidence-runtime.md)).
 
 ---
 

@@ -7,6 +7,7 @@ from app.di.auth import get_current_user
 from app.di.knowledgebases import get_knowledgebase_service
 from app.di.preview import get_preview_trace_service, get_runtime_graph_service
 from app.di.chat import get_chat_completion_service
+from app.di.evaluation import get_rag_evaluation_service
 from app.di.sub_agents import get_sub_agent_service
 from app.di.tools import get_tool_service
 from app.domain.models.current_user import CurrentUser
@@ -18,6 +19,16 @@ from app.schemas.agent import (
     ListAgentsResponse,
 )
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.evaluation import (
+    EvalDatasetCreate,
+    EvalDatasetListResponse,
+    EvalDatasetResponse,
+    EvalDummyDatasetResponse,
+    EvalRunDetailResponse,
+    EvalRunListResponse,
+    EvalRunRequest,
+    EvalRunResponse,
+)
 from app.schemas.knowledgebase import KnowledgebaseStatus, ListKnowledgebasesResponse
 from app.schemas.preview import CapabilityCatalogPreviewResponse, PreviewTraceResponse, RuntimeGraphResponse
 from app.schemas.sub_agent import (
@@ -43,6 +54,7 @@ from app.services.knowledgebase_service import KnowledgebaseService
 from app.services.preview_trace_service import PreviewTraceService
 from app.services.runtime_graph_service import RuntimeGraphService
 from app.services.sub_agent_service import SubAgentService
+from app.services.rag_evaluation_service import RagEvaluationService
 from app.services.tool_service import ToolService
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
@@ -248,3 +260,89 @@ async def get_agent(
     service: AgentService = Depends(get_agent_service),
 ) -> GetAgentResponse:
     return await service.get_by_id(current_user=current_user, agent_id=agent_id)
+
+
+@router.post("/{agent_id}/evaluations/run", response_model=EvalRunResponse)
+async def run_evaluation(
+    agent_id: AgentIdPath,
+    body: EvalRunRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RagEvaluationService = Depends(get_rag_evaluation_service),
+) -> EvalRunResponse:
+    return await service.run_single(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+        request=body,
+    )
+
+
+@router.get("/{agent_id}/evaluations/runs", response_model=EvalRunListResponse)
+async def list_evaluation_runs(
+    agent_id: AgentIdPath,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RagEvaluationService = Depends(get_rag_evaluation_service),
+) -> EvalRunListResponse:
+    return await service.list_runs(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/{agent_id}/evaluations/runs/{run_id}", response_model=EvalRunDetailResponse)
+async def get_evaluation_run(
+    agent_id: AgentIdPath,
+    run_id: AgentIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RagEvaluationService = Depends(get_rag_evaluation_service),
+) -> EvalRunDetailResponse:
+    return await service.get_run(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+        run_id=run_id,
+    )
+
+
+@router.get("/{agent_id}/evaluations/datasets", response_model=EvalDatasetListResponse)
+async def list_evaluation_datasets(
+    agent_id: AgentIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RagEvaluationService = Depends(get_rag_evaluation_service),
+) -> EvalDatasetListResponse:
+    return await service.list_datasets(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+    )
+
+
+@router.post(
+    "/{agent_id}/evaluations/datasets",
+    response_model=EvalDatasetResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_evaluation_dataset(
+    agent_id: AgentIdPath,
+    body: EvalDatasetCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RagEvaluationService = Depends(get_rag_evaluation_service),
+) -> EvalDatasetResponse:
+    return await service.create_dataset(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+        request=body,
+    )
+
+
+@router.get("/{agent_id}/evaluations/datasets/dummy", response_model=EvalDummyDatasetResponse)
+async def get_dummy_evaluation_dataset(
+    agent_id: AgentIdPath,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: RagEvaluationService = Depends(get_rag_evaluation_service),
+) -> EvalDummyDatasetResponse:
+    return await service.get_dummy_dataset(
+        agent_id=agent_id,
+        organization_id=current_user.organization_id,
+    )

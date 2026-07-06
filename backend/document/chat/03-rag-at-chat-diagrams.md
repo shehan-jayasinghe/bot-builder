@@ -59,10 +59,10 @@ Catalog layer `[3]` lists KBs + `routing_hint` so the LLM knows when to call `se
 | Event | When |
 |-------|------|
 | `rag_skipped` | In active workflow or agent has no KBs (trace-only; no retrieval) |
-| `tool_start` / `tool_complete` | LLM calls `search_knowledge` — RAG stats in `tool_complete` (`kb_ids`, `chunk_count`, `context_length`) |
+| `tool_start` / `tool_complete` | LLM calls `search_knowledge` — RAG stats + ranked `chunks` in `tool_complete` (`query`, `kb_ids`, `chunk_count`, `context_length`) |
 
 Per-turn `rag_complete` is **not** emitted (removed in Phase C).
 
-**Spec:** [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md)
+**Turn evidence:** `turn_evidence` on each finished trace turn (preview/webhook) — see [../evaluation/01-turn-evidence-runtime.md](../evaluation/01-turn-evidence-runtime.md).
 
-**RAG evaluation (planned):** ranked chunks in `turn_evidence` for RAGAS — [../evaluation/01-turn-evidence-runtime.md](../evaluation/01-turn-evidence-runtime.md)
+**Spec:** [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md)

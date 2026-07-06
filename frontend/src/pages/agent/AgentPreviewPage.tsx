@@ -151,6 +151,9 @@ export function AgentPreviewPage() {
           </p>
         </div>
         <div className="agent-preview__header-actions">
+          <Link to={`/agent/${agentId}/evaluation`} className="btn btn--ghost">
+            Eval Lab
+          </Link>
           <button type="button" className="btn btn--ghost" onClick={handleClear}>
             Clear session
           </button>

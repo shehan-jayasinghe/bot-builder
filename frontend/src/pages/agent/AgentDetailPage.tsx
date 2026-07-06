@@ -79,6 +79,9 @@ export function AgentDetailPage() {
           <Link to={`/agent/${agentId}/preview`} className="btn btn--ghost">
             Preview
           </Link>
+          <Link to={`/agent/${agentId}/evaluation`} className="btn btn--ghost">
+            Evaluation
+          </Link>
           <button type="button" className="btn btn--primary">
             Publish
           </button>

@@ -312,7 +312,7 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 - Per-agent PII config on Mongo agent doc (optional follow-up — detectors are global today)
 - LangSmith data in preview UI
 
-**RAG evaluation (RAGAS):** planned — [../../evaluation/00-overview.md](../../evaluation/00-overview.md) (turn evidence, Eval API, Eval Lab UI).
+**RAG evaluation (RAGAS):** **Done** — [../../evaluation/00-overview.md](../../evaluation/00-overview.md) (turn evidence, Eval API, Eval Lab UI).
 
 **NeMo Guardrails (Phases 0–3 done, off by default):** see [migration-nemo-guardrails.md](./migration-nemo-guardrails.md).
 

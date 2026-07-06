@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     nemo_guardrails_enabled: bool = False
     nemo_config_path: str = ""
 
+    # RAG evaluation (RAGAS) — on-demand eval API (off by default)
+    rag_eval_enabled: bool = False
+    rag_eval_faithfulness_threshold: float = 0.8
+    rag_eval_context_precision_threshold: float = 0.7
+    rag_eval_judge_model_id: str = ""
+    eval_runs_collection: str = "eval_runs"
+    eval_datasets_collection: str = "eval_datasets"
+
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
 

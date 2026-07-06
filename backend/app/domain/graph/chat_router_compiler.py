@@ -9,6 +9,7 @@ class ChatRouterState(TypedDict, total=False):
     finished: bool
     needs_workflow_enter: bool
     result: Any
+    turn_evidence: dict[str, Any]
 
 
 class ChatRouterEngine(Protocol):

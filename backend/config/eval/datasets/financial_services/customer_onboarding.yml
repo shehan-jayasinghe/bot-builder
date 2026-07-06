@@ -1,0 +1,8 @@
+name: Financial — Customer Onboarding (builtin)
+industry: financial_services
+agent_type: customer_onboarding
+cases:
+  - question: What documents are required to open a savings account?
+    ground_truth: Valid photo ID, proof of address, and PAN; NRIs need passport and visa copies.
+  - question: How long does KYC verification take?
+    ground_truth: Video KYC is usually completed within 24 hours; branch KYC may take 1–2 business days.

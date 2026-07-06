@@ -7,6 +7,7 @@ import { AddKnowledgeBasePage } from "../pages/agent/AddKnowledgeBasePage";
 import { AddToolPage } from "../pages/agent/AddToolPage";
 import { AgentPage } from "../pages/agent/AgentPage";
 import { AgentDetailPage } from "../pages/agent/AgentDetailPage";
+import { AgentEvaluationPage } from "../pages/agent/AgentEvaluationPage";
 import { AgentPreviewPage } from "../pages/agent/AgentPreviewPage";
 import { CreateAgentPage } from "../pages/agent/CreateAgentPage";
 import { SignInPage } from "../pages/auth/SignInPage";
@@ -40,6 +41,7 @@ export function AppRoutes() {
           <Route path="agent/:agentId/knowledgebases/new" element={<AddKnowledgeBasePage />} />
           <Route path="agent/:agentId/tools/new" element={<AddToolPage />} />
           <Route path="agent/:agentId/preview" element={<AgentPreviewPage />} />
+          <Route path="agent/:agentId/evaluation" element={<AgentEvaluationPage />} />
           <Route path="agent/:agentId" element={<AgentDetailPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />

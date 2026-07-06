@@ -66,6 +66,7 @@ class PreviewTraceTurn(BaseModel):
     started_at: str
     events: list[PreviewTraceEvent] = Field(default_factory=list)
     routing_decision: dict[str, Any] | None = None
+    turn_evidence: dict[str, Any] | None = None
 
 
 class PreviewTraceResponse(BaseModel):

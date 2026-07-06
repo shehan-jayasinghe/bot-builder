@@ -71,12 +71,14 @@ def _map_turns(raw_turns: Any) -> list[PreviewTraceTurn]:
             if isinstance(event, dict) and event.get("type") and event.get("at")
         ]
         routing = item.get("routing_decision")
+        evidence = item.get("turn_evidence")
         turns.append(
             PreviewTraceTurn(
                 turn_id=str(turn_id),
                 started_at=str(started_at),
                 events=events,
                 routing_decision=dict(routing) if isinstance(routing, dict) else None,
+                turn_evidence=dict(evidence) if isinstance(evidence, dict) else None,
             ),
         )
     return turns

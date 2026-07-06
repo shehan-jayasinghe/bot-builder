@@ -9,7 +9,7 @@ from app.domain.constants.knowledgebase_constants import (
 )
 from app.domain.models.runtime_bundle import RuntimeKnowledgeBase
 from app.domain.pipeline.rag.keyword_search import KeywordSearch
-from app.domain.pipeline.rag.rag_result import RagRetrieveResult
+from app.domain.pipeline.rag.rag_result import RagChunk, RagRetrieveResult
 from app.domain.pipeline.rag.vector_search import VectorSearch
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,8 @@ class RAGRetriever:
         grouped: dict[str, list[str]] = {}
         seen_texts: set[str] = set()
         chunk_count = 0
+        rank = 0
+        chunks: list[RagChunk] = []
         kb_ids: list[str] = []
         storage_types: list[str] = []
         errors: list[str] = []
@@ -83,8 +85,19 @@ class RAGRetriever:
                 if text in seen_texts:
                     continue
                 seen_texts.add(text)
+                rank += 1
                 kb_chunks.append(text)
                 chunk_count += 1
+                chunks.append(
+                    RagChunk(
+                        text=text,
+                        rank=rank,
+                        score=hit.get("score"),
+                        chunk_id=hit.get("chunk_id"),
+                        kb_id=kb.id,
+                        kb_name=kb.name,
+                    ),
+                )
 
             if kb_chunks:
                 grouped[kb.name] = kb_chunks
@@ -96,6 +109,7 @@ class RAGRetriever:
             chunk_count=chunk_count,
             kb_ids=kb_ids,
             storage_types=storage_types,
+            chunks=chunks,
             error=error,
         )
 

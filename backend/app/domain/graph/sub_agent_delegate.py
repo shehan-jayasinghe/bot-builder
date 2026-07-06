@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, create_model
 
 from app.domain.constants.chat_constants import MAX_HISTORY_TURNS
 from app.domain.graph.search_knowledge_delegate import SEARCH_KNOWLEDGE_TOOL_NAME, build_search_knowledge_tool
+from app.domain.graph.turn_evidence import TurnEvidence
 from app.domain.graph.turn_result import AgentTurnResult
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeOrchestrator, RuntimeSubAgent, RuntimeTool
 from app.domain.models.tracker import Tracker
@@ -130,6 +131,7 @@ class SubAgentRunner:
         tracing_context: LlmTracingContext | None = None,
         rag: Any = None,
         trace: Any = None,
+        turn_evidence: TurnEvidence | None = None,
     ) -> AgentTurnResult:
         system_prompt = build_sub_agent_system_prompt(
             sub_agent,
@@ -161,6 +163,7 @@ class SubAgentRunner:
             tracing_context=tracing_context,
             rag=rag,
             trace=trace,
+            turn_evidence=turn_evidence,
         )
         if result.orchestrator_return:
             return AgentTurnResult(
