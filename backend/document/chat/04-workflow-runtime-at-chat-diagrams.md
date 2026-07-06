@@ -8,7 +8,9 @@ Workflow REST: [../workflows/01-create-workflow-diagrams.md](../workflows/01-cre
 
 **Prerequisite:** Phase 0 + 1 done. Workflows attached to agent with `status: published`.
 
-**Status:** Implemented — `workflow_runner` + `ChatGraph` routing.
+**Status:** Implemented — `WorkflowGraphRunner` (LangGraph `StateGraph` from workflow JSON) + LangGraph session router in `ChatGraph`.
+
+**LangChain migration:** **Done** — [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) Step 4. REST unchanged.
 
 **Agentic migration (REST):** Phase A **Done** — [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). Phase B **Done** (runtime) — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md). Phase C **no REST change**. Phase D **Done** — active workflow takes priority over sticky sub-agent (no REST change). See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
@@ -115,7 +117,7 @@ Example node:
 
 # Flow 3 — `input` node (slot capture)
 
-**Only place slot capture runs in chat** — not in Flow 5 sanitize.
+**Only place slot capture runs in chat** — not in Flow 5 guardrails.
 
 ```mermaid
 flowchart TB
@@ -185,9 +187,9 @@ flowchart TB
 
 ---
 
-# Flow 5 — Integration with LangGraph routing (Flow 6)
+# Flow 5 — Integration with ChatGraph routing (Flow 6)
 
-**Status: done** — `ChatGraph` routes workflow vs orchestrator; orchestrator can enter workflow via `workflow_*` tool (Phase B).
+**Status: done** — LangGraph session router in `ChatGraph` (`chat_router_compiler.py`) routes workflow vs sticky sub-agent vs orchestrator; orchestrator can enter workflow via `workflow_*` delegate tool (Phase B). Workflow steps run in `WorkflowGraphRunner` (compiled `StateGraph`). See [migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) and [migration-chat-router-langgraph.md](../agentic/updets/migration-chat-router-langgraph.md).
 
 ```mermaid
 flowchart TB
@@ -219,12 +221,12 @@ flowchart TB
 
 | File | Role |
 |------|------|
-| [workflow_runner.py](../../app/domain/workflow/workflow_runner.py) | Node dispatch + slot validation |
+| [workflow_graph_compiler.py](../../app/domain/workflow/workflow_graph_compiler.py) · [workflow_graph_runner.py](../../app/domain/workflow/workflow_graph_runner.py) | LangGraph node dispatch + slot validation |
 | [slot_validator.py](../../app/domain/workflow/slot_validator.py) | Regex / type checks for `input` nodes |
 | [chat_graph.py](../../app/domain/graph/chat_graph.py) | Flow 6 router — workflow vs orchestrator; LLM `workflow_*` entry (Phase B) |
 | [chat_completion_service.py](../../app/services/chat_completion_service.py) | Wires `ChatGraph`; RAG skip when `in_workflow` only |
 | [tracker.py](../../app/domain/models/tracker.py) | Flow state transitions |
-| [workflow_delegate.py](../../app/domain/workflow/workflow_delegate.py) | `workflow_*` LangGraph tools + `routing_hint` in descriptions |
+| [workflow_delegate.py](../../app/domain/workflow/workflow_delegate.py) | `workflow_*` LangChain `StructuredTool` delegates + `routing_hint` in descriptions |
 | Tests | [test_workflow_runtime_at_chat.py](../../tests/test_workflow_runtime_at_chat.py) |
 
 **No API schema change** — same `ChatRequest` / `ChatResponse`. Optional future: `metadata.workflow_payload` for button clicks.

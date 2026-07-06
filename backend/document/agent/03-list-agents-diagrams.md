@@ -1,6 +1,6 @@
 # List Agents — `GET /api/v1/agents`
 
-**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — **no** route or schema change. Phase B: [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) — **no** REST change. Phase C: [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) — **no** REST change. Phase D: [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md) — **no** REST change.
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — **no** route or schema change. Phase B: [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) — **no** REST change. Phase C: [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) — **no** REST change. Phase D: [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md) — **no** REST change. **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
 
 Returns all agents for the authenticated user's organization. `organization_id` comes from JWT auth (`CurrentUser`) — the client does **not** send it in the URL or query.
 

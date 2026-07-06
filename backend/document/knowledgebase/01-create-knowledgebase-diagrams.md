@@ -1,6 +1,6 @@
 # Create Knowledge Base — `POST /api/v1/knowledgebases`
 
-**Agentic migration:** Phase A **Done** — `routing_hint` when `agent_id` set; PATCH: [04-update-knowledgebase-agent-diagrams.md](./04-update-knowledgebase-agent-diagrams.md). Phase B **no REST change**. Phase C **Done** — `routing_hint` guides LLM `search_knowledge` at chat. Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` when `agent_id` set; PATCH: [04-update-knowledgebase-agent-diagrams.md](./04-update-knowledgebase-agent-diagrams.md). Phase B **no REST change**. Phase C **Done** — `routing_hint` guides LLM `search_knowledge` at chat. Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md). **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
 
 # Flow 1 — Auth
 

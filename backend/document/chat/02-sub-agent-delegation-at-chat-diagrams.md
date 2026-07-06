@@ -6,9 +6,9 @@ Parent: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) · Fl
 
 Sub-agent REST (attach + `routing_hint`): [../sub-agents/01-create-sub-agent-diagrams.md](../sub-agents/01-create-sub-agent-diagrams.md)
 
-**Agentic migration (chat API):** Phase A **Done**. Phase B **no change** (workflows only). Phase C **Done** — `search_knowledge` on `SubAgentRunner` turn. Phase D **Done** — sticky sub-agent handover. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration (chat API):** Phase A **Done**. Phase B **no change** (workflows only). Phase C **Done** — `search_knowledge` on `SubAgentRunner` turn. Phase D **Done** — sticky sub-agent handover. **LangChain proper (Done):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
 
-**Status:** Implemented — `sub_agent_delegate.py` + orchestrator delegate tools + sticky follow-up in `chat_graph.py`.
+**Status:** Implemented — `sub_agent_delegate.py` + orchestrator delegate tools + sticky follow-up in `chat_graph.py` (LangGraph session router). Sub-agent LLM uses LangChain `create_agent()` via shared [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py).
 
 ---
 
@@ -18,10 +18,10 @@ Sub-agent REST (attach + `routing_hint`): [../sub-agents/01-create-sub-agent-dia
 flowchart TB
     MSG[User message]
     MSG --> WF{active_flow_state?}
-    WF -->|yes| WORK[WorkflowRunner]
+    WF -->|yes| WORK[WorkflowGraphRunner]
     WF -->|no| KIND{active_agent_kind?}
     KIND -->|sub_agent| STICKY[SubAgentRunner — sticky follow-up]
-    KIND -->|orchestrator| ORCH[OrchestratorRunner]
+    KIND -->|orchestrator| ORCH[OrchestratorRunner — create_agent]
     ORCH -->|delegate tool| DELEG[SubAgentRunner — first entry]
     STICKY --> SCOPE[Scoped tools + search_knowledge + return_to_orchestrator]
     DELEG --> SCOPE
@@ -44,7 +44,7 @@ flowchart TB
 | What | File |
 |------|------|
 | Delegate tools + `return_to_orchestrator` | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) |
-| Orchestrator wiring | [orchestrator.py](../../app/domain/graph/orchestrator.py) |
+| Orchestrator / sub-agent agent | [orchestrator.py](../../app/domain/graph/orchestrator.py) · [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py) | Done |
 | Sticky routing | [chat_graph.py](../../app/domain/graph/chat_graph.py) |
 | Sub-agent lookup | `find_sub_agent_by_id()` in [runtime_bundle.py](../../app/domain/models/runtime_bundle.py) |
 | Session state | [tracker.py](../../app/domain/models/tracker.py) |

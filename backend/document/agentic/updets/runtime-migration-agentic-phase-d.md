@@ -10,6 +10,8 @@
 
 **Phase D — Done** (implemented in code).
 
+**Runtime stack note:** Sticky sub-agent routing via LangGraph session router (`chat_router_compiler.py`). Orchestrator/sub-agent inner loops use LangChain `create_agent()`. **LangChain proper (Done):** [migration-langchain-proper.md](./migration-langchain-proper.md) · [migration-chat-router-langgraph.md](./migration-chat-router-langgraph.md).
+
 ---
 
 ## Problem (before Phase D)
@@ -39,7 +41,7 @@ if tracker.active_agent_kind == "sub_agent" and tracker.active_flow_state is Non
 flowchart TB
     MSG[User message]
     MSG --> WF{active_flow_state?}
-    WF -->|yes| WFR[WorkflowRunner — priority unchanged]
+    WF -->|yes| WFR[WorkflowGraphRunner — priority unchanged]
     WF -->|no| KIND{active_agent_kind?}
     KIND -->|sub_agent| STICKY[SubAgentRunner — sticky follow-up]
     KIND -->|orchestrator| ORCH[OrchestratorRunner]

@@ -12,6 +12,9 @@ Single reference for **every REST endpoint** affected by the move to an agentic 
 - Phase B: [api-migration-agentic-phase-b.md](./api-migration-agentic-phase-b.md) · [runtime-migration-agentic-phase-b.md](./runtime-migration-agentic-phase-b.md)
 - Phase C: [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md) · [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md)
 - Phase D: [api-migration-agentic-phase-d.md](./api-migration-agentic-phase-d.md) · [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md)
+- **LangChain proper (Done, no REST change):** [migration-langchain-proper.md](./migration-langchain-proper.md)
+
+**Runtime stack note:** Orchestrator and sub-agent use LangChain `create_agent()`; workflows use `WorkflowGraphRunner`; session routing uses LangGraph `chat_router_compiler.py`. See [migration-langchain-proper.md](./migration-langchain-proper.md) and [migration-chat-router-langgraph.md](./migration-chat-router-langgraph.md).
 
 **Legend**
 
@@ -196,7 +199,7 @@ Runtime assembly: [runtime-migration-agentic.md](./runtime-migration-agentic.md)
 
 ### Not a REST API (Phase C)
 
-`search_knowledge` is an **LLM tool** inside `OrchestratorRunner` and `SubAgentRunner`, not a new HTTP endpoint. Layer **[4]** is empty at turn start; retrieved chunks arrive via `search_knowledge` **ToolMessage** in the LLM loop (Phase C **Done**).
+`search_knowledge` is an **LLM tool** inside LangChain `create_agent()` (orchestrator/sub-agent), not a new HTTP endpoint. Layer **[4]** is empty at turn start; retrieved chunks arrive via `search_knowledge` **ToolMessage** in the agent loop (Phase C **Done**). See [migration-langchain-proper.md](./migration-langchain-proper.md).
 
 **Spec:** [api-migration-agentic-phase-c.md](./api-migration-agentic-phase-c.md) · [runtime-migration-agentic-phase-c.md](./runtime-migration-agentic-phase-c.md)
 

@@ -25,8 +25,11 @@ Related config docs:
 - Phase B — [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) (agentic workflow routing — **Done**)
 - Phase C — [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) (agentic RAG — **Done**)
 - Phase D — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) (sticky sub-agent — **Done**)
+- LangChain proper — [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) (**Done** — `create_agent()` orchestrator/sub-agent, compiled workflow graph, `PIIMiddleware`, LangSmith parent run; **no REST change**)
 
-**Preview UI (admin builder — planned):**
+**Runtime stack:** LangGraph session router (`ChatGraph`) + LangChain `create_agent()` (orchestrator/sub-agent) + LangGraph `WorkflowGraphRunner` for workflows. See [migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) and [migration-chat-router-langgraph.md](../agentic/updets/migration-chat-router-langgraph.md).
+
+**Preview UI (admin builder — implemented):**
 
 - [05-agent-runtime-graph-diagrams.md](./05-agent-runtime-graph-diagrams.md) — `GET .../runtime-graph`
 - [06-preview-chat-diagrams.md](./06-preview-chat-diagrams.md) — `POST .../preview/chat`
@@ -38,8 +41,8 @@ Related config docs:
 
 | Phase | Flows | Status | What runs today |
 |-------|--------|--------|-----------------|
-| **0** | 1–5, 12 | **Done** | Request validation, channel/agent resolve (friendly 200 fallback), tracker, RuntimeBundle batch hydrate, PII redaction, guardrails, orchestrator LLM, persist + response |
-| **1** | 6–7, 10 | **Done** | Orchestrator Bedrock turn with tool calling via `ExecutorRegistry` + `langgraph_tools` |
+| **0** | 1–5, 12 | **Done** | Request validation, channel/agent resolve (friendly 200 fallback), tracker, RuntimeBundle batch hydrate, guardrails, orchestrator LLM (PII via agent middleware), persist + response |
+| **1** | 6–7, 10 | **Done** | Orchestrator/sub-agent Bedrock turn via LangChain `create_agent()` in [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py); tools via agent `ToolNode` + [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) |
 | **2** | 8 | **Done** | Sub-agent delegation at runtime — see [02-sub-agent-delegation-at-chat-diagrams.md](./02-sub-agent-delegation-at-chat-diagrams.md) |
 | **3** | 9 | **Done** — agentic `search_knowledge` tool (Phase C) | Qdrant / keyword RAG — see [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
 | **4** | 11 | **Done** | Workflow runtime — [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md) · Phase B (LLM routing): [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
@@ -47,8 +50,9 @@ Related config docs:
 | **B** | 6, 11 | **Done** | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 | **C** | 9 | **Done** | [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
 | **D** | 8 | **Done** | Sticky sub-agent — [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
+| **LangChain** | 6–7, 8, 10, 11 | **Done** | [migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) — `create_agent()` orchestrator/sub-agent; compiled workflow graph |
 
-**Current runtime path:** `chat.py` → `ChatCompletionService` → sanitize → guardrails → `RuntimeBundleLoader` → `ChatGraph` → orchestrator / workflow → `TrackerService.persist`.
+**Current runtime path:** `chat.py` → `ChatCompletionService` → guardrails → `RuntimeBundleLoader` → `ChatGraph` (LangGraph router) → `OrchestratorRunner` / `WorkflowGraphRunner` / `SubAgentRunner` → `TrackerService.persist`.
 
 ---
 
@@ -65,7 +69,7 @@ flowchart TB
     SVC --> F2[Flow 2 — channel + agent]
     F2 --> F3[Flow 3 — tracker]
     F3 --> F4[Flow 4 — RuntimeBundle]
-    F4 --> F5[Flow 5 — sanitize + guardrails]
+    F4 --> F5[Flow 5 — guardrails]
     F5 --> F6[Flow 6 — ChatGraph routing]
     F6 --> F7[Flow 7 — orchestrator + tools]
     F6 --> F8[Flow 8 — sub-agent]
@@ -149,7 +153,7 @@ flowchart TB
     AGENT --> TRK[TrackerService.load_or_create]
     TRK --> REDIS[Redis session — hot]
     TRK --> MONGO[Mongo — cold]
-    TRK --> APPEND[append_user_message — sanitized in Flow 5]
+    TRK --> APPEND[append_user_message — in Flow 5]
     APPEND --> F4[Flow 4]
 ```
 
@@ -228,26 +232,27 @@ flowchart TB
 
 ---
 
-# Flow 5 — Sanitize message + guardrails
+# Flow 5 — Guardrails
 
 ```mermaid
 flowchart TB
     RAW[Raw user message]
-    RAW --> REDACT[PII redaction — email, phone, secrets]
-    REDACT --> GUARD[GuardrailRunner — agent guardrails]
+    RAW --> GUARD[GuardrailRunner — agent guardrails]
     GUARD -->|block| REFUSE[Safe refusal reply]
-    GUARD -->|ok| CLEAN[Sanitized text → tracker + graph]
+    GUARD -->|ok| CLEAN[Message → tracker + graph]
     CLEAN --> F6[Flow 6]
 ```
 
-- **Redact** before LLM and tracker storage — do not hash for model input.
+- PII is handled by LangChain `PIIMiddleware` on orchestrator/sub-agent `create_agent()` — not at this step.
 - Slot extractor **not** used here — only Flow 11 (workflow `input` nodes).
 
 ---
 
-# Flow 6 — LangGraph routing
+# Flow 6 — ChatGraph routing (LangGraph session router)
 
-**Status: done.** Implemented in [chat_graph.py](../../app/domain/graph/chat_graph.py) and wired from [chat_completion_service.py](../../app/services/chat_completion_service.py).
+**Status: done.** [chat_graph.py](../../app/domain/graph/chat_graph.py) invokes [chat_router_compiler.py](../../app/domain/graph/chat_router_compiler.py) — LangGraph conditional edges on tracker session state (workflow → sticky sub-agent → orchestrator).
+
+Inner LLM/workflows use LangChain/LangGraph per [migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md). Router migration: [migration-chat-router-langgraph.md](../agentic/updets/migration-chat-router-langgraph.md).
 
 ```mermaid
 flowchart TB
@@ -266,13 +271,13 @@ flowchart TB
     F11 --> F12
 ```
 
-RAG (Flow 9) runs in `ChatCompletionService` before `ChatGraph` when not in an active workflow.
+RAG (Flow 9) runs **inside** orchestrator/sub-agent `create_agent()` turns when the model calls `search_knowledge` — not in `ChatCompletionService` before `ChatGraph`.
 
 ---
 
 # Flow 7 — Orchestrator node
 
-**Status: done** — orchestrator LLM with executor tools, sub-agent delegates, and workflow delegate tools.
+**Status: done.** [orchestrator.py](../../app/domain/graph/orchestrator.py) delegates to [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py) — LangChain `create_agent()` with routing middleware, `PIIMiddleware`, and agent `ToolNode` for executor/delegate/workflow tools.
 
 ```mermaid
 flowchart TB
@@ -359,7 +364,7 @@ Full detail: [../tools/03-execute-tool-at-chat-diagrams.md](../tools/03-execute-
 
 # Flow 11 — Workflow runtime + slot capture
 
-**Status: done** — `workflow_runner` + `ChatGraph` routing. Spec: [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md).
+**Status: done** — `WorkflowGraphRunner` + LangGraph `ChatGraph` routing. Spec: [04-workflow-runtime-at-chat-diagrams.md](./04-workflow-runtime-at-chat-diagrams.md).
 
 **Agentic Phase B (runtime, Done):** removed `default_first_message` auto-start — LLM picks workflow via `workflow_*` tool + catalog hints. Spec: [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md).
 
@@ -435,7 +440,7 @@ flowchart TB
 | `bundle_loaded` | Flow 4 |
 | `routing_decision` | Agent/workflow switch |
 | `rag_skipped` | Flow 9 — in workflow or no KBs |
-| `tool_start` / `tool_complete` | Flow 9 (`search_knowledge`) · Flow 10 (executors — planned) |
+| `tool_start` / `tool_complete` | Flow 9 (`search_knowledge`) · Flow 10 (executors via agent `ToolNode`) |
 | `tool_start` / `tool_complete` / `tool_error` | Flow 10 |
 | `workflow_step` / `slot_captured` | Flow 11 |
 | `output_message` | Flow 12 |
@@ -501,6 +506,7 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | B | workflow routing | Done | [../agentic/updets/runtime-migration-agentic-phase-b.md](../agentic/updets/runtime-migration-agentic-phase-b.md) |
 | C | agentic RAG | Done | [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md) |
 | D | sticky sub-agent | Done | [../agentic/updets/runtime-migration-agentic-phase-d.md](../agentic/updets/runtime-migration-agentic-phase-d.md) |
+| LangChain | orchestrator / workflows | Done | [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) |
 
 ---
 
@@ -511,19 +517,20 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | API route | [chat.py](../../app/api/v1/chat.py) | Done |
 | Entry service | [chat_completion_service.py](../../app/services/chat_completion_service.py) | Done |
 | Schemas | [schemas/chat.py](../../app/schemas/chat.py) | Done |
-| Graph routing | [chat_graph.py](../../app/domain/graph/chat_graph.py) | Done |
+| Graph routing | [chat_graph.py](../../app/domain/graph/chat_graph.py) · [chat_router_compiler.py](../../app/domain/graph/chat_router_compiler.py) | Done |
 | Runtime bundle | [runtime_bundle.py](../../app/domain/models/runtime_bundle.py) · [runtime_bundle_loader.py](../../app/services/runtime_bundle_loader.py) | Done |
-| Orchestrator | [orchestrator.py](../../app/domain/graph/orchestrator.py) | Done |
+| Orchestrator (`create_agent`) | [orchestrator.py](../../app/domain/graph/orchestrator.py) · [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py) · [agent_factory.py](../../app/domain/graph/langchain/agent_factory.py) | Done |
 | Sub-agent delegate | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) | Done |
-| Workflow runtime | [workflow_runner.py](../../app/domain/workflow/workflow_runner.py) | Done |
+| Workflow runtime (LangGraph) | [workflow_graph_runner.py](../../app/domain/workflow/workflow_graph_runner.py) · [workflow_graph_compiler.py](../../app/domain/workflow/workflow_graph_compiler.py) | Done |
 | Assistant resolve | [assistant_loader.py](../../app/services/assistant_loader.py) | Done |
 | Tracker | [tracker.py](../../app/domain/models/tracker.py) · [tracker_service.py](../../app/services/tracker_service.py) | Done |
 | LLM | [llm.py](../../app/infrastructure/ai/llm.py) | Done |
-| PII sanitizer | [pii_redactor.py](../../app/domain/pipeline/sanitization/pii_redactor.py) | Done |
+| PII (agent) | [pii_middleware.py](../../app/domain/graph/langchain/pii_middleware.py) via [agent_factory.py](../../app/domain/graph/langchain/agent_factory.py) | Done |
 | Guardrails | [guardrails/runner.py](../../app/domain/pipeline/guardrails/runner.py) | Done |
 | Final prompt | [final_prompt_builder.py](../../app/domain/pipeline/prompt/final_prompt_builder.py) · [capability_catalog_builder.py](../../app/domain/pipeline/prompt/capability_catalog_builder.py) | Done |
 | Agent create prompt | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) — base layer only | Done |
-| Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) · [registry.py](../../app/domain/executors/registry.py) | Done |
+| Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) (LangChain `StructuredTool`) · [registry.py](../../app/domain/executors/registry.py) | Done — via agent `ToolNode` in `create_agent()` |
+| LangSmith tracing | [langsmith_tracing.py](../../app/infrastructure/ai/langsmith_tracing.py) | Done — parent run per chat turn |
 | RAG query | [retriever.py](../../app/domain/pipeline/rag/retriever.py) | Done |
 | Search knowledge tool | [search_knowledge_delegate.py](../../app/domain/graph/search_knowledge_delegate.py) | Done |
 | Trace | [trace.py](../../app/domain/pipeline/observability/trace.py) | Done |

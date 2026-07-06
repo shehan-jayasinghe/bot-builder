@@ -8,6 +8,8 @@
 
 **Status:** **Done** (implemented in code).
 
+**Runtime stack note:** Sticky routing via LangGraph session router (`chat_router_compiler.py`). Sub-agent uses `create_agent()`. **LangChain proper (Done, no REST change):** [migration-langchain-proper.md](./migration-langchain-proper.md) · [migration-chat-router-langgraph.md](./migration-chat-router-langgraph.md).
+
 ---
 
 ## Summary
@@ -24,14 +26,14 @@ Phase D is **runtime-only**. No new URLs, no Pydantic changes.
 
 ## What changed at chat (not REST)
 
-| Before Phase D | After Phase D (Done) |
+| Before Phase D | Current (Done) |
 |----------------|----------------------|
 | Start of every turn: if `active_agent_kind == "sub_agent"` → `tracker.reset_to_orchestrator()` | No per-turn reset — sticky sub-agent state persists |
 | Follow-up messages always ran orchestrator LLM first | Follow-up messages run **SubAgentRunner** directly when sticky |
 | `active_agent_id` / `active_agent_kind` cleared next message | Persist until **explicit exit** |
 | `last_routing_decision.args` only on delegate turn | Reused on sticky follow-up turns |
 
-Workflow priority is **unchanged** (Phase B): `active_flow_state` still routes to `WorkflowRunner` before sub-agent sticky path.
+Workflow priority is **unchanged** (Phase B): `active_flow_state` still routes to `WorkflowGraphRunner` before sub-agent sticky path.
 
 ---
 

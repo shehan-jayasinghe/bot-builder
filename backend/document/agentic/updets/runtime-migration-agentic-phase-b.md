@@ -10,11 +10,13 @@
 
 **Phase B — Done** (implemented in code).
 
+**Runtime stack note:** Workflow entry and routing use LangGraph session router + `WorkflowGraphRunner`. Orchestrator uses `create_agent()`. See [migration-langchain-proper.md](./migration-langchain-proper.md).
+
 ---
 
-## Problem
+## Problem (before Phase B — fixed)
 
-Today `ChatGraph` bypasses the orchestrator on the **first user message** when the agent has any published workflow:
+Before Phase B, `ChatGraph` bypassed the orchestrator on the **first user message** when the agent had any published workflow:
 
 ```text
 user message #1 + workflows[] → auto-enter workflows[0] (default_first_message)
@@ -24,13 +26,13 @@ That ignores capability catalog `routing_hint` and prevents the LLM from choosin
 
 ---
 
-## Target behavior
+## Current behavior (Phase B — Done)
 
 ```mermaid
 flowchart TB
     MSG[User message]
     MSG --> FLOW{active_flow_state?}
-    FLOW -->|yes| WF[WorkflowRunner — Flow 11]
+    FLOW -->|yes| WF[WorkflowGraphRunner — Flow 11]
     FLOW -->|no| ORCH[OrchestratorRunner — Flow 7]
     ORCH --> CATALOG[Prompt layer 3 — workflow hints]
     ORCH --> TOOLS[workflow_* delegate tools]
@@ -38,7 +40,7 @@ flowchart TB
     ORCH -->|no workflow tool| REPLY[Normal orchestrator reply]
 ```
 
-| Enter reason | When | After Phase B |
+| Enter reason | When | Current (Done) |
 |--------------|------|---------------|
 | `active_state` | Resume in-progress workflow | **Keep** |
 | `orchestrator_tool` | LLM called `workflow_<name>` | **Keep** — primary entry |
@@ -46,9 +48,9 @@ flowchart TB
 
 ---
 
-## Code changes
+## Code changes (implemented)
 
-### 1. `app/domain/graph/chat_graph.py` — required
+### 1. `app/domain/graph/chat_graph.py`
 
 | Action | Detail |
 |--------|--------|
@@ -64,7 +66,7 @@ flowchart TB
 | **Delete** | `will_auto_start_workflow` computation |
 | **Change** | `skip_rag = in_workflow` only (not `or will_auto_start_workflow`) |
 
-Today:
+Before Phase B (removed):
 
 ```python
 will_auto_start_workflow = (
@@ -75,7 +77,7 @@ will_auto_start_workflow = (
 skip_rag = in_workflow or will_auto_start_workflow
 ```
 
-After Phase B:
+Current (Phase B; `skip_rag` logic trace-only after Phase C):
 
 ```python
 skip_rag = in_workflow
@@ -83,7 +85,7 @@ skip_rag = in_workflow
 
 ### 3. `app/domain/workflow/workflow_delegate.py` — optional (recommended)
 
-Enrich LangGraph tool `description` with `routing_hint` from `bundle.capability_catalog` so the model sees hints in the tool list as well as layer [3].
+Enrich LangChain `StructuredTool` `description` with `routing_hint` from `bundle.capability_catalog` so the model sees hints in the tool list as well as layer [3].
 
 | Today | Target |
 |-------|--------|
@@ -99,7 +101,7 @@ If workflow delegate descriptions are enriched, pass catalog from `bundle` into 
 
 | File | Why |
 |------|-----|
-| `workflow_runner.py` | Node execution unchanged |
+| `workflow_graph_runner.py` | LangGraph workflow execution at chat |
 | `workflow_service.py` | REST/catalog already Phase A |
 | `runtime_bundle_loader.py` | Already loads workflows + catalog |
 | `capability_catalog_builder.py` | Layer [3] already lists workflows + hints |
@@ -110,13 +112,13 @@ If workflow delegate descriptions are enriched, pass catalog from `bundle` into 
 
 ## Prompt / routing flow (orchestrator turn)
 
-Unchanged from Phase A except workflow **entry**:
+After Phase B (layer [4] updated by Phase C — empty at turn start; RAG via `search_knowledge` tool):
 
 ```text
 [1] system_prompt + personality/tone
 [2] guardrail_instructions
 [3] capability_catalog  ← workflow routing_hint here
-[4] rag_context         ← always-on until Phase C
+[4] rag_context         ← empty at turn start (Phase C); chunks via search_knowledge ToolMessage
 ```
 
 LLM tools on orchestrator turn:

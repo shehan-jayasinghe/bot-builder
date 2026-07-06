@@ -4,7 +4,7 @@ Organization-scoped **connections** to external systems (customer MongoDB, REST 
 
 `organization_id` comes from JWT auth (`CurrentUser`), not from the request body.
 
-**Agentic migration:** **No** API change for connector endpoints. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md).
+**Agentic migration:** **No** API change for connector endpoints. See [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md). **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
 
 **Not in scope:** platform infrastructure connectors (Bedrock, S3, Qdrant, Neo4j for KB ingest) — those stay in `.env` / platform config.
 

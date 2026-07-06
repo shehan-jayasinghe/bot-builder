@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     bedrock_embed_model_id: str = "amazon.titan-embed-text-v2:0"
     bedrock_embed_dimensions: int = 1024
 
-    # LangSmith / LangChain tracing (LLM observability in preview + webhook chat)
+    # LangSmith / LangChain tracing — one parent run per chat turn when enabled
     langchain_tracing_v2: bool = False
     langchain_api_key: str = ""
     langchain_project: str = "bot-builder"

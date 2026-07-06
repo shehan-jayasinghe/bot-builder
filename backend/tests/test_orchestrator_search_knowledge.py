@@ -146,6 +146,8 @@ def test_execute_tool_turn_search_knowledge_via_mocked_llm() -> None:
 
         from langchain_core.messages import AIMessage
 
+        from app.domain.graph.langchain.tool_router import run_search_knowledge_tool
+
         kb = RuntimeKnowledgeBase(
             id="kb-1",
             name="FAQ",
@@ -171,28 +173,24 @@ def test_execute_tool_turn_search_knowledge_via_mocked_llm() -> None:
             knowledge_bases=[kb],
         )
 
-        mock_bound = MagicMock()
-        mock_bound.ainvoke = AsyncMock(
-            side_effect=[
-                AIMessage(
-                    content="",
-                    tool_calls=[
-                        {
-                            "name": SEARCH_KNOWLEDGE_TOOL_NAME,
-                            "args": {"query": "refund policy"},
-                            "id": "tc-1",
-                        },
-                    ],
-                ),
-                AIMessage(content="Refunds are accepted within 30 days."),
-            ],
-        )
-        mock_client = MagicMock()
-        mock_client.bind_tools.return_value = mock_bound
-        mock_llm = MagicMock()
-        mock_llm.get_client.return_value = mock_client
+        mock_agent = MagicMock()
 
-        with patch.object(runner, "_build_llm", return_value=mock_llm):
+        async def _fake_ainvoke(_input_state: dict, config: dict | None = None) -> dict:
+            await run_search_knowledge_tool(
+                tool_args={"query": "refund policy"},
+                knowledge_bases=[kb],
+                organization_id=ORG_ID,
+                rag=rag,
+                trace=None,
+            )
+            return {"messages": [AIMessage(content="Refunds are accepted within 30 days.")]}
+
+        mock_agent.ainvoke = _fake_ainvoke
+
+        with patch(
+            "app.domain.graph.langchain.orchestrator_agent.create_bot_agent",
+            return_value=mock_agent,
+        ):
             result = await runner.execute_tool_turn(
                 orchestrator=orchestrator,
                 system_prompt="You are helpful.",
@@ -217,6 +215,7 @@ def test_execute_tool_turn_skips_executor_named_search_knowledge() -> None:
 
         from langchain_core.messages import AIMessage
 
+        from app.domain.graph.langchain.tool_router import run_search_knowledge_tool
         from app.domain.models.runtime_bundle import RuntimeTool
 
         kb = RuntimeKnowledgeBase(
@@ -249,28 +248,24 @@ def test_execute_tool_turn_skips_executor_named_search_knowledge() -> None:
             tools=[executor_tool],
         )
 
-        mock_bound = MagicMock()
-        mock_bound.ainvoke = AsyncMock(
-            side_effect=[
-                AIMessage(
-                    content="",
-                    tool_calls=[
-                        {
-                            "name": SEARCH_KNOWLEDGE_TOOL_NAME,
-                            "args": {"query": "policy"},
-                            "id": "tc-1",
-                        },
-                    ],
-                ),
-                AIMessage(content="Done"),
-            ],
-        )
-        mock_client = MagicMock()
-        mock_client.bind_tools.return_value = mock_bound
-        mock_llm = MagicMock()
-        mock_llm.get_client.return_value = mock_client
+        mock_agent = MagicMock()
 
-        with patch.object(runner, "_build_llm", return_value=mock_llm):
+        async def _fake_ainvoke(_input_state: dict, config: dict | None = None) -> dict:
+            await run_search_knowledge_tool(
+                tool_args={"query": "policy"},
+                knowledge_bases=[kb],
+                organization_id=ORG_ID,
+                rag=rag,
+                trace=None,
+            )
+            return {"messages": [AIMessage(content="Done")]}
+
+        mock_agent.ainvoke = _fake_ainvoke
+
+        with patch(
+            "app.domain.graph.langchain.orchestrator_agent.create_bot_agent",
+            return_value=mock_agent,
+        ):
             await runner.execute_tool_turn(
                 orchestrator=orchestrator,
                 system_prompt="You are helpful.",

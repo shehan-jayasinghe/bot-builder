@@ -1,6 +1,6 @@
 # Create Tool — `POST /api/v1/agents/{agent_id}/tools`
 
-**Agentic migration:** Phase A **Done** — `routing_hint` on create/PATCH → [08-update-tool-agent-diagrams.md](./08-update-tool-agent-diagrams.md). Phase B **no REST change**. Phase C **no REST change**. Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration:** Phase A **Done** — `routing_hint` on create/PATCH → [08-update-tool-agent-diagrams.md](./08-update-tool-agent-diagrams.md). Phase B **no REST change**. Phase C **no REST change**. Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md). **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
 
 Organization creates a **Tool** — JSON config that tells the platform which **executor** to run, which **connector** to use, and operation-specific **config**.
 

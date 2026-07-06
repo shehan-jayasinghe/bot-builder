@@ -8,6 +8,8 @@ One batch load: orchestrator + attached tools, knowledge bases, workflows, and s
 
 **Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — runtime graph unchanged. Phase C **Done** — chat RAG via `search_knowledge` tool. Phase D **Done** — sticky sub-agent graph highlight. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
+**LangChain proper (Done, no REST change):** Same endpoint and payload; chat runtime uses `create_agent()` per [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
+
 Related:
 
 - Chat runtime: [01-chat-completion-diagrams.md](./01-chat-completion-diagrams.md) Flow 4

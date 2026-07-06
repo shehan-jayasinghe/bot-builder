@@ -8,7 +8,9 @@ KB REST (attach + `routing_hint`): [../knowledgebase/01-create-knowledgebase-dia
 
 **Agentic migration (chat API):** **No** route or schema change. Phase A **Done**. Phase B **Done** (workflows). Phase C **Done** — agentic RAG at chat. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md).
 
-**Status:** Implemented — LLM-driven RAG via `search_knowledge` tool. Layer `[4] rag_context` is empty at turn start; chunks arrive as `ToolMessage` content after the model calls the tool.
+**LangChain proper (Done):** `search_knowledge` wired via `create_agent()` — [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) Step 3. REST unchanged.
+
+**Status:** Implemented — LLM-driven RAG via `search_knowledge` tool in LangChain `create_agent()` (orchestrator/sub-agent). Layer `[4] rag_context` is empty at turn start; chunks arrive as `ToolMessage` content after the model calls the tool.
 
 ---
 

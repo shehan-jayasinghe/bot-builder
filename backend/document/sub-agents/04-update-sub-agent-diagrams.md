@@ -1,6 +1,6 @@
 # Update Sub-Agent — `PATCH /api/v1/agents/{agent_id}/sub-agents/{sub_agent_id}`
 
-**Agentic migration:** Phase A **Done**. Phase B **no REST change**. Phase C **Done** — sub-agent chat RAG via `search_knowledge`. Phase D **Done** — sticky sub-agent at chat (no REST change). See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration:** Phase A **Done**. Phase B **no REST change**. Phase C **Done** — sub-agent chat RAG via `search_knowledge`. Phase D **Done** — sticky sub-agent at chat (no REST change). See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md). **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
 
 Create sub-agent: [01-create-sub-agent-diagrams.md](./01-create-sub-agent-diagrams.md)
 

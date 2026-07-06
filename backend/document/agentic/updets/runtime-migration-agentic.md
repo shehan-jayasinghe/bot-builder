@@ -10,6 +10,8 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 
 **Phase A — implemented** in code (catalog sync + `FinalPromptBuilder` at chat). Phase B **Done**. Phase C **Done**. Phase D **Done**.
 
+**Runtime stack note:** Phases A–D and **LangChain proper** are **Done**. Inner runtime: `create_agent()` + `WorkflowGraphRunner` + LangGraph session router (`chat_router_compiler.py`). See [migration-langchain-proper.md](./migration-langchain-proper.md) and [migration-chat-router-langgraph.md](./migration-chat-router-langgraph.md).
+
 ## New files
 
 | File | Purpose |

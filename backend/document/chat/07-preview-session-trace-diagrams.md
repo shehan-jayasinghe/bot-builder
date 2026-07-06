@@ -12,6 +12,8 @@ Related:
 
 **Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — `workflow_enter` trace no longer uses `reason: default_first_message`. Phase C **Done** — RAG stats on `tool_complete` for `search_knowledge`. Phase D **Done** — `sub_agent_continue` on sticky turns. See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
 
+**LangChain proper (Done, no REST change):** Trace events on Mongo `TraceCollector`; LangSmith parent run per turn — [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
+
 **Status:** Implemented.
 
 ---

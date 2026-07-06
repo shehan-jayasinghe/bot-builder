@@ -22,7 +22,7 @@ from app.domain.workflow.workflow_delegate import (
     normalize_workflow_name,
     workflow_tool_name,
 )
-from app.domain.workflow.workflow_runner import WorkflowRunner
+from app.domain.workflow.workflow_graph_runner import WorkflowGraphRunner, WorkflowReply
 from app.schemas.chat import ChatRequest
 from app.services.chat_completion_service import ChatCompletionService
 
@@ -60,7 +60,7 @@ def test_validate_slot_value_pattern() -> None:
     assert bad is False
 
 
-def test_workflow_runner_message_substitution() -> None:
+def test_workflow_graph_runner_message_substitution() -> None:
     workflow = RuntimeWorkflow(
         id=WORKFLOW_ID,
         name="greet",
@@ -75,7 +75,7 @@ def test_workflow_runner_message_substitution() -> None:
         edges=[{"id": "edge-1", "source": "start-1", "target": "message-1"}],
         status=WORKFLOW_STATUS_PUBLISHED,
     )
-    runner = WorkflowRunner()
+    runner = WorkflowGraphRunner()
     state = runner.build_initial_state(workflow)
     assert state is not None
     state["slots"] = {"customer_name": "Sam"}
@@ -92,7 +92,7 @@ def test_workflow_runner_message_substitution() -> None:
     assert result.exited is True
 
 
-def test_workflow_runner_input_prompt_then_capture() -> None:
+def test_workflow_graph_runner_input_prompt_then_capture() -> None:
     workflow = RuntimeWorkflow(
         id=WORKFLOW_ID,
         name="capture",
@@ -120,7 +120,7 @@ def test_workflow_runner_input_prompt_then_capture() -> None:
         ],
         status=WORKFLOW_STATUS_PUBLISHED,
     )
-    runner = WorkflowRunner()
+    runner = WorkflowGraphRunner()
     state = runner.build_initial_state(workflow)
     assert state is not None
 
@@ -144,7 +144,7 @@ def test_workflow_runner_input_prompt_then_capture() -> None:
     assert third.exited is True
 
 
-def test_workflow_runner_end_clears_via_chat_graph() -> None:
+def test_workflow_graph_runner_end_clears_via_chat_graph() -> None:
     workflow = RuntimeWorkflow(
         id=WORKFLOW_ID,
         name="farewell",
@@ -270,7 +270,7 @@ def test_chat_completion_preview_loads_bundle_for_preview() -> None:
         runtime_bundle_loader.load.return_value = bundle
         runtime_bundle_loader.load_connectors_for_tools.return_value = {}
 
-        from app.domain.workflow.workflow_runner import WorkflowReply
+        from app.domain.workflow.workflow_graph_runner import WorkflowReply
 
         chat_graph.run_turn.return_value = MagicMock(
             replies=[WorkflowReply(text="Welcome")],

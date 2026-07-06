@@ -21,6 +21,22 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | **B** | Remove auto-start workflow — LLM picks from catalog | **Done** — [runtime-migration-agentic-phase-b.md](./updets/runtime-migration-agentic-phase-b.md) |
 | **C** | `search_knowledge` tool; remove always-on RAG | **Done** — [runtime-migration-agentic-phase-c.md](./updets/runtime-migration-agentic-phase-c.md) |
 | **D** | Sticky sub-agent | **Done** — [runtime-migration-agentic-phase-d.md](./updets/runtime-migration-agentic-phase-d.md) |
+| **LangChain proper** | Replace manual orchestrator, tools, workflows; PIIMiddleware; LangSmith | **Done** — [migration-langchain-proper.md](./updets/migration-langchain-proper.md) |
+| **Chat router LangGraph** | `ChatGraph` session router → compiled `StateGraph` | **Done** — [migration-chat-router-langgraph.md](./updets/migration-chat-router-langgraph.md) |
+
+## Runtime stack (after migration)
+
+| Layer | Implementation |
+|-------|----------------|
+| Orchestrator + sub-agent | LangChain `create_agent()` + `PIIMiddleware` |
+| Workflows at chat | LangGraph `StateGraph` via `WorkflowGraphRunner` |
+| Outer routing | LangGraph `StateGraph` via `ChatGraph` / `chat_router_compiler.py` |
+| Tools | `StructuredTool` + agent `ToolNode` |
+| PII | LangChain `PIIMiddleware` (built-in email, credit_card) |
+| Dev trace | LangSmith parent run per turn | `chat_turn_tracing` in [langsmith_tracing.py](../../app/infrastructure/ai/langsmith_tracing.py) |
+| Builder trace | Mongo `TraceCollector` |
+
+See [migration-langchain-proper.md](./updets/migration-langchain-proper.md) for the **single migration plan** (code + docs checklist).
 
 ## Docs
 
@@ -34,6 +50,8 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | [updets/runtime-migration-agentic-phase-c.md](./updets/runtime-migration-agentic-phase-c.md) | **Phase C runtime** — remove always-on RAG |
 | [updets/api-migration-agentic-phase-d.md](./updets/api-migration-agentic-phase-d.md) | **Phase D** — sticky sub-agent (**Done**) |
 | [updets/runtime-migration-agentic-phase-d.md](./updets/runtime-migration-agentic-phase-d.md) | **Phase D runtime** — persist sub-agent across turns |
+| [updets/migration-langchain-proper.md](./updets/migration-langchain-proper.md) | **Single plan** — manual runtime → LangChain/LangGraph proper |
+| [updets/migration-chat-router-langgraph.md](./updets/migration-chat-router-langgraph.md) | **Chat router** — `ChatGraph` → LangGraph conditional router |
 
 ## API docs by resource
 

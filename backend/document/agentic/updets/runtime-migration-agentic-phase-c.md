@@ -10,11 +10,13 @@
 
 **Phase C — Done** (implemented in code).
 
+**Runtime stack note:** RAG runs inside LangChain `create_agent()` via `search_knowledge` tool + routing middleware (`OrchestratorRunner` / `SubAgentRunner` → `run_tool_agent_turn`). **LangChain proper (Done):** [migration-langchain-proper.md](./migration-langchain-proper.md).
+
 ---
 
-## Problem
+## Problem (before Phase C — fixed)
 
-Today `ChatCompletionService` **always** retrieves knowledge before the orchestrator runs:
+Before Phase C, `ChatCompletionService` **always** retrieved knowledge before the orchestrator ran:
 
 ```text
 user message + orchestrator KBs[] → RAGRetriever.retrieve() → layer [4] rag_context in system prompt
@@ -22,19 +24,19 @@ user message + orchestrator KBs[] → RAGRetriever.retrieve() → layer [4] rag_
 
 That ignores capability catalog `routing_hint` and spends retrieval cost on every turn even when the LLM does not need KB context.
 
-**Exception today:** RAG is skipped when `tracker.active_flow_state` is set (Phase B).
+**Exception (before Phase C):** RAG was skipped when `tracker.active_flow_state` was set (Phase B).
 
-**Sub-agent path:** `OrchestratorRunner.run_turn` still auto-calls `rag.retrieve()` when delegating to a sub-agent with KBs — same always-on pattern.
+**Sub-agent path (before Phase C):** `OrchestratorRunner.run_turn` auto-called `rag.retrieve()` when delegating to a sub-agent with KBs — same always-on pattern. **Removed in Phase C.**
 
 ---
 
-## Target behavior
+## Current behavior (Phase C — Done)
 
 ```mermaid
 flowchart TB
     MSG[User message]
     MSG --> FLOW{active_flow_state?}
-    FLOW -->|yes| WF[WorkflowRunner — no pre-turn RAG]
+    FLOW -->|yes| WF[WorkflowGraphRunner — no pre-turn RAG]
     FLOW -->|no| ORCH[OrchestratorRunner]
     ORCH --> PROMPT[Layers 1–3 only — no rag_context]
     ORCH --> TOOLS[search_knowledge + executor + delegate + workflow_*]
@@ -44,18 +46,18 @@ flowchart TB
     ORCH -->|text reply| REPLY[Assistant reply]
 ```
 
-| RAG trigger | When | After Phase C |
+| RAG trigger | When | Current (Done) |
 |-------------|------|---------------|
-| Pre-turn always-on | Every orchestrator turn with KBs | **Remove** |
+| Pre-turn always-on | Every orchestrator turn with KBs | **Removed** |
 | `search_knowledge` tool | LLM chooses to search | **Primary** |
 | In-workflow skip | `active_flow_state` set | **Keep** — no pre-turn RAG |
-| Sub-agent auto prefetch | On delegate enter | **Remove** — `search_knowledge` on `SubAgentRunner` turn (required) |
+| Sub-agent auto prefetch | On delegate enter | **Removed** — `search_knowledge` on `SubAgentRunner` turn |
 
 ---
 
-## Code changes
+## Code changes (implemented)
 
-### 1. `app/domain/graph/search_knowledge_delegate.py` — required (new)
+### 1. `app/domain/graph/search_knowledge_delegate.py`
 
 Mirror [workflow_delegate.py](../../app/domain/workflow/workflow_delegate.py) for **tool registration only** — use a **stub coroutine** (like `workflow_*`). Real retrieval runs in `OrchestratorRunner.execute_tool_turn`, **not** in the stub (same pattern as executor tools, unlike `workflow_*` which early-returns).
 
@@ -91,7 +93,7 @@ In `execute_tool_turn`, when `tool_name == "search_knowledge"`: call `RAGRetriev
 | **Simplify** | `skip_rag = in_workflow` — **trace-only** after Phase C (emit `rag_skipped` when in workflow or no KBs; no retrieval either way) |
 | **Keep** | Pass `rag=self._rag` into `chat_graph.run_turn` for tool execution inside orchestrator |
 
-Today (post–Phase B):
+Before Phase C (removed):
 
 ```python
 if skip_rag or not kb_list:
@@ -101,11 +103,11 @@ else:
     rag_context = rag_result.context
 ```
 
-After Phase C:
+Current (implemented):
 
 ```python
 rag_context = ""  # layer [4] empty; chunks only via search_knowledge ToolMessage
-# skip_rag still gates rag_skipped trace when in_workflow or not kb_list
+# emit rag_skipped trace when in_workflow or not kb_list (trace-only; no retrieval)
 ```
 
 ### 3. `app/domain/graph/orchestrator.py` — required
@@ -150,14 +152,12 @@ Layer [4] remains supported for explicit `rag_context` but chat passes empty str
 | `vector_search.py` / `keyword_search.py` | Unchanged |
 | `capability_catalog_builder.py` | Layer [3] already lists KBs + hints |
 | `knowledgebase_service.py` | REST/catalog already Phase A |
-| `workflow_runner.py` | Workflows unchanged |
+| `workflow_graph_runner.py` | Workflows unchanged |
 | `chat_graph.py` | Still passes `rag` through to orchestrator |
 
 ---
 
-## Prompt layers (orchestrator turn)
-
-After Phase C:
+## Prompt layers (orchestrator turn — current)
 
 ```text
 [1] system_prompt + personality/tone
@@ -209,10 +209,11 @@ Agents that depended on **silent always-on RAG** will answer without KB context 
 
 ---
 
-## After Phase C
+## Next phases
 
-| Phase | Next |
-|-------|------|
-| **D** | Sticky sub-agent handover | [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| Phase | Status | Doc |
+|-------|--------|-----|
+| **D** | **Done** — sticky sub-agent | [runtime-migration-agentic-phase-d.md](./runtime-migration-agentic-phase-d.md) |
+| **LangChain proper** | **Done** — `create_agent()`, compiled workflows, PIIMiddleware | [migration-langchain-proper.md](./migration-langchain-proper.md) |
 
 Master index: [../00-overview.md](../00-overview.md)

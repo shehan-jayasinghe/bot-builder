@@ -8,6 +8,8 @@
 
 **Status:** **Done** (implemented in code).
 
+**Runtime stack note:** `search_knowledge` runs inside LangChain `create_agent()` via routing middleware. **LangChain proper (Done):** [migration-langchain-proper.md](./migration-langchain-proper.md). **No REST change.**
+
 ---
 
 ## Summary
@@ -24,7 +26,7 @@ Phase C is **runtime-only**. No new URLs, no Pydantic changes.
 
 ## What changes at chat (not REST)
 
-| Today (post–Phase B) | After Phase C |
+| Before Phase C | Current (Done) |
 |----------------------|---------------|
 | `chat_completion_service` calls `RAGRetriever.retrieve()` before orchestrator when KBs attached | No pre-turn RAG; `FinalPromptBuilder` layer [4] empty at turn start |
 | Layer [4] `rag_context` in system prompt every orchestrator turn | Retrieved chunks returned via `search_knowledge` **tool message** in LLM loop |
@@ -35,7 +37,7 @@ Phase C is **runtime-only**. No new URLs, no Pydantic changes.
 LLM routing uses **existing** Phase A pieces:
 
 - Layer **[3]** capability catalog (KB `routing_hint` + name/description)
-- New `search_knowledge` LangGraph tool when orchestrator has attached KBs
+- New `search_knowledge` LangChain `StructuredTool` when orchestrator has attached KBs
 
 ---
 
@@ -102,7 +104,7 @@ Doc: [../../knowledgebase/01-create-knowledgebase-diagrams.md](../../knowledgeba
 | Component | Change |
 |-----------|--------|
 | `app/services/chat_completion_service.py` | **Remove** always-on `RAGRetriever.retrieve()` for orchestrator path; pass `rag_context=""` to `FinalPromptBuilder` |
-| `app/domain/graph/search_knowledge_delegate.py` | **Add** — `build_search_knowledge_tool()` LangGraph tool (stub coroutine; real logic in `execute_tool_turn`) |
+| `app/domain/graph/search_knowledge_delegate.py` | **Add** — `build_search_knowledge_tool()` LangChain `StructuredTool` (stub coroutine; real logic in `execute_tool_turn`) |
 | `app/domain/graph/orchestrator.py` | Register `search_knowledge` when orchestrator has KBs; invoke `RAGRetriever` in `execute_tool_turn`; remove auto sub-agent RAG prefetch |
 | `app/domain/graph/sub_agent_delegate.py` | **Update** `SubAgentRunner.run_turn` — register `search_knowledge` when sub-agent has KBs; stop pre-fetched `rag_context` in prompt |
 | `app/domain/pipeline/prompt/final_prompt_builder.py` | Layer [4] only when explicitly passed (empty at turn start after Phase C) |

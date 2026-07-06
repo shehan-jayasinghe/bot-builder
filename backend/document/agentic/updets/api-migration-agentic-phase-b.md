@@ -8,6 +8,8 @@
 
 **Status:** **Done** (implemented in code).
 
+**Runtime stack note:** Phase B **Done**. Workflows via `WorkflowGraphRunner`; orchestrator via `create_agent()`. **LangChain proper (Done, no REST change):** [migration-langchain-proper.md](./migration-langchain-proper.md).
+
 ---
 
 ## Summary
@@ -24,7 +26,7 @@ Phase B is **runtime-only**. No new URLs, no Pydantic changes.
 
 ## What changes at chat (not REST)
 
-| Today (pre–Phase B) | After Phase B |
+| Before Phase B | Current (Done) |
 |---------------------|---------------|
 | First user message **auto-starts** `workflows[0]` (`default_first_message`) | Orchestrator runs; LLM may call `workflow_<name>` tool |
 | `workflow_enter` trace reason `default_first_message` | Only `orchestrator_tool` or `active_state` |

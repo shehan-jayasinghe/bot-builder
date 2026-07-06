@@ -12,10 +12,15 @@ class TraceCollector:
         self._started_at: str | None = None
         self._pending_events: list[dict[str, Any]] = []
 
-    def begin_turn(self) -> None:
+    def begin_turn(self) -> str:
         self._turn_id = uuid4().hex
         self._started_at = datetime.now(UTC).isoformat()
         self._pending_events = []
+        return self._turn_id
+
+    @property
+    def turn_id(self) -> str | None:
+        return self._turn_id
 
     def bind_tracker(self, tracker: Tracker) -> None:
         self._tracker = tracker

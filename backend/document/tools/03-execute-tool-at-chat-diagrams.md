@@ -6,7 +6,9 @@ This is **not** a REST endpoint for org users — it runs inside `ChatCompletion
 
 Executor catalog: [00-executor-catalog.md](./00-executor-catalog.md)
 
-**Agentic migration (REST):** Phase A **Done** — `routing_hint` on tools. Phase B **no REST change** (workflows only). Phase C **Done** (RAG at chat via `search_knowledge` tool). Phase D **no REST change**. See [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration (REST):** Phase A **Done** — `routing_hint` on tools. Phase B–D **no REST change**. **LangChain proper (Done):** tools via LangChain agent `ToolNode` — [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
+
+**Runtime:** LangChain `create_agent()` in `OrchestratorRunner.execute_tool_turn` → [orchestrator_agent.py](../../app/domain/graph/langchain/orchestrator_agent.py). Tools run through agent `ToolNode`.
 
 ---
 
@@ -34,7 +36,7 @@ flowchart TB
         L1 --> L2 --> L3
     end
 
-    LOAD --> LLM[Bedrock — tool-calling]
+    LOAD --> LLM[Bedrock — LangChain create_agent tool calling]
 
     LLM -->|no tool| REPLY[OrchestratorRunner — text reply]
     LLM -->|tool call| EXEC

@@ -12,8 +12,7 @@ from app.domain.pipeline.guardrails.runner import GuardrailRunner
 from app.domain.pipeline.observability.trace import TraceCollector
 from app.domain.pipeline.prompt.final_prompt_builder import FinalPromptBuilder
 from app.domain.pipeline.rag.retriever import RAGRetriever
-from app.domain.pipeline.sanitization.pii_redactor import redact_pii
-from app.infrastructure.ai.langsmith_tracing import LlmTracingContext
+from app.infrastructure.ai.langsmith_tracing import LlmTracingContext, chat_turn_tracing
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.schemas.chat import ChatButton, ChatMessage, ChatRequest, ChatResponse
 from app.services.assistant_loader import AssistantLoader
@@ -102,7 +101,7 @@ class ChatCompletionService:
         source: str,
     ) -> ChatResponse:
         agent_id = str(agent_doc["_id"])
-        self._trace.begin_turn()
+        turn_id = self._trace.begin_turn()
 
         await self._trace.record(
             "input_message",
@@ -132,15 +131,14 @@ class ChatCompletionService:
             },
         )
 
-        sanitized_message = redact_pii(request.message)
         guardrail_result = await self._guardrails.check(
-            user_message=sanitized_message,
+            user_message=request.message,
             guardrails=bundle.orchestrator.guardrails,
         )
         if not guardrail_result.allowed:
             await self._trace.record("guardrail_blocked", {})
             replies = [guardrail_result.refusal_message or GUARDRAIL_REFUSAL_MESSAGE]
-            tracker.append_user_message(message=sanitized_message, metadata=request.metadata)
+            tracker.append_user_message(message=request.message, metadata=request.metadata)
             routing = {"mode": "orchestrator", "blocked": True}
             tracker.set_routing_decision(agent_id=agent_id, kind="orchestrator", decision=routing)
             await self._trace.record(
@@ -155,7 +153,7 @@ class ChatCompletionService:
 
         await self._trace.record("guardrail_complete", {})
 
-        tracker.append_user_message(message=sanitized_message, metadata=request.metadata)
+        tracker.append_user_message(message=request.message, metadata=request.metadata)
         await self._tracker_service.save_session(tracker)
 
         in_workflow = tracker.active_flow_state is not None
@@ -185,18 +183,20 @@ class ChatCompletionService:
             organization_id=str(agent_doc["organization_id"]),
             model_id=llm_config.model_id if llm_config else None,
             region=llm_config.region if llm_config else None,
+            turn_id=turn_id,
         )
 
-        turn_result = await self._chat_graph.run_turn(
-            bundle=bundle,
-            tracker=tracker,
-            user_message=sanitized_message,
-            system_prompt=final_prompt,
-            connectors_by_id=connectors_by_id,
-            tracing_context=tracing_context,
-            rag=self._rag,
-            trace=self._trace.record,
-        )
+        async with chat_turn_tracing(tracing_context, user_message=request.message):
+            turn_result = await self._chat_graph.run_turn(
+                bundle=bundle,
+                tracker=tracker,
+                user_message=request.message,
+                system_prompt=final_prompt,
+                connectors_by_id=connectors_by_id,
+                tracing_context=tracing_context,
+                rag=self._rag,
+                trace=self._trace.record,
+            )
         replies = turn_result.replies
         routing = turn_result.routing
 

@@ -1,11 +1,16 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
+from app.domain.graph.chat_router_compiler import compile_chat_router_graph
 from app.domain.graph.orchestrator import OrchestratorRunner
 from app.domain.graph.sub_agent_delegate import SubAgentRunner
 from app.domain.models.runtime_bundle import RuntimeBundle, RuntimeWorkflow
 from app.domain.models.tracker import Tracker
-from app.domain.workflow.workflow_runner import WorkflowReply, WorkflowRunner, WorkflowTurnResult
+from app.domain.workflow.workflow_graph_runner import (
+    WorkflowGraphRunner,
+    WorkflowReply,
+    WorkflowTurnResult,
+)
 from app.infrastructure.ai.langsmith_tracing import LlmTracingContext
 
 if TYPE_CHECKING:
@@ -20,15 +25,31 @@ class ChatGraphResult:
     routing: dict[str, Any] = field(default_factory=lambda: {"mode": "orchestrator"})
 
 
+@dataclass
+class _ChatTurnContext:
+    bundle: RuntimeBundle
+    tracker: Tracker
+    user_message: str
+    system_prompt: str
+    connectors_by_id: dict[str, dict[str, Any]]
+    tracing_context: LlmTracingContext | None
+    rag: "RAGRetriever | None"
+    trace: TraceCallback | None
+    workflow_enter: RuntimeWorkflow | None = None
+    workflow_enter_reason: str = "orchestrator_tool"
+
+
 class ChatGraph:
     def __init__(
         self,
         *,
         orchestrator: OrchestratorRunner | None = None,
-        workflow_runner: WorkflowRunner | None = None,
+        workflow_graph_runner: WorkflowGraphRunner | None = None,
     ) -> None:
         self._orchestrator = orchestrator or OrchestratorRunner()
-        self._workflow_runner = workflow_runner or WorkflowRunner()
+        self._workflow_graph_runner = workflow_graph_runner or WorkflowGraphRunner()
+        self._turn: _ChatTurnContext | None = None
+        self._compiled_router = compile_chat_router_graph(self)
 
     async def run_turn(
         self,
@@ -42,34 +63,7 @@ class ChatGraph:
         rag: "RAGRetriever | None" = None,
         trace: TraceCallback | None = None,
     ) -> ChatGraphResult:
-        flow_state = tracker.active_flow_state
-        if flow_state is not None:
-            workflow = bundle.find_workflow_by_id(str(flow_state.get("workflow_id", "")))
-            if workflow is None:
-                tracker.clear_flow_state()
-            else:
-                return await self._run_workflow_turn(
-                    workflow=workflow,
-                    tracker=tracker,
-                    user_message=user_message,
-                    enter_reason="active_state",
-                    trace=trace,
-                )
-
-        if tracker.active_agent_kind == "sub_agent":
-            sticky_result = await self._run_sticky_sub_agent_turn(
-                bundle=bundle,
-                tracker=tracker,
-                user_message=user_message,
-                connectors_by_id=connectors_by_id,
-                tracing_context=tracing_context,
-                rag=rag,
-                trace=trace,
-            )
-            if sticky_result is not None:
-                return sticky_result
-
-        turn_result = await self._orchestrator.run_turn(
+        self._turn = _ChatTurnContext(
             bundle=bundle,
             tracker=tracker,
             user_message=user_message,
@@ -79,26 +73,118 @@ class ChatGraph:
             rag=rag,
             trace=trace,
         )
+        try:
+            final_state = await self._compiled_router.ainvoke(
+                {"finished": False, "needs_workflow_enter": False},
+            )
+            result = final_state.get("result")
+            if isinstance(result, ChatGraphResult):
+                return result
+            return ChatGraphResult()
+        finally:
+            self._turn = None
+
+    def route_session(self) -> str:
+        turn = self._require_turn()
+        flow_state = turn.tracker.active_flow_state
+        if flow_state is not None:
+            workflow = turn.bundle.find_workflow_by_id(str(flow_state.get("workflow_id", "")))
+            if workflow is None:
+                turn.tracker.clear_flow_state()
+            else:
+                return "active_workflow"
+        if turn.tracker.active_agent_kind == "sub_agent":
+            return "sticky_sub_agent"
+        return "orchestrator"
+
+    async def run_active_workflow_path(self) -> dict[str, Any]:
+        turn = self._require_turn()
+        flow_state = turn.tracker.active_flow_state
+        if flow_state is None:
+            return {"finished": True, "result": ChatGraphResult()}
+
+        workflow = turn.bundle.find_workflow_by_id(str(flow_state.get("workflow_id", "")))
+        if workflow is None:
+            turn.tracker.clear_flow_state()
+            return {"finished": False}
+
+        result = await self._run_workflow_turn(
+            workflow=workflow,
+            tracker=turn.tracker,
+            user_message=turn.user_message,
+            enter_reason="active_state",
+            trace=turn.trace,
+        )
+        return {"finished": True, "result": result}
+
+    async def run_sticky_sub_agent_path(self) -> dict[str, Any]:
+        turn = self._require_turn()
+        sticky_result = await self._run_sticky_sub_agent_turn(
+            bundle=turn.bundle,
+            tracker=turn.tracker,
+            user_message=turn.user_message,
+            connectors_by_id=turn.connectors_by_id,
+            tracing_context=turn.tracing_context,
+            rag=turn.rag,
+            trace=turn.trace,
+        )
+        if sticky_result is None:
+            return {"finished": False}
+        return {"finished": True, "result": sticky_result}
+
+    async def run_orchestrator_path(self) -> dict[str, Any]:
+        turn = self._require_turn()
+        turn_result = await self._orchestrator.run_turn(
+            bundle=turn.bundle,
+            tracker=turn.tracker,
+            user_message=turn.user_message,
+            system_prompt=turn.system_prompt,
+            connectors_by_id=turn.connectors_by_id,
+            tracing_context=turn.tracing_context,
+            rag=turn.rag,
+            trace=turn.trace,
+        )
 
         if turn_result.workflow_enter is not None:
-            return await self._enter_and_run_workflow(
-                workflow=turn_result.workflow_enter.workflow,
-                tracker=tracker,
-                user_message=user_message,
-                enter_reason="orchestrator_tool",
-                trace=trace,
-            )
+            turn.workflow_enter = turn_result.workflow_enter.workflow
+            turn.workflow_enter_reason = "orchestrator_tool"
+            return {"finished": False, "needs_workflow_enter": True}
 
         if turn_result.delegation is not None:
-            return ChatGraphResult(
+            return {
+                "finished": True,
+                "result": ChatGraphResult(
+                    replies=[WorkflowReply(text=reply) for reply in turn_result.replies],
+                    routing=turn_result.routing,
+                ),
+            }
+
+        return {
+            "finished": True,
+            "result": ChatGraphResult(
                 replies=[WorkflowReply(text=reply) for reply in turn_result.replies],
                 routing=turn_result.routing,
-            )
+            ),
+        }
 
-        return ChatGraphResult(
-            replies=[WorkflowReply(text=reply) for reply in turn_result.replies],
-            routing=turn_result.routing,
+    async def run_workflow_enter_path(self) -> dict[str, Any]:
+        turn = self._require_turn()
+        if turn.workflow_enter is None:
+            return {"finished": True, "result": ChatGraphResult()}
+
+        result = await self._enter_and_run_workflow(
+            workflow=turn.workflow_enter,
+            tracker=turn.tracker,
+            user_message=turn.user_message,
+            enter_reason=turn.workflow_enter_reason,
+            trace=turn.trace,
         )
+        return {"finished": True, "result": result}
+
+    def _require_turn(self) -> _ChatTurnContext:
+        if self._turn is None:
+            raise RuntimeError("ChatGraph turn context is not set")
+        return self._turn
 
     async def _run_sticky_sub_agent_turn(
         self,
@@ -161,7 +247,7 @@ class ChatGraph:
         enter_reason: str,
         trace: TraceCallback | None,
     ) -> ChatGraphResult:
-        initial_state = self._workflow_runner.build_initial_state(workflow)
+        initial_state = self._workflow_graph_runner.build_initial_state(workflow)
         if initial_state is None:
             return ChatGraphResult(
                 replies=[WorkflowReply(text="This workflow is not configured correctly.")],
@@ -205,7 +291,7 @@ class ChatGraph:
                 routing={"mode": "orchestrator"},
             )
 
-        result = await self._workflow_runner.run_turn(
+        result = await self._workflow_graph_runner.run_turn(
             workflow=workflow,
             state=state,
             user_message=user_message,

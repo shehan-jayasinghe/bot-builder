@@ -9,7 +9,7 @@ Admin **Preview** chat (right panel). Same inference as [01-chat-completion-diag
 
 Public widget continues to use `POST /api/v1/chat/webhook/{webhook_id}`.
 
-**Agentic migration:** Phase A **Done** — no route/schema change. Phase B **Done** — same URLs; runtime no longer auto-starts workflows on first message. Phase C **Done** — agentic `search_knowledge` RAG. Phase D **Done** — sticky sub-agent (no REST change). See [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md).
+**Agentic migration:** Phase A **Done** — no route/schema change. Phase B–D **Done**. **LangChain proper (Done):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) — same URLs; runtime moves to `create_agent()` + compiled workflow graph.
 
 **Status:** Implemented.
 
@@ -64,11 +64,10 @@ flowchart TB
     TRK --> BUNDLE[RuntimeBundleLoader.load]
     BUNDLE --> PIPE[ChatCompletionService — preview flag]
 
-    PIPE --> SAN[PII redact]
-    SAN --> GUARD[Guardrails]
+    PIPE --> GUARD[Guardrails]
     GUARD -->|block| REFUSE[Refusal text]
-    GUARD --> ORCH[OrchestratorRunner + tools]
-    ORCH --> PERSIST[persist tracker + trace]
+    GUARD --> GRAPH[ChatGraph — LangGraph session router]
+    GRAPH --> PERSIST[persist tracker + trace]
 
     PERSIST --> RES[200 ChatResponse]
     REFUSE --> PERSIST
@@ -77,8 +76,9 @@ flowchart TB
 | Step | Same as webhook? |
 |------|------------------|
 | RuntimeBundle | yes |
-| Sanitize + guardrails | yes |
-| Orchestrator + tools | yes |
+| Sanitize + guardrails | guardrails only — PII via agent `PIIMiddleware` |
+| ChatGraph routing | yes — same LangGraph session router as webhook |
+| Orchestrator + tools | yes — LangChain `create_agent()` |
 | RAG | yes when Phase 3 done |
 | Channel / webhook resolve | **no** — agent from path |
 | Friendly 200 on missing agent | **no** — return `404` for admin |

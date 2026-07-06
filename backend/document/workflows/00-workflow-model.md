@@ -4,6 +4,8 @@ Shared shape for workflow documents in MongoDB, REST schemas, and runtime (`Runt
 
 REST: [01-create-workflow-diagrams.md](./01-create-workflow-diagrams.md) · runtime at chat: [../chat/04-workflow-runtime-at-chat-diagrams.md](../chat/04-workflow-runtime-at-chat-diagrams.md)
 
+**Runtime:** [workflow_graph_compiler.py](../../app/domain/workflow/workflow_graph_compiler.py) + [workflow_graph_runner.py](../../app/domain/workflow/workflow_graph_runner.py) compile `nodes` + `edges` to LangGraph `StateGraph`. Mongo schema and REST **unchanged**.
+
 ---
 
 ## Document fields
@@ -31,7 +33,7 @@ Each node in `nodes[]`:
 | Field | Type | Notes |
 |-------|------|--------|
 | `id` | string | Unique within workflow |
-| `type` | string | Runtime handler in [workflow_runner.py](../../app/domain/workflow/workflow_runner.py) |
+| `type` | string | Runtime handler — [workflow_graph_compiler.py](../../app/domain/workflow/workflow_graph_compiler.py) |
 | `position` | object | Canvas `{ x, y }` — not used at runtime |
 | `data` | object | Type-specific payload |
 
@@ -60,4 +62,4 @@ Set when a workflow enters; cleared on `end` or exit.
 | `slots` | `dict` of captured slot values |
 | `awaiting_slot` | Slot name when waiting for user input on an `input` node |
 
-Runner: [workflow_runner.py](../../app/domain/workflow/workflow_runner.py) · graph routing: [chat_graph.py](../../app/domain/graph/chat_graph.py)
+Runner: [workflow_graph_runner.py](../../app/domain/workflow/workflow_graph_runner.py) · outer routing: [chat_graph.py](../../app/domain/graph/chat_graph.py) · [migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md) (**Done**)

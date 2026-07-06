@@ -36,6 +36,7 @@ def test_build_llm_run_config_includes_metadata_and_tags(monkeypatch) -> None:
             organization_id="org-1",
             model_id="amazon.nova-lite-v1:0",
             region="us-east-1",
+            turn_id="turn-abc",
         ),
     )
 
@@ -49,4 +50,5 @@ def test_build_llm_run_config_includes_metadata_and_tags(monkeypatch) -> None:
         "organization_id": "org-1",
         "model_id": "amazon.nova-lite-v1:0",
         "region": "us-east-1",
+        "turn_id": "turn-abc",
     }
