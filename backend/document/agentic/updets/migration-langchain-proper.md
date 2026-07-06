@@ -298,16 +298,18 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 | `domain/pipeline/safety/` | Custom regex PII — replaced by LangChain `PIIMiddleware` |
 | `domain/pipeline/sanitization/` | `pii_redactor.py` removed |
 | `domain/pipeline/skills/` | Empty unused directory |
+| `GuardrailRunner._SECRET_REQUEST_PATTERN` | Regex `no_secrets` hard-block — removed; policy via prompt + `PIIMiddleware` |
 
 ---
 
 ## Out of scope (separate future work)
 
-- NVIDIA NeMo Guardrails
 - RAGAS agent evaluation
 - Per-agent PII config on Mongo agent doc (optional follow-up)
 - LangSmith data in preview UI
 - Frontend changes
+
+**NeMo Guardrails (Phase 0 done, off by default):** see [migration-nemo-guardrails.md](./migration-nemo-guardrails.md).
 
 ---
 
@@ -316,6 +318,7 @@ LangSmith = developer UI at smith.langchain.com. Preview trace = Mongo (unchange
 | Layer | Implementation |
 |-------|----------------|
 | HTTP entry | `ChatCompletionService` |
+| Intent gate (optional) | NeMo `check_async` + local scripted intents — [migration-nemo-guardrails.md](./migration-nemo-guardrails.md) |
 | Safety (PII) | LangChain `PIIMiddleware` on `create_agent()` |
 | Prompt | `FinalPromptBuilder` layers [1]–[4] |
 | Outer router | LangGraph `StateGraph` via `chat_router_compiler.py` |

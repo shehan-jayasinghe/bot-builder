@@ -153,7 +153,9 @@ Authorization: Bearer <clerk_jwt>
 |--------|------|----------------|
 | `input_message` | User message received | **Input Message** |
 | `guardrail_complete` | Policy check passed | **LLM Request** → `guardrail_complete` |
-| `guardrail_blocked` | Policy refusal | **LLM Request** → blocked |
+| `nemo_scripted_reply` | NeMo on; greeting/help/bye — no orchestrator LLM | **Output Message** (early return) |
+| `nemo_intent_blocked` | NeMo on; input rail refused message | **LLM Request** → blocked |
+| `guardrail_blocked` | Generic hard-block when NeMo off (reserved — not emitted today) | **LLM Request** → blocked |
 | `bundle_loaded` | RuntimeBundle ready | *(optional — dev detail)* |
 | `rag_skipped` | No KBs on agent or turn is in active workflow | **LLM Request** → `rag_skipped` |
 | `tool_start` | Tool invoked (`search_knowledge` or executor — executor trace planned) | **Tool Start** → tool name |

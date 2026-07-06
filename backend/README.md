@@ -38,7 +38,7 @@ app/
 
 | Module | File | Trace event |
 |--------|------|-------------|
-| Guardrails | `domain/pipeline/guardrails/runner.py` | `guardrail_complete` |
+| Guardrails (prompt layer [2]) | `domain/pipeline/guardrails/runner.py` — `build_instructions`; optional NeMo intent gate via `nemo_intent_gate.py` | `guardrail_complete`; `nemo_scripted_reply` / `nemo_intent_blocked` when `NEMO_GUARDRAILS_ENABLED=true` |
 | PII | `domain/graph/langchain/pii_middleware.py` → `agent_factory.py` | (LangChain middleware — no Mongo trace event) |
 | RAG | `domain/graph/search_knowledge_delegate.py` + routing middleware | `tool_start` / `tool_complete` for `search_knowledge`; `rag_skipped` when no KBs or in workflow |
 | Trace | `domain/pipeline/observability/trace.py` | all events |
@@ -47,6 +47,7 @@ app/
 
 | Component | Implementation |
 |-----------|----------------|
+| Intent gate (optional) | NeMo — `NEMO_GUARDRAILS_ENABLED` (default off); see [migration-nemo-guardrails.md](document/agentic/updets/migration-nemo-guardrails.md) |
 | Outer routing | LangGraph `StateGraph` via `ChatGraph` / `chat_router_compiler.py` |
 | Orchestrator + sub-agent | LangChain `create_agent()` + `PIIMiddleware` |
 | Workflows at chat | LangGraph `StateGraph` via `WorkflowGraphRunner` |
@@ -69,4 +70,5 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Swagger: http://localhost:8000/docs
 - Health: http://localhost:8000/api/v1/health
 - Agentic migration (API + runtime): [document/agentic/00-overview.md](document/agentic/00-overview.md) — Phases A–D **Done**
-- LangChain proper migration (single plan): [document/agentic/updets/migration-langchain-proper.md](document/agentic/updets/migration-langchain-proper.md) — **planned**
+- LangChain proper migration (single plan): [document/agentic/updets/migration-langchain-proper.md](document/agentic/updets/migration-langchain-proper.md) — **Done**
+- NeMo Guardrails (Phase 0): [document/agentic/updets/migration-nemo-guardrails.md](document/agentic/updets/migration-nemo-guardrails.md) — **Done** (off by default)

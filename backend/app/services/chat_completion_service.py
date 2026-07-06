@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from app.config import settings
 from app.domain.constants.chat_constants import (
     ASSISTANT_UNAVAILABLE_MESSAGE,
     GENERIC_ERROR_MESSAGE,
@@ -134,9 +135,29 @@ class ChatCompletionService:
         guardrail_result = await self._guardrails.check(
             user_message=request.message,
             guardrails=bundle.orchestrator.guardrails,
+            skip_nemo=tracker.active_flow_state is not None,
         )
+        if guardrail_result.scripted_reply:
+            await self._trace.record("nemo_scripted_reply", {})
+            replies = [guardrail_result.scripted_reply]
+            tracker.append_user_message(message=request.message, metadata=request.metadata)
+            routing = {"mode": "orchestrator", "scripted": True}
+            tracker.set_routing_decision(agent_id=agent_id, kind="orchestrator", decision=routing)
+            await self._trace.record(
+                "output_message",
+                _output_message_trace_data(replies),
+            )
+            self._trace.finish_turn(routing_decision=routing)
+            await self._tracker_service.persist(tracker, replies)
+            return ChatResponse(
+                messages=[ChatMessage(recipient_id=request.sender_id, text=replies[0])],
+            )
+
         if not guardrail_result.allowed:
-            await self._trace.record("guardrail_blocked", {})
+            blocked_event = (
+                "nemo_intent_blocked" if settings.nemo_guardrails_enabled else "guardrail_blocked"
+            )
+            await self._trace.record(blocked_event, {})
             replies = [guardrail_result.refusal_message or GUARDRAIL_REFUSAL_MESSAGE]
             tracker.append_user_message(message=request.message, metadata=request.metadata)
             routing = {"mode": "orchestrator", "blocked": True}

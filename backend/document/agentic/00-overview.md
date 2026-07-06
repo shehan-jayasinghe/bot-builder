@@ -7,7 +7,7 @@ Migration to LLM-driven routing via **capability catalog** and **final prompt** 
 | # | Layer | Source |
 |---|--------|--------|
 | 1 | `system_prompt` | Base role/responsibilities on agent doc; personality/tone added at chat by `FinalPromptBuilder` |
-| 2 | `guardrail_instructions` | `GuardrailRunner` |
+| 2 | `guardrail_instructions` | `GuardrailRunner.build_instructions()` (prompt layer); optional NeMo intent gate when `NEMO_GUARDRAILS_ENABLED=true` |
 | 3 | `capability_catalog` | `agent.capability_catalog` + live `RuntimeBundle` |
 | 4 | `rag_context` | `search_knowledge` LLM tool only (Phase C **Done**) |
 
@@ -23,11 +23,13 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | **D** | Sticky sub-agent | **Done** — [runtime-migration-agentic-phase-d.md](./updets/runtime-migration-agentic-phase-d.md) |
 | **LangChain proper** | Replace manual orchestrator, tools, workflows; PIIMiddleware; LangSmith | **Done** — [migration-langchain-proper.md](./updets/migration-langchain-proper.md) |
 | **Chat router LangGraph** | `ChatGraph` session router → compiled `StateGraph` | **Done** — [migration-chat-router-langgraph.md](./updets/migration-chat-router-langgraph.md) |
+| **NeMo Guardrails** | Intent gate (scripted greeting/help/bye, input self-check) — off by default | **Phase 0 Done** — [migration-nemo-guardrails.md](./updets/migration-nemo-guardrails.md) |
 
 ## Runtime stack (after migration)
 
 | Layer | Implementation |
 |-------|----------------|
+| Intent gate (optional) | NeMo `check_async` + local scripted intents — `NEMO_GUARDRAILS_ENABLED` (default off) |
 | Orchestrator + sub-agent | LangChain `create_agent()` + `PIIMiddleware` |
 | Workflows at chat | LangGraph `StateGraph` via `WorkflowGraphRunner` |
 | Outer routing | LangGraph `StateGraph` via `ChatGraph` / `chat_router_compiler.py` |
@@ -52,6 +54,7 @@ See [migration-langchain-proper.md](./updets/migration-langchain-proper.md) for 
 | [updets/runtime-migration-agentic-phase-d.md](./updets/runtime-migration-agentic-phase-d.md) | **Phase D runtime** — persist sub-agent across turns |
 | [updets/migration-langchain-proper.md](./updets/migration-langchain-proper.md) | **Single plan** — manual runtime → LangChain/LangGraph proper |
 | [updets/migration-chat-router-langgraph.md](./updets/migration-chat-router-langgraph.md) | **Chat router** — `ChatGraph` → LangGraph conditional router |
+| [updets/migration-nemo-guardrails.md](./updets/migration-nemo-guardrails.md) | **NeMo Guardrails** — intent gate (Phase 0 **Done**, off by default) |
 
 ## API docs by resource
 

@@ -44,7 +44,7 @@ API matrix: [api-migration-agentic.md](./api-migration-agentic.md)
 | Fix | Detail |
 |-----|--------|
 | **Prompt storage** | `build_system_prompt()` stores layer-[1] base only. `personality`, `tone`, `guardrails` stay as separate Mongo fields. |
-| **Chat assembly** | `FinalPromptBuilder` adds personality, tone, and `GuardrailRunner` instructions at runtime. |
+| **Chat assembly** | `FinalPromptBuilder` adds personality, tone, and `GuardrailRunner.build_instructions()` at runtime. `GuardrailRunner.check()` is pass-through by default; optional NeMo intent gate when `NEMO_GUARDRAILS_ENABLED=true` — [migration-nemo-guardrails.md](./migration-nemo-guardrails.md). |
 | **Legacy compat** | If stored `system_prompt` already contains `Personality:`, `Tone:`, or guardrail markers, duplicates are skipped. |
 | **Dead code removed** | `OrchestratorRunner._build_system_prompt` removed — chat passes pre-built prompt from `FinalPromptBuilder`. |
 

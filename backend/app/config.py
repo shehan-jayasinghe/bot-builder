@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     langchain_project: str = "bot-builder"
     langchain_endpoint: str = "https://api.smith.langchain.com"
 
+    # NeMo Guardrails — intent gate (Phase 0; off by default)
+    nemo_guardrails_enabled: bool = False
+    nemo_config_path: str = ""
+
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
 

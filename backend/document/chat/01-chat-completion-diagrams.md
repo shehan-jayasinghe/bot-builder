@@ -237,13 +237,23 @@ flowchart TB
 ```mermaid
 flowchart TB
     RAW[Raw user message]
-    RAW --> GUARD[GuardrailRunner — agent guardrails]
-    GUARD -->|block| REFUSE[Safe refusal reply]
-    GUARD -->|ok| CLEAN[Message → tracker + graph]
+    RAW --> SKIP{active_flow_state?}
+    SKIP -->|yes| CLEAN[Skip NeMo — workflow turn]
+    SKIP -->|no| GUARD[GuardrailRunner.check]
+    GUARD --> NEMO{NEMO_GUARDRAILS_ENABLED?}
+    NEMO -->|no| PASS[Pass-through]
+    NEMO -->|yes| GATE{scripted / blocked / proceed}
+    GATE -->|scripted| OUT1[nemo_scripted_reply → Flow 12]
+    GATE -->|blocked| OUT2[nemo_intent_blocked → Flow 12]
+    GATE -->|proceed| PASS
+    PASS --> CLEAN
     CLEAN --> F6[Flow 6]
 ```
 
-- PII is handled by LangChain `PIIMiddleware` on orchestrator/sub-agent `create_agent()` — not at this step.
+- **Prompt policy:** `GuardrailRunner.build_instructions()` → `FinalPromptBuilder` layer [2] (includes `no_secrets` and other Mongo guardrails as instructions).
+- **PII / secrets in message:** LangChain `PIIMiddleware` on orchestrator/sub-agent `create_agent()` — not at this step.
+- **NeMo intent gate (optional):** when `NEMO_GUARDRAILS_ENABLED=true`, `evaluate_nemo_intent()` runs before the graph — local scripted greeting/help/bye (no orchestrator LLM), NeMo `self check input` for jailbreak/off-topic, skipped during active workflow. See [migration-nemo-guardrails.md](../agentic/updets/migration-nemo-guardrails.md).
+- **Default (flag off):** `check()` pass-through; policy in prompt layer [2] only.
 - Slot extractor **not** used here — only Flow 11 (workflow `input` nodes).
 
 ---
@@ -436,7 +446,10 @@ flowchart TB
 | Event | When |
 |-------|------|
 | `input_message` | Turn start |
-| `guardrail_complete` / `guardrail_blocked` | Flow 5 |
+| `guardrail_complete` | Flow 5 — check passed; policy also in prompt layer [2] |
+| `nemo_scripted_reply` | Flow 5 — NeMo on; greeting/help/bye scripted (no orchestrator LLM) |
+| `nemo_intent_blocked` | Flow 5 — NeMo on; input rail blocked (jailbreak/off-topic) |
+| `guardrail_blocked` | Generic hard-block when NeMo off (reserved — not emitted today) |
 | `bundle_loaded` | Flow 4 |
 | `routing_decision` | Agent/workflow switch |
 | `rag_skipped` | Flow 9 — in workflow or no KBs |
@@ -526,7 +539,7 @@ Full API matrix: [../agentic/updets/api-migration-agentic.md](../agentic/updets/
 | Tracker | [tracker.py](../../app/domain/models/tracker.py) · [tracker_service.py](../../app/services/tracker_service.py) | Done |
 | LLM | [llm.py](../../app/infrastructure/ai/llm.py) | Done |
 | PII (agent) | [pii_middleware.py](../../app/domain/graph/langchain/pii_middleware.py) via [agent_factory.py](../../app/domain/graph/langchain/agent_factory.py) | Done |
-| Guardrails | [guardrails/runner.py](../../app/domain/pipeline/guardrails/runner.py) | Done |
+| Guardrails | [guardrails/runner.py](../../app/domain/pipeline/guardrails/runner.py) · [nemo_intent_gate.py](../../app/domain/pipeline/guardrails/nemo_intent_gate.py) (optional) | Done |
 | Final prompt | [final_prompt_builder.py](../../app/domain/pipeline/prompt/final_prompt_builder.py) · [capability_catalog_builder.py](../../app/domain/pipeline/prompt/capability_catalog_builder.py) | Done |
 | Agent create prompt | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) — base layer only | Done |
 | Tool execution | [langgraph_tools.py](../../app/domain/executors/langgraph_tools.py) (LangChain `StructuredTool`) · [registry.py](../../app/domain/executors/registry.py) | Done — via agent `ToolNode` in `create_agent()` |
