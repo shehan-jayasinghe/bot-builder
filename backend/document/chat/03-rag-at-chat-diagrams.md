@@ -64,3 +64,5 @@ Catalog layer `[3]` lists KBs + `routing_hint` so the LLM knows when to call `se
 Per-turn `rag_complete` is **not** emitted (removed in Phase C).
 
 **Spec:** [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md)
+
+**RAG evaluation (planned):** ranked chunks in `turn_evidence` for RAGAS — [../evaluation/01-turn-evidence-runtime.md](../evaluation/01-turn-evidence-runtime.md)
