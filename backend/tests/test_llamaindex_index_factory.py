@@ -43,22 +43,27 @@ def test_index_factory_returns_collection_name_for_empty_chunks() -> None:
 
 
 def test_index_factory_indexes_keyword_chunks() -> None:
-    factory = IndexFactory(qdrant=MagicMock(), embed_model=MagicMock())
+    qdrant = MagicMock()
+    factory = IndexFactory(qdrant=qdrant, embed_model=MagicMock())
     chunks = [
         ChunkDocument(chunk_id="k1", text="payment refund policy", token_count=3, metadata={}),
     ]
 
-    with patch("app.infrastructure.ai.llamaindex.index_factory.BM25Retriever") as bm25_cls:
-        retriever = MagicMock()
-        bm25_cls.from_defaults.return_value = retriever
-        path = factory.index_keyword(
+    with patch("app.infrastructure.ai.llamaindex.index_factory.upsert_keyword_chunks") as upsert:
+        collection = factory.index_keyword(
             organization_id="org-1",
             knowledgebase_id="kb-1",
             chunks=chunks,
         )
 
-    assert path.endswith("/org-1/kb-1/bm25")
-    retriever.persist.assert_called_once()
+    assert collection == "kb_org-1_kb-1"
+    upsert.assert_called_once_with(
+        qdrant=qdrant,
+        collection_name="kb_org-1_kb-1",
+        chunks=chunks,
+        organization_id="org-1",
+        knowledgebase_id="kb-1",
+    )
 
 
 def test_index_factory_indexes_graph_chunks() -> None:

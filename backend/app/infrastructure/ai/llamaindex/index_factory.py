@@ -1,9 +1,7 @@
 import logging
-import shutil
 
 from llama_index.core import PropertyGraphIndex, StorageContext, VectorStoreIndex
 from llama_index.core.indices.property_graph.transformations import SimpleLLMPathExtractor
-from llama_index.retrievers.bm25 import BM25Retriever
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client.http.models import Distance, VectorParams
 
@@ -19,7 +17,8 @@ from app.infrastructure.ai.llamaindex.bedrock_llm import BedrockLlamaLLM
 from app.infrastructure.ai.llamaindex.chunk_nodes import chunks_to_text_nodes
 from app.infrastructure.ai.llamaindex.collection_naming import kb_collection_name
 from app.infrastructure.ai.llamaindex.graph_store import build_neo4j_property_graph_store
-from app.infrastructure.ai.llamaindex.persistence import graph_index_marker, keyword_index_dir
+from app.infrastructure.ai.llamaindex.keyword_qdrant import upsert_keyword_chunks
+from app.infrastructure.ai.llamaindex.persistence import graph_index_marker
 from app.infrastructure.connectors.qdrant.qdrant_connector import QdrantConnector
 
 logger = logging.getLogger(__name__)
@@ -133,33 +132,18 @@ class IndexFactory:
         knowledgebase_id: str,
         chunks: list[ChunkDocument],
     ) -> str:
-        target_dir = keyword_index_dir(
+        collection_name = kb_collection_name(
             organization_id=organization_id,
             knowledgebase_id=knowledgebase_id,
         )
-        if target_dir.exists():
-            shutil.rmtree(target_dir)
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        nodes = chunks_to_text_nodes(
+        upsert_keyword_chunks(
+            qdrant=self._qdrant,
+            collection_name=collection_name,
             chunks=chunks,
             organization_id=organization_id,
             knowledgebase_id=knowledgebase_id,
         )
-        if not nodes:
-            return str(target_dir)
-
-        retriever = BM25Retriever.from_defaults(
-            nodes=nodes,
-            similarity_top_k=len(nodes),
-        )
-        retriever.persist(str(target_dir))
-        logger.info(
-            "Indexed %s keyword chunks to %s via LlamaIndex BM25",
-            len(nodes),
-            target_dir,
-        )
-        return str(target_dir)
+        return collection_name
 
     def index_graph(
         self,

@@ -25,7 +25,7 @@ flowchart TB
     TOOLS -->|LLM calls search_knowledge| RET[RAGRetriever.retrieve]
     RET --> TYPE{storage_type}
     TYPE -->|vector| Q[LlamaIndex VectorStoreIndex + Qdrant]
-    TYPE -->|keyword| K[LlamaIndex BM25Retriever]
+    TYPE -->|keyword| K[Qdrant sparse vectors — BM25]
     TYPE -->|graph| G[LlamaIndex PropertyGraphIndex + Neo4j]
     Q --> TM[ToolMessage with formatted context]
     K --> TM
@@ -38,11 +38,11 @@ flowchart TB
 | Tool registration | [search_knowledge_delegate.py](../../app/domain/graph/search_knowledge_delegate.py) |
 | Tool handler | LangChain routing middleware — [tool_router.py](../../app/domain/graph/langchain/tool_router.py) |
 | Retriever facade | [retriever.py](../../app/domain/pipeline/rag/retriever.py) → `RetrieverFactory.search()` |
-| LlamaIndex query | [retriever_factory.py](../../app/infrastructure/ai/llamaindex/retriever_factory.py) — vector / BM25 / graph |
+| LlamaIndex query | [retriever_factory.py](../../app/infrastructure/ai/llamaindex/retriever_factory.py) — vector / keyword (Qdrant sparse) / graph |
 | Chat wiring | [chat_completion_service.py](../../app/services/chat_completion_service.py) — passes `rag` into graph; no pre-turn retrieve |
 | Sub-agent scope | [sub_agent_delegate.py](../../app/domain/graph/sub_agent_delegate.py) — `search_knowledge` when sub-agent has KBs |
 | Ingest router | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) → [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
-| LlamaIndex adapters | `infrastructure/ai/llamaindex/` — Bedrock embed/LLM, Qdrant, BM25 persist, Neo4j graph store |
+| LlamaIndex adapters | `infrastructure/ai/llamaindex/` — Bedrock embed/LLM, Qdrant (dense + sparse), Neo4j graph store |
 
 **Scope:** orchestrator KBs on orchestrator turns; sub-agent KBs on delegated sub-agent turns. Optional `knowledge_base_names` arg narrows which KBs to search.
 

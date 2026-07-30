@@ -26,6 +26,7 @@ Built by `FinalPromptBuilder` at chat time — do not mutate `agent.system_promp
 | **NeMo Guardrails** | Intent + output gates — `scripted_intents.yml` + input/output self-check | **Phases 0–3 Done** — [migration-nemo-guardrails.md](./updets/migration-nemo-guardrails.md) |
 | **RAG evaluation (RAGAS)** | `turn_evidence` + Eval API + Eval Lab UI | **Done** — [../evaluation/00-overview.md](../evaluation/00-overview.md) |
 | **LlamaIndex RAG** | Replace custom vector/keyword/graph index code with LlamaIndex | **Done** — [updets/migration-llamaindex-rag.md](./updets/migration-llamaindex-rag.md) |
+| **Keyword → Qdrant sparse** | Move keyword BM25 from local disk to Qdrant sparse vectors | **Pending** — [updets/migration-keyword-qdrant-sparse.md](./updets/migration-keyword-qdrant-sparse.md) |
 
 ## Runtime stack (after migration)
 
@@ -60,6 +61,7 @@ See [migration-langchain-proper.md](./updets/migration-langchain-proper.md) for 
 | [updets/migration-nemo-guardrails.md](./updets/migration-nemo-guardrails.md) | **NeMo Guardrails** — intent + output gates (Phases 0–3 **Done**, off by default) |
 | [../evaluation/00-overview.md](../evaluation/00-overview.md) | **RAG evaluation (RAGAS)** — turn evidence, metrics API, Eval Lab UI **Done** |
 | [updets/migration-llamaindex-rag.md](./updets/migration-llamaindex-rag.md) | **LlamaIndex RAG** — ingest + retrieval for vector/keyword/graph **Done** |
+| [updets/migration-keyword-qdrant-sparse.md](./updets/migration-keyword-qdrant-sparse.md) | **Keyword → Qdrant sparse** — move BM25 from local disk to Qdrant sparse vectors **Pending** |
 
 ## API docs by resource
 

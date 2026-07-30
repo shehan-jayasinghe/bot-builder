@@ -337,7 +337,7 @@ MVP: follow-up messages stay on sub-agent until workflow enter, `return_to_orche
 
 **Status: done** — LLM calls `search_knowledge` tool; `RAGRetriever` runs via LangChain tool routing. Spec: [03-rag-at-chat-diagrams.md](./03-rag-at-chat-diagrams.md) · [../agentic/updets/runtime-migration-agentic-phase-c.md](../agentic/updets/runtime-migration-agentic-phase-c.md).
 
-**Infrastructure:** LlamaIndex vector / BM25 / graph via [migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md) (**Done**). Chat tool contract unchanged.
+**Infrastructure:** LlamaIndex vector / keyword (Qdrant sparse) / graph via [migration-llamaindex-rag.md](../agentic/updets/migration-llamaindex-rag.md) (**Done**) + [keyword Qdrant plan](../agentic/updets/migration-keyword-qdrant-sparse.md). Chat tool contract unchanged.
 
 ```mermaid
 flowchart TB
@@ -345,7 +345,7 @@ flowchart TB
     LLM -->|tool_use search_knowledge| RET[RAGRetriever facade]
     RET --> TYPE{storage_type}
     TYPE -->|vector| Q[LlamaIndex VectorStoreIndex + Qdrant]
-    TYPE -->|keyword| T[LlamaIndex BM25Retriever]
+    TYPE -->|keyword| T[Qdrant sparse vectors — BM25]
     TYPE -->|graph| G[LlamaIndex PropertyGraphIndex + Neo4j]
     Q --> TM[ToolMessage — formatted chunks]
     T --> TM

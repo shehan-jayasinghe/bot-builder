@@ -7,6 +7,7 @@ from app.domain.constants.knowledgebase_constants import (
     STORAGE_TYPE_KEYWORD,
     STORAGE_TYPE_VECTOR,
 )
+from app.infrastructure.ai.llamaindex.constants import KEYWORD_MIN_SCORE
 from app.infrastructure.ai.llamaindex.retriever_factory import RetrieverFactory
 
 
@@ -57,27 +58,28 @@ def test_retriever_factory_maps_retrieved_vector_nodes() -> None:
 
 
 def test_retriever_factory_keyword_path() -> None:
-    factory = RetrieverFactory(qdrant=MagicMock(), embed_model=MagicMock())
-    retriever = MagicMock()
-    retriever.retrieve.return_value = [
-        NodeWithScore(
-            node=TextNode(text="payment refund policy", metadata={"chunk_id": "k1"}),
-            score=0.2,
-        ),
-    ]
+    qdrant = MagicMock()
+    factory = RetrieverFactory(qdrant=qdrant, embed_model=MagicMock())
 
-    with patch("app.infrastructure.ai.llamaindex.retriever_factory.keyword_index_dir") as index_dir:
-        index_dir.return_value.exists.return_value = True
-        with patch("app.infrastructure.ai.llamaindex.retriever_factory.BM25Retriever") as bm25_cls:
-            bm25_cls.from_persist_dir.return_value = retriever
-            hits = factory.retrieve_keyword(
-                organization_id="org-1",
-                knowledgebase_id="kb-1",
-                query="refund",
-            )
+    with patch("app.infrastructure.ai.llamaindex.retriever_factory.search_keyword_sparse") as search:
+        search.return_value = [
+            {"text": "payment refund policy", "score": 0.2, "chunk_id": "k1"},
+        ]
+        hits = factory.retrieve_keyword(
+            organization_id="org-1",
+            knowledgebase_id="kb-1",
+            query="refund",
+        )
 
     assert hits[0]["text"] == "payment refund policy"
     assert hits[0]["chunk_id"] == "k1"
+    search.assert_called_once_with(
+        qdrant=qdrant,
+        collection_name="kb_org-1_kb-1",
+        query="refund",
+        top_k=5,
+        min_score=KEYWORD_MIN_SCORE,
+    )
 
 
 def test_retriever_factory_graph_path() -> None:

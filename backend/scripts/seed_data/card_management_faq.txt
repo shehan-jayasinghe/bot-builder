@@ -1,0 +1,17 @@
+ABC Bank — Card Management FAQ
+
+Activate card: Use the mobile app or call the number on the card sticker. Activation completes within 2 minutes.
+
+Lost or stolen card: Block immediately in the app under Card Management > Block Card. Replacement ships in 5–7 business days.
+
+Credit limit increase: Request via app; decisions typically within 48 hours. Requires 6 months of on-time payments.
+
+PIN reset: App > Card Management > Reset PIN. OTP sent to registered mobile.
+
+International usage: Enable travel notice in app before departure to avoid declines.
+
+Cash advance fee: 3% of amount or USD 10 minimum.
+
+Statement due date: 21 days after statement close. Minimum payment is 2% of balance or USD 25, whichever is greater.
+
+Dispute a charge: Card Management > Transactions > Dispute within 60 days of posting.

@@ -223,3 +223,9 @@ app/infrastructure/connectors/neo4j/                    # health ping
 - Hybrid retrieval (vector + keyword fusion)
 - Per-KB retriever tuning UI
 - LlamaIndex `SentenceSplitter` instead of LangChain chunker (optional follow-up)
+
+---
+
+## Follow-up: keyword BM25 → Qdrant sparse vectors
+
+Local BM25 disk persistence is not production-safe (Celery worker vs API filesystem, container restarts, multi-replica). Moving keyword storage into **Qdrant sparse vectors** — see [migration-keyword-qdrant-sparse.md](./migration-keyword-qdrant-sparse.md).

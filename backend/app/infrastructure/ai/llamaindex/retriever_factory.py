@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 from llama_index.core import PropertyGraphIndex, VectorStoreIndex
-from llama_index.retrievers.bm25 import BM25Retriever
 
 from app.config import settings
 from app.domain.constants.knowledgebase_constants import (
@@ -20,8 +19,9 @@ from app.infrastructure.ai.llamaindex.constants import (
 )
 from app.infrastructure.ai.llamaindex.graph_store import build_neo4j_property_graph_store
 from app.infrastructure.ai.llamaindex.index_factory import build_qdrant_vector_store
+from app.infrastructure.ai.llamaindex.keyword_qdrant import search_keyword_sparse
 from app.infrastructure.ai.llamaindex.node_mapping import hits_from_nodes
-from app.infrastructure.ai.llamaindex.persistence import graph_index_marker, keyword_index_dir
+from app.infrastructure.ai.llamaindex.persistence import graph_index_marker
 from app.infrastructure.connectors.qdrant.qdrant_connector import QdrantConnector
 
 logger = logging.getLogger(__name__)
@@ -111,18 +111,17 @@ class RetrieverFactory:
         query: str,
         top_k: int = DEFAULT_TOP_K,
     ) -> list[dict[str, Any]]:
-        target_dir = keyword_index_dir(
+        collection_name = kb_collection_name(
             organization_id=organization_id,
             knowledgebase_id=knowledgebase_id,
         )
-        if not target_dir.exists():
-            logger.info("Keyword BM25 index missing for knowledgebase_id=%s", knowledgebase_id)
-            return []
-
-        retriever = BM25Retriever.from_persist_dir(str(target_dir))
-        retriever.similarity_top_k = top_k
-        nodes = retriever.retrieve(query)
-        return hits_from_nodes(nodes, min_score=KEYWORD_MIN_SCORE)
+        return search_keyword_sparse(
+            qdrant=self._qdrant,
+            collection_name=collection_name,
+            query=query,
+            top_k=top_k,
+            min_score=KEYWORD_MIN_SCORE,
+        )
 
     def retrieve_graph(
         self,

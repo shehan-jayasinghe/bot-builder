@@ -563,8 +563,8 @@ flowchart TB
     end
 
     subgraph KEY["STORAGE_TYPE_KEYWORD"]
-        K1[LlamaIndex KeywordTableIndex or BM25Retriever]
-        K2[Persist docstore per KB]
+        K1[BM25 sparse vector encode]
+        K2[Upsert to Qdrant sparse collection]
         K1 --> K2
     end
 
@@ -590,10 +590,10 @@ flowchart TB
 | Flow step | What happens | Open file |
 |-----------|--------------|-----------|
 | LlamaIndex pipeline | Route index by `storage_type` | [llama_index_pipeline.py](../../app/infrastructure/ai/indexers/llama_index_pipeline.py) → [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
-| LlamaIndex adapters | Bedrock embed/LLM, Qdrant, BM25 persist, graph store | [llamaindex/](../../app/infrastructure/ai/llamaindex/) — [migration plan](../agentic/updets/migration-llamaindex-rag.md) **Done** |
+| LlamaIndex adapters | Bedrock embed/LLM, Qdrant (dense + sparse), graph store | [llamaindex/](../../app/infrastructure/ai/llamaindex/) — [LlamaIndex plan](../agentic/updets/migration-llamaindex-rag.md) **Done** · [keyword Qdrant plan](../agentic/updets/migration-keyword-qdrant-sparse.md) |
 | Bedrock embed | Titan embeddings — vector | [bedrock_embedding.py](../../app/infrastructure/ai/llamaindex/bedrock_embedding.py) |
 | Qdrant upsert | Dense vector storage | `QdrantVectorStore` in [index_factory.py](../../app/infrastructure/ai/llamaindex/index_factory.py) |
-| Keyword index | BM25 search | `BM25Retriever` in index/retriever factories + [persistence.py](../../app/infrastructure/ai/llamaindex/persistence.py) |
+| Keyword index | BM25 sparse vectors in Qdrant | [keyword_qdrant.py](../../app/infrastructure/ai/llamaindex/keyword_qdrant.py) + index/retriever factories |
 | Neo4j graph | Entity + relation storage + query | [graph_store.py](../../app/infrastructure/ai/llamaindex/graph_store.py) + `PropertyGraphIndex` |
 | Update KB status | `indexing` → `ready` or `failed` | [knowledgebase_repository.py](../../app/infrastructure/db/repositories/mongo/knowledgebase_repository.py) |
 | Update job log | `running` → `completed` or `failed` | [job_log_repository.py](../../app/infrastructure/db/repositories/mongo/job_log_repository.py) |
@@ -603,10 +603,10 @@ flowchart TB
 | `storage_type` | Backend | Library |
 |----------------|---------|---------|
 | `vector` | Qdrant | LlamaIndex `VectorStoreIndex` + `BedrockLlamaEmbedding` |
-| `keyword` | `{RAG_INDEX_DIR}/{org}/{kb}/bm25/` | LlamaIndex `BM25Retriever` |
+| `keyword` | Qdrant (sparse vectors) | `keyword_qdrant.py` — BM25 sparse encode + Qdrant sparse search |
 | `graph` | Neo4j + `graph.ready` marker | LlamaIndex `PropertyGraphIndex` + `BedrockLlamaLLM` |
 
-**Deploy note:** Re-ingest KBs after deploy if upgrading from pre-LlamaIndex indexes (old `.joblib` keyword files incompatible). No REST API change.
+**Deploy note:** Re-ingest keyword KBs after deploy — local BM25 files replaced by Qdrant sparse vectors. See [migration plan](../agentic/updets/migration-keyword-qdrant-sparse.md). No REST API change.
 
 ---
 
