@@ -1,8 +1,22 @@
 import logging
 import os
+import re
 from typing import Any
 
+from neo4j import GraphDatabase
+
 logger = logging.getLogger(__name__)
+
+
+def normalize_rel_type(rel_type: str) -> str:
+    """Convert LLM relationship labels to valid Neo4j Cypher type identifiers."""
+    cleaned = re.sub(r"[^A-Za-z0-9_]", "_", rel_type.strip().upper())
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    if not cleaned:
+        return "RELATED_TO"
+    if not cleaned[0].isalpha():
+        cleaned = f"REL_{cleaned}"
+    return cleaned
 
 
 class Neo4jConnector:
@@ -28,13 +42,6 @@ class Neo4jConnector:
 
     def _get_driver(self) -> Any:
         if self._driver is None:
-            try:
-                from neo4j import GraphDatabase
-            except ImportError as exc:
-                raise ImportError(
-                    "neo4j driver is required. Install with: poetry add neo4j"
-                ) from exc
-
             self._driver = GraphDatabase.driver(
                 self._uri,
                 auth=(self._user, self._password),
@@ -89,12 +96,17 @@ class Neo4jConnector:
         to_value: str,
         properties: dict[str, Any] | None = None,
     ) -> None:
-        props = properties or {}
-        set_clause = f" SET r += $props" if props else ""
+        props = dict(properties or {})
+        original_type = rel_type
+        safe_rel_type = normalize_rel_type(rel_type)
+        if original_type != safe_rel_type:
+            props.setdefault("original_type", original_type)
+
+        set_clause = " SET r += $props" if props else ""
         query = (
             f"MATCH (a:{from_label} {{{from_key}: $from_value}}), "
             f"(b:{to_label} {{{to_key}: $to_value}}) "
-            f"MERGE (a)-[r:{rel_type}]->(b){set_clause}"
+            f"MERGE (a)-[r:{safe_rel_type}]->(b){set_clause}"
         )
         params: dict[str, Any] = {
             "from_value": from_value,

@@ -1,0 +1,8 @@
+name: Generic evaluation cases (builtin)
+industry: other
+agent_type: generic
+cases:
+  - question: What are your business hours?
+    ground_truth: Monday to Friday 9 AM–6 PM local time; closed on public holidays.
+  - question: How do I reset my password?
+    ground_truth: Use Forgot Password on the login page; a reset link is sent to your registered email.

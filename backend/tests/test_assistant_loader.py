@@ -17,7 +17,7 @@ def test_to_dialogue_assistant_maps_mongo_document() -> None:
             "temperature": 0.5,
             "max_output_tokens": 512,
         },
-        "skill_ids": ["transactions_analysis"],
+        "tool_ids": ["transactions_analysis"],
         "workflow_ids": ["dispute_process"],
         "knowledge_base_ids": ["kb_001"],
         "status": "published",
@@ -36,7 +36,8 @@ def test_to_dialogue_assistant_maps_mongo_document() -> None:
         temperature=0.5,
         max_output_tokens=512,
     )
-    assert assistant.skill_ids == ["transactions_analysis"]
+    assert assistant.tool_ids == ["transactions_analysis"]
+    assert assistant.tool_ids == ["transactions_analysis"]
     assert assistant.workflow_ids == ["dispute_process"]
     assert assistant.knowledge_base_ids == ["kb_001"]
     assert "Personality: Professional" in assistant.build_system_prompt()
@@ -54,3 +55,18 @@ def test_build_system_prompt_without_personality_or_tone() -> None:
     )
 
     assert assistant.build_system_prompt() == "Base prompt."
+
+
+def test_to_dialogue_assistant_migrates_legacy_skill_ids_to_tool_ids() -> None:
+    assistant = AssistantLoader._to_dialogue_assistant(
+        agent_doc={
+            "_id": ObjectId(),
+            "name": "Legacy",
+            "system_prompt": "prompt",
+            "skill_ids": ["legacy_tool"],
+            "status": "published",
+        },
+        webhook_id="wh-1",
+    )
+
+    assert assistant.tool_ids == ["legacy_tool"]

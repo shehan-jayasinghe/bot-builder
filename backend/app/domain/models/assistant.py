@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -18,10 +20,11 @@ class DialogueAssistant(BaseModel):
     tone: str | None = None
     llm_config: LLMConfig | None = None
     status: str = "published"
-    skill_ids: list[str] = Field(default_factory=list)
+    tool_ids: list[str] = Field(default_factory=list)
     sub_agent_ids: list[str] = Field(default_factory=list)
     workflow_ids: list[str] = Field(default_factory=list)
     knowledge_base_ids: list[str] = Field(default_factory=list)
+    guardrails: list[dict[str, Any]] = Field(default_factory=list)
     temperature: float = Field(default=0.7)
     max_output_tokens: int = Field(default=1024)
 

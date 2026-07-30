@@ -1,0 +1,10 @@
+name: Financial — Payment Collections (builtin)
+industry: financial_services
+agent_type: payment_collections
+cases:
+  - question: What is the minimum balance for urban savings?
+    ground_truth: Urban minimum balance is ₹10,000; non-maintenance fee ₹350 + GST.
+  - question: What happens if I miss a loan EMI payment?
+    ground_truth: A late fee of 2% applies after a 5-day grace period; contact collections for hardship plans.
+  - question: How can I set up auto-debit for my credit card?
+    ground_truth: Enable auto-debit in the mobile app under Cards > Auto Pay; minimum due or full balance.

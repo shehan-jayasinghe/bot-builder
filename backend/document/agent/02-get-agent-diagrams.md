@@ -2,6 +2,13 @@
 
 Returns one agent for the authenticated user's organization. Draft and published agents are both readable.
 
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) · Phase B: [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · Phase C: [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · Phase D: [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md) (**no** REST change). **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
+
+| Item | Change |
+|------|--------|
+| Route | **No** |
+| **Optional** response field | `capability_catalog` — for builder UI to show/edit routing hints. Not required if hints are only set via attach APIs. |
+
 # Auth phase
 
 ## Flow
@@ -205,11 +212,11 @@ Authorization: Bearer <clerk_jwt>
 }
 ```
 
-**After DB lookup — found** (+agent fields)
+**After DB lookup — Mongo document** (internal; not returned as-is by API)
 
 ```json
 {
-  "agent_id": "67abc123def456789012345",
+  "_id": "67abc123def456789012345",
   "organization_id": "6a3b7c61d8139334274fbbfc",
   "name": "abc bank",
   "description": "Payment and collections assistant for customers",
@@ -226,11 +233,21 @@ Authorization: Bearer <clerk_jwt>
     "max_output_tokens": 1024
   },
   "status": "draft",
-  "skill_ids": [],
+  "tool_ids": [],
   "workflow_ids": [],
+  "sub_agent_ids": [],
+  "knowledge_base_ids": [],
+  "capability_catalog": {
+    "tools": {},
+    "knowledge_bases": {},
+    "workflows": {},
+    "sub_agents": {}
+  },
   "created_at": "2026-06-24T12:00:00Z"
 }
 ```
+
+`GetAgentResponse` does **not** expose `tool_ids`, `workflow_ids`, or `capability_catalog` today (optional after agentic migration).
 
 **Final API response** (`200 OK`)
 
@@ -264,6 +281,19 @@ Authorization: Bearer <clerk_jwt>
 }
 ```
 
+**Optional after agentic migration** — `capability_catalog` on response (builder UI):
+
+```json
+{
+  "capability_catalog": {
+    "tools": {},
+    "knowledge_bases": {},
+    "workflows": {},
+    "sub_agents": {}
+  }
+}
+```
+
 **404 Not Found** — agent does not exist or belongs to another organization
 
 ```json
@@ -284,19 +314,18 @@ Authorization: Bearer <clerk_jwt>
 
 | Item | Status |
 |------|--------|
-| List all agents | separate endpoint (future) |
+| List all agents | [03-list-agents-diagrams.md](./03-list-agents-diagrams.md) — `GET /api/v1/agents` |
 | Update agent | separate endpoint (future) |
 | Delete agent | separate endpoint (future) |
-| Tools / workflow details | only IDs returned if present on document |
+| `capability_catalog` in response | optional — agentic migration |
 | Bedrock invoke | read-only; no LLM call |
 
-## Planned implementation (not coded yet)
+## Implementation
 
-| File | Change |
-|------|--------|
-| [agents.py](../../app/api/v1/agents.py) | Add `GET /{agent_id}` route |
-| [agent.py](../../app/schemas/agent.py) | Add `GetAgentResponse` (same shape as create response) |
-| [agent_service.py](../../app/services/agent_service.py) | Add `get_by_id()` |
-| [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) | Add `find_by_id_for_organization()` |
-| [agent.py](../../app/shared/exceptions/agent.py) | Add `AgentNotFoundError` (optional) |
-| [main.py](../../app/main.py) | Register `404` handler for `AgentNotFoundError` (optional) |
+| File | Role |
+|------|------|
+| [agents.py](../../app/api/v1/agents.py) | `GET /{agent_id}` route |
+| [agent.py](../../app/schemas/agent.py) | `GetAgentResponse` |
+| [agent_service.py](../../app/services/agent_service.py) | `get_by_id()` |
+| [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) | `find_by_id_for_organization()` |
+| [agent.py](../../app/shared/exceptions/agent.py) | `AgentNotFoundError` |

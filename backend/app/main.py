@@ -7,9 +7,29 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_v1_router
 from app.config import settings
+from app.infrastructure.ai.langsmith_tracing import configure_langsmith
 from app.infrastructure.db.mongo import connect_mongo, disconnect_mongo
 from app.infrastructure.db.redis import connect_redis, disconnect_redis
 from app.shared.exceptions.agent import AgentNotFoundError
+from app.shared.exceptions.connector import (
+    ConnectionTestFailedError,
+    ConnectorNameExistsError,
+    ConnectorNotFoundError,
+)
+from app.shared.exceptions.tool import (
+    ToolConnectorTypeMismatchError,
+    ToolNameExistsError,
+    ToolNotFoundError,
+)
+from app.shared.exceptions.sub_agent import (
+    SubAgentInvalidCapabilityError,
+    SubAgentLimitReachedError,
+    SubAgentNameExistsError,
+    SubAgentNotFoundError,
+)
+from app.shared.exceptions.workflow import WorkflowLimitReachedError, WorkflowNotFoundError, WorkflowValidationError
+from app.shared.exceptions.knowledgebase import KnowledgebaseNotFoundError
+from app.shared.exceptions.evaluation import EvaluationDisabledError, EvalRunNotFoundError
 from app.shared.exceptions.auth import (
     AuthError,
     ClerkUserCreationError,
@@ -35,6 +55,7 @@ def setup_logging() -> None:
 
 
 setup_logging()
+configure_langsmith()
 
 
 @asynccontextmanager
@@ -80,6 +101,79 @@ async def agent_not_found_handler(_request: Request, exc: AgentNotFoundError) ->
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 
+@app.exception_handler(ConnectorNotFoundError)
+async def connector_not_found_handler(_request: Request, exc: ConnectorNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConnectorNameExistsError)
+async def connector_name_exists_handler(_request: Request, exc: ConnectorNameExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ConnectionTestFailedError)
+async def connection_test_failed_handler(_request: Request, exc: ConnectionTestFailedError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(ToolNotFoundError)
+async def tool_not_found_handler(_request: Request, exc: ToolNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ToolNameExistsError)
+async def tool_name_exists_handler(_request: Request, exc: ToolNameExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ToolConnectorTypeMismatchError)
+async def tool_validation_handler(_request: Request, exc: ToolConnectorTypeMismatchError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(WorkflowLimitReachedError)
+async def workflow_limit_reached_handler(_request: Request, exc: WorkflowLimitReachedError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(WorkflowNotFoundError)
+async def workflow_not_found_handler(_request: Request, exc: WorkflowNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(WorkflowValidationError)
+async def workflow_validation_handler(_request: Request, exc: WorkflowValidationError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(KnowledgebaseNotFoundError)
+async def knowledgebase_not_found_handler(_request: Request, exc: KnowledgebaseNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentNotFoundError)
+async def sub_agent_not_found_handler(_request: Request, exc: SubAgentNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentNameExistsError)
+async def sub_agent_name_exists_handler(_request: Request, exc: SubAgentNameExistsError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentLimitReachedError)
+async def sub_agent_limit_reached_handler(_request: Request, exc: SubAgentLimitReachedError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(SubAgentInvalidCapabilityError)
+async def sub_agent_invalid_capability_handler(
+    _request: Request,
+    exc: SubAgentInvalidCapabilityError,
+) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
 @app.exception_handler(UserDisabledError)
 async def user_disabled_handler(_request: Request, exc: UserDisabledError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
@@ -103,6 +197,16 @@ async def clerk_user_creation_handler(_request: Request, exc: ClerkUserCreationE
 @app.exception_handler(RegistrationFailedError)
 async def registration_failed_handler(_request: Request, exc: RegistrationFailedError) -> JSONResponse:
     return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(EvaluationDisabledError)
+async def evaluation_disabled_handler(_request: Request, exc: EvaluationDisabledError) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(EvalRunNotFoundError)
+async def eval_run_not_found_handler(_request: Request, exc: EvalRunNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 
 @app.exception_handler(AuthError)

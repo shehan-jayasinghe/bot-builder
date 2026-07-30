@@ -3,8 +3,12 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "../auth/ProtectedRoute";
 import { PublicAuthRoute } from "../auth/PublicAuthRoute";
 import { AppShell } from "../layouts/AppShell";
+import { AddKnowledgeBasePage } from "../pages/agent/AddKnowledgeBasePage";
+import { AddToolPage } from "../pages/agent/AddToolPage";
 import { AgentPage } from "../pages/agent/AgentPage";
 import { AgentDetailPage } from "../pages/agent/AgentDetailPage";
+import { AgentEvaluationPage } from "../pages/agent/AgentEvaluationPage";
+import { AgentPreviewPage } from "../pages/agent/AgentPreviewPage";
 import { CreateAgentPage } from "../pages/agent/CreateAgentPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { SignUpPage } from "../pages/auth/SignUpPage";
@@ -17,6 +21,7 @@ import { HomePage } from "../pages/home/HomePage";
 import { SchedulersPage } from "../pages/schedulers/SchedulersPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
+import { WorkflowEditorPage } from "../pages/workflows/WorkflowEditorPage";
 
 export function AppRoutes() {
   return (
@@ -33,8 +38,13 @@ export function AppRoutes() {
           <Route index element={<HomePage />} />
           <Route path="agent" element={<AgentPage />} />
           <Route path="agent/new" element={<CreateAgentPage />} />
+          <Route path="agent/:agentId/knowledgebases/new" element={<AddKnowledgeBasePage />} />
+          <Route path="agent/:agentId/tools/new" element={<AddToolPage />} />
+          <Route path="agent/:agentId/preview" element={<AgentPreviewPage />} />
+          <Route path="agent/:agentId/evaluation" element={<AgentEvaluationPage />} />
           <Route path="agent/:agentId" element={<AgentDetailPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
+          <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />
           <Route path="data-sources" element={<DataSourcesPage />} />
           <Route path="channels" element={<ChannelsPage />} />
           <Route path="conversations" element={<ConversationsPage />} />

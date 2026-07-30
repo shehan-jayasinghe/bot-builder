@@ -19,8 +19,10 @@ class TrackerService:
         *,
         sender_id: str,
         assistant_id: str,
-        message: str,
-        metadata: dict[str, Any],
+        message: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        source: str | None = None,
+        organization_id: str | None = None,
     ) -> Tracker:
         tracker: Tracker | None = None
 
@@ -38,20 +40,31 @@ class TrackerService:
             )
             if doc is not None:
                 tracker = Tracker.from_document(doc)
-                tracker.set_active_flow_state(None)
 
         if tracker is None:
             tracker = Tracker(sender_id=sender_id, assistant_id=assistant_id)
 
-        tracker.append_user_message(message=message, metadata=metadata)
+        if source is not None:
+            tracker.set_source(source)
+        if organization_id is not None:
+            tracker.set_organization_id(organization_id)
 
-        await self._tracker_session_store.set(
-            assistant_id=assistant_id,
-            sender_id=sender_id,
-            payload=tracker.to_payload(),
-        )
+        if message is not None:
+            tracker.append_user_message(message=message, metadata=metadata or {})
+            await self._tracker_session_store.set(
+                assistant_id=assistant_id,
+                sender_id=sender_id,
+                payload=tracker.to_payload(),
+            )
 
         return tracker
+
+    async def save_session(self, tracker: Tracker) -> None:
+        await self._tracker_session_store.set(
+            assistant_id=tracker.assistant_id,
+            sender_id=tracker.sender_id,
+            payload=tracker.to_payload(),
+        )
 
     async def persist(self, tracker: Tracker, assistant_replies: list[str]) -> None:
         tracker.append_assistant_replies(assistant_replies)

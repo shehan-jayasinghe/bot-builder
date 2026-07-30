@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import logging
 from typing import Any
 
@@ -13,6 +14,13 @@ from app.shared.exceptions.assistant import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ResolvedChannelAgent:
+    agent_doc: dict[str, Any]
+    organization_id: str
+    webhook_id: str
 
 
 class AssistantLoader:
@@ -42,6 +50,31 @@ class AssistantLoader:
         except Exception as e:
             logger.exception("Failed to load assistant for webhook_id=%s", webhook_id)
             raise AssistantLoadError(f"Could not load assistant for webhook_id: {webhook_id}") from e
+
+    async def try_resolve(
+        self,
+        *,
+        webhook_id: str,
+        metadata: dict[str, Any],
+    ) -> ResolvedChannelAgent | None:
+        channel = await self._channel_repository.find_active_by_webhook_id(webhook_id)
+        if channel is None or not channel.get("agent_id"):
+            return None
+
+        self._resolve_metadata(metadata=metadata, channel=channel)
+        agent_doc = await self._agent_repository.find_published_by_id(str(channel["agent_id"]))
+        if agent_doc is None:
+            return None
+
+        organization_id = str(agent_doc.get("organization_id") or channel.get("organization_id") or "")
+        if not organization_id:
+            return None
+
+        return ResolvedChannelAgent(
+            agent_doc=agent_doc,
+            organization_id=organization_id,
+            webhook_id=webhook_id,
+        )
 
     async def _find_channel(self, *, webhook_id: str) -> dict[str, Any]:
         channel = await self._channel_repository.find_active_by_webhook_id(webhook_id)
@@ -76,6 +109,10 @@ class AssistantLoader:
                 llm_config.max_output_tokens if llm_config else int(agent_doc.get("max_output_tokens", 1024))
             )
 
+            tool_ids = AssistantLoader._string_list(agent_doc.get("tool_ids"))
+            if not tool_ids:
+                tool_ids = AssistantLoader._string_list(agent_doc.get("skill_ids"))
+
             return DialogueAssistant(
                 id=str(agent_doc["_id"]),
                 name=str(agent_doc["name"]),
@@ -86,10 +123,11 @@ class AssistantLoader:
                 tone=AssistantLoader._optional_str(agent_doc.get("tone")),
                 llm_config=llm_config,
                 status=str(agent_doc.get("status", "published")),
-                skill_ids=AssistantLoader._string_list(agent_doc.get("skill_ids")),
+                tool_ids=tool_ids,
                 sub_agent_ids=AssistantLoader._string_list(agent_doc.get("sub_agent_ids")),
                 workflow_ids=AssistantLoader._string_list(agent_doc.get("workflow_ids")),
                 knowledge_base_ids=AssistantLoader._string_list(agent_doc.get("knowledge_base_ids")),
+                guardrails=list(agent_doc.get("guardrails") or []),
                 temperature=temperature,
                 max_output_tokens=max_output_tokens,
             )

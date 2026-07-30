@@ -82,6 +82,14 @@ class S3Connector:
     def build_uri(self, *, key: str) -> str:
         return f"s3://{self._bucket}/{key}"
 
+    def read_bytes(self, *, key: str) -> bytes:
+        try:
+            response = self._get_client().get_object(Bucket=self._bucket, Key=key)
+            return response["Body"].read()
+        except ClientError:
+            logger.exception("Failed to read object from S3: %s", key)
+            raise
+
     def ping(self) -> bool:
         try:
             self._get_client().head_bucket(Bucket=self._bucket)

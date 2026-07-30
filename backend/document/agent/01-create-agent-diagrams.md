@@ -1,5 +1,7 @@
 # Create Agent — `POST /api/v1/agents`
 
+**Agentic migration:** [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) — empty `capability_catalog` on create. Phase B–D: **no** REST change on agent create — [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) · [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) · [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md). **LangChain proper (Done, no REST change):** [../agentic/updets/migration-langchain-proper.md](../agentic/updets/migration-langchain-proper.md).
+
 # Auth phase
 
 ## Flow
@@ -171,13 +173,14 @@ flowchart TB
 | Industry constants | `INDUSTRY_RESPONSIBILITIES` | [agent_defaults.py](../../app/domain/constants/agent_defaults.py) |
 | Merge guardrails | `DEFAULT_GUARDRAILS` + request overrides | [agent_defaults.py](../../app/domain/constants/agent_defaults.py) |
 | Personality / tone | `DEFAULT_PERSONALITY`, `DEFAULT_TONE` | [agent_defaults.py](../../app/domain/constants/agent_defaults.py) |
-| Prompt build | LangChain `ChatPromptTemplate` → `system_prompt` | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |
+| Prompt build | Base layer-[1] only — role + responsibilities (no baked personality/tone/guardrails) | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |
 | Bedrock defaults | `bedrock_model_id`, `aws_region` from `.env` | [config.py](../../app/config.py) |
 | LLM defaults in code | `temperature`, `max_output_tokens` | [agent_service.py](../../app/services/agent_service.py) |
 | Repository DI | `get_agent_repository()` | [repositories.py](../../app/di/repositories.py) |
 | Save agent | Insert into `agents` collection | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Response schema | `CreateAgentResponse` (`201`) | [agent.py](../../app/schemas/agent.py) |
-| Empty skills / workflows | `skill_ids: []`, `workflow_ids: []` at create | [agent_service.py](../../app/services/agent_service.py) |
+| Empty tools / workflows | `tool_ids: []`, `workflow_ids: []` at create | [agent_service.py](../../app/services/agent_service.py) |
+| Capability catalog | empty `capability_catalog` on Mongo document (not in request body) | [agent_service.py](../../app/services/agent_service.py) · migration: [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
 
 ## Request body (frontend)
 
@@ -231,7 +234,7 @@ flowchart TB
 |------|----------------|
 | After auth | `organization_id`, `user_id` (from auth — not in request body) |
 | After Pydantic validation | `name`, `industry`, `description`, `agent_type` |
-| After constants + prompt | `system_prompt`, `personality`, `tone` |
+| After constants + prompt | `system_prompt` (base only), `personality`, `tone` |
 | After env defaults | `llm_config.model_id`, `llm_config.region` |
 | After DB save | `id`, `status: draft` |
 | Final response | full `CreateAgentResponse` |
@@ -249,13 +252,15 @@ flowchart TB
 
 **After prompt build** (+3 fields)
 
+`system_prompt` contains **only** the role, description, and core responsibilities. Personality, tone, and guardrails are stored as **separate fields** and assembled at chat time by `FinalPromptBuilder` (see [../agentic/updets/runtime-migration-agentic.md](../agentic/updets/runtime-migration-agentic.md)).
+
 ```json
 {
   "name": "abc bank",
   "industry": "financial_services",
   "description": "Payment and collections assistant for customers",
   "agent_type": "payment_collections",
-  "system_prompt": "You are an AI-powered Payment & Collections Agent for abc bank...",
+  "system_prompt": "You are an AI-powered Payment & Collections Agent for abc bank.\nPayment and collections assistant for customers.\n\nCore responsibilities:\n- ...",
   "personality": "Professional, Empathetic, Solution-oriented",
   "tone": "Friendly, Reassuring, Clear"
 }
@@ -267,7 +272,7 @@ flowchart TB
 {
   "name": "abc bank",
   "industry": "financial_services",
-  "system_prompt": "You are an AI-powered Payment & Collections Agent for abc bank...",
+  "system_prompt": "You are an AI-powered Payment & Collections Agent for abc bank.\n...",
   "personality": "Professional, Empathetic, Solution-oriented",
   "tone": "Friendly, Reassuring, Clear",
   "llm_config": {
@@ -288,7 +293,7 @@ flowchart TB
   "description": "Payment and collections assistant for customers",
   "industry": "financial_services",
   "agent_type": "payment_collections",
-  "system_prompt": "You are an AI-powered Payment & Collections Agent for abc bank...",
+  "system_prompt": "You are an AI-powered Payment & Collections Agent for abc bank.\n...",
   "personality": "Professional, Empathetic, Solution-oriented",
   "tone": "Friendly, Reassuring, Clear",
   "guardrails": [
@@ -315,8 +320,13 @@ flowchart TB
 
 | Item | Status | Open file |
 |------|--------|-----------|
-| Tools / skills | empty `skill_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
+| Tools | empty `tool_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
 | Workflows | empty `workflow_ids: []` | [agent_service.py](../../app/services/agent_service.py) |
+| Capability catalog | empty sections on create (service/Mongo only) | [agent_service.py](../../app/services/agent_service.py) |
+| `routing_hint` on create | not on `CreateAgentRequest` — set when attaching tools/KBs/workflows/sub-agents | [../agentic/updets/api-migration-agentic.md](../agentic/updets/api-migration-agentic.md) |
+| Phase B | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-b.md](../agentic/updets/api-migration-agentic-phase-b.md) |
+| Phase C | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-c.md](../agentic/updets/api-migration-agentic-phase-c.md) |
+| Phase D | no REST change on agent create | [../agentic/updets/api-migration-agentic-phase-d.md](../agentic/updets/api-migration-agentic-phase-d.md) |
 | Webhook / publish | `status: draft` only | [agent_repository.py](../../app/infrastructure/db/repositories/mongo/agent_repository.py) |
 | Website crawl / RAG | not started | — |
-| Bedrock invoke at create time | prompt built locally only | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |
+| Bedrock invoke at create time | prompt built locally only (base layer; no personality/tone/guardrails in string) | [prompt_builder.py](../../app/infrastructure/ai/prompt_builder.py) |

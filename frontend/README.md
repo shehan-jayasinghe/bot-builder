@@ -26,16 +26,21 @@ src/
 ├── config/            # env
 ├── constants/         # navigation
 ├── layouts/           # AppShell
-├── pages/             # One folder per section (stubs for now)
+├── pages/agent/       # Agent detail, preview, evaluation (Eval Lab)
+├── api/               # REST clients (agents, preview, evaluation, …)
+├── components/evaluation/  # Metric panels + EvalCaseTable
 └── routes/            # Route definitions
 ```
 
-## Pages (placeholders)
+## Pages
 
 | Route | Page |
 |-------|------|
-| `/` | Home (workflow canvas shell) |
-| `/agent` | Agent |
+| `/` | Home |
+| `/agent` | Agent list |
+| `/agent/:agentId` | Agent detail |
+| `/agent/:agentId/preview` | Preview chat + trace |
+| `/agent/:agentId/evaluation` | **Eval Lab** — RAGAS test cases + metric panels |
 | `/workflows` | Workflows |
 | `/data-sources` | Data Sources |
 | `/channels` | Channels |
@@ -43,3 +48,5 @@ src/
 | `/analytics` | Analytics |
 | `/schedulers` | Schedulers |
 | `/settings` | Settings |
+
+RAG evaluation docs: [../backend/document/evaluation/00-overview.md](../backend/document/evaluation/00-overview.md). Requires `RAG_EVAL_ENABLED=true` on the backend.

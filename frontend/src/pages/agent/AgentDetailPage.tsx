@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { getAgent } from "../../api/agents";
+import { AgentKnowledgeBasePanel } from "../../components/agent/AgentKnowledgeBasePanel";
+import { AgentSubAgentsPanel } from "../../components/agent/AgentSubAgentsPanel";
+import { AgentToolsPanel } from "../../components/agent/AgentToolsPanel";
+import { AgentWorkflowsPanel } from "../../components/agent/AgentWorkflowsPanel";
+import { CapabilityCatalogPanel } from "../../components/agent/CapabilityCatalogPanel";
 import { AGENT_DETAIL_TABS } from "../../constants/navigation";
 import { getAgentTypeOption, getIndustryLabel } from "../../constants/agents";
 import { NavIcon } from "../../components/ui/NavIcon";
@@ -18,6 +24,9 @@ const PERSONALITY_TAGS = [
 
 export function AgentDetailPage() {
   const { agentId } = useParams<{ agentId: string }>();
+  const [activeTab, setActiveTab] = useState<(typeof AGENT_DETAIL_TABS)[number]["label"]>(
+    AGENT_DETAIL_TABS[0].label,
+  );
 
   const { data: agent, isLoading, isError, error } = useQuery({
     queryKey: ["agent", agentId],
@@ -54,11 +63,12 @@ export function AgentDetailPage() {
     <div className="agent-detail">
       <div className="agent-detail__topbar">
         <div className="agent-detail__tabs">
-          {AGENT_DETAIL_TABS.map((tab, index) => (
+          {AGENT_DETAIL_TABS.map((tab) => (
             <button
               key={tab.label}
               type="button"
-              className={`agent-detail__tab ${index === 0 ? "agent-detail__tab--active" : ""}`}
+              className={`agent-detail__tab ${activeTab === tab.label ? "agent-detail__tab--active" : ""}`}
+              onClick={() => setActiveTab(tab.label)}
             >
               <NavIcon name={tab.icon} className="agent-detail__tab-icon" />
               <span>{tab.label}</span>
@@ -66,9 +76,12 @@ export function AgentDetailPage() {
           ))}
         </div>
         <div className="agent-detail__topbar-actions">
-          <button type="button" className="btn btn--ghost">
+          <Link to={`/agent/${agentId}/preview`} className="btn btn--ghost">
             Preview
-          </button>
+          </Link>
+          <Link to={`/agent/${agentId}/evaluation`} className="btn btn--ghost">
+            Evaluation
+          </Link>
           <button type="button" className="btn btn--primary">
             Publish
           </button>
@@ -88,102 +101,104 @@ export function AgentDetailPage() {
             <span className={`agent-status agent-status--${agent.status}`}>{agent.status}</span>
           </div>
         </div>
-        <div className="agent-detail__header-actions">
-          <button type="button" className="btn btn--ghost">
-            Clear
-          </button>
-          <button type="button" className="btn btn--primary">
-            Save changes
-          </button>
-        </div>
-      </div>
-
-      <div className="agent-detail__grid">
-        <div className="agent-detail__main">
-          <section className="agent-panel agent-panel--prompt">
-            <div className="agent-panel__header">
-              <h2>System prompt</h2>
-              <span className="agent-panel__hint">Core instructions for your agent</span>
-            </div>
-            <div className="agent-panel__scroll">
-              <textarea className="agent-panel__textarea" readOnly value={agent.system_prompt} />
-            </div>
-          </section>
-
-          <div className="agent-detail__secondary">
-            <section className="agent-panel agent-panel--compact">
-              <div className="agent-panel__header">
-                <h2>Personality</h2>
-              </div>
-              <div className="agent-detail__tags">
-                {PERSONALITY_TAGS.map((tag) => (
-                  <span
-                    key={tag}
-                    className={`agent-detail__tag ${tag === "Custom" ? "agent-detail__tag--active" : ""}`}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <input className="agent-panel__input" readOnly value={agent.personality} />
-            </section>
-
-            <section className="agent-panel agent-panel--compact">
-              <div className="agent-panel__header">
-                <h2>Tone</h2>
-              </div>
-              <input className="agent-panel__input" readOnly value={agent.tone} />
-            </section>
+        {activeTab === "Agent" ? (
+          <div className="agent-detail__header-actions">
+            <button type="button" className="btn btn--ghost">
+              Clear
+            </button>
+            <button type="button" className="btn btn--primary">
+              Save changes
+            </button>
           </div>
-        </div>
-
-        <aside className="agent-detail__aside">
-          <section className="agent-panel">
-            <div className="agent-panel__header agent-panel__header--row">
-              <h2>Tools</h2>
-              <button type="button" className="agent-detail__link-btn">
-                + Add
-              </button>
-            </div>
-            <div className="agent-detail__empty-panel">
-              <div className="agent-detail__empty-icon" aria-hidden>
-                🔧
-              </div>
-              <p>No tools connected yet.</p>
-              <span>Add APIs, CRMs, or custom actions to extend your agent.</span>
-              <button type="button" className="btn btn--ghost">
-                Add tool
-              </button>
-            </div>
-          </section>
-
-          <section className="agent-panel">
-            <div className="agent-panel__header">
-              <h2>Deployment</h2>
-            </div>
-            <dl className="agent-meta-list">
-              <div>
-                <dt>Status</dt>
-                <dd>
-                  <span className={`agent-status agent-status--${agent.status}`}>{agent.status}</span>
-                </dd>
-              </div>
-              <div>
-                <dt>Model</dt>
-                <dd>{agent.llm_config.model_id}</dd>
-              </div>
-              <div>
-                <dt>Region</dt>
-                <dd>{agent.llm_config.region}</dd>
-              </div>
-              <div>
-                <dt>Temperature</dt>
-                <dd>{agent.llm_config.temperature}</dd>
-              </div>
-            </dl>
-          </section>
-        </aside>
+        ) : null}
       </div>
+
+      {activeTab === "Sub Agents" ? (
+        <div className="agent-detail__tab-content">
+          <AgentSubAgentsPanel agentId={agent.id} />
+        </div>
+      ) : activeTab === "Agent" ? (
+        <div className="agent-detail__grid">
+          <div className="agent-detail__main">
+            <section className="agent-panel agent-panel--prompt">
+              <div className="agent-panel__header">
+                <h2>System prompt</h2>
+                <span className="agent-panel__hint">Core instructions for your agent</span>
+              </div>
+              <div className="agent-panel__scroll">
+                <textarea className="agent-panel__textarea" readOnly value={agent.system_prompt} />
+              </div>
+            </section>
+
+            <div className="agent-detail__secondary">
+              <section className="agent-panel agent-panel--compact">
+                <div className="agent-panel__header">
+                  <h2>Personality</h2>
+                </div>
+                <div className="agent-detail__tags">
+                  {PERSONALITY_TAGS.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`agent-detail__tag ${tag === "Custom" ? "agent-detail__tag--active" : ""}`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <input className="agent-panel__input" readOnly value={agent.personality} />
+              </section>
+
+              <section className="agent-panel agent-panel--compact">
+                <div className="agent-panel__header">
+                  <h2>Tone</h2>
+                </div>
+                <input className="agent-panel__input" readOnly value={agent.tone} />
+              </section>
+            </div>
+          </div>
+
+          <aside className="agent-detail__aside">
+            <CapabilityCatalogPanel agentId={agent.id} />
+            <AgentToolsPanel agentId={agent.id} />
+            <AgentWorkflowsPanel agentId={agent.id} />
+            <AgentKnowledgeBasePanel agentId={agent.id} />
+
+            <section className="agent-panel">
+              <div className="agent-panel__header">
+                <h2>Deployment</h2>
+              </div>
+              <dl className="agent-meta-list">
+                <div>
+                  <dt>Status</dt>
+                  <dd>
+                    <span className={`agent-status agent-status--${agent.status}`}>{agent.status}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Model</dt>
+                  <dd>{agent.llm_config.model_id}</dd>
+                </div>
+                <div>
+                  <dt>Region</dt>
+                  <dd>{agent.llm_config.region}</dd>
+                </div>
+                <div>
+                  <dt>Temperature</dt>
+                  <dd>{agent.llm_config.temperature}</dd>
+                </div>
+              </dl>
+            </section>
+          </aside>
+        </div>
+      ) : (
+        <div className="agent-detail__tab-content">
+          <section className="agent-panel">
+            <div className="agent-detail__empty-panel">
+              <p>{activeTab} coming soon.</p>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

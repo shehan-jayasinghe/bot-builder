@@ -1,11 +1,8 @@
-from collections.abc import Awaitable, Callable
-
 from fastapi import APIRouter, Depends
 
-from app.domain.engine.dialogue import DialogueEngine
-from app.domain.pipeline.chat_pipeline import ChatPipeline
-from app.di import get_chat_pipeline, get_dialogue_engine_factory
+from app.di.chat import get_chat_completion_service
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.services.chat_completion_service import ChatCompletionService
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -14,26 +11,16 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 async def chat_webhook(
     webhook_id: str,
     body: ChatRequest,
-    engine_factory: Callable[..., Awaitable[DialogueEngine]] = Depends(get_dialogue_engine_factory),
-    chat_pipeline: ChatPipeline = Depends(get_chat_pipeline),
+    chat_service: ChatCompletionService = Depends(get_chat_completion_service),
 ) -> ChatResponse:
     """
     Main chat endpoint — entry point for the inference flow.
 
     Flow:
       1. Validate request (Pydantic)
-      2. Build DialogueEngine
-      3. ChatPipeline (guardrails → RAG → skills → engine)
-      4. Return JSON replies
+      2. Resolve channel + published agent (friendly 200 fallback)
+      3. Load tracker + RuntimeBundle
+      4. Guardrails (prompt + optional NeMo intent gate) → ChatGraph → optional NeMo output gate
+      5. Persist session and return JSON replies
     """
-    # TODO: add auth (API token / service token)
-    # TODO: add rate limiting per webhook_id
-
-    engine = await engine_factory(
-        webhook_id=webhook_id,
-        sender_id=body.sender_id,
-        message=body.message,
-        metadata=body.metadata,
-    )
-    messages = await chat_pipeline.run(engine)
-    return ChatResponse(messages=messages)
+    return await chat_service.complete(webhook_id=webhook_id, request=body)

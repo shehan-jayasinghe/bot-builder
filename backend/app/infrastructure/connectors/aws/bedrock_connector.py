@@ -6,6 +6,14 @@ import boto3
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError
 
+from app.infrastructure.connectors.aws.bedrock_model_formats import (
+    build_embed_request,
+    build_llm_request,
+    detect_model_family,
+    parse_embed_response,
+    parse_llm_response,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,6 +26,7 @@ class BedrockConnector:
         region: str | None = None,
         embed_model_id: str | None = None,
         llm_model_id: str | None = None,
+        embed_dimensions: int = 1024,
     ) -> None:
         self._region = region or os.getenv("AWS_REGION", "us-east-1")
         self._embed_model_id = embed_model_id or os.getenv(
@@ -28,6 +37,7 @@ class BedrockConnector:
             "BEDROCK_MODEL_ID",
             "anthropic.claude-3-5-sonnet-20241022-v2:0",
         )
+        self._embed_dimensions = embed_dimensions
         self._client: BaseClient | None = None
 
     @property
@@ -45,19 +55,22 @@ class BedrockConnector:
 
     def embed_text(self, *, text: str) -> list[float]:
         """Return a dense embedding vector for a single text input."""
-        body = json.dumps({"inputText": text})
+        family = detect_model_family(self._embed_model_id)
+        body = build_embed_request(
+            family=family,
+            text=text,
+            dimensions=self._embed_dimensions,
+            model_id=self._embed_model_id,
+        )
         try:
             response = self._get_client().invoke_model(
                 modelId=self._embed_model_id,
-                body=body,
+                body=json.dumps(body),
                 contentType="application/json",
                 accept="application/json",
             )
             payload = json.loads(response["body"].read())
-            embedding = payload.get("embedding")
-            if not embedding:
-                raise ValueError("Bedrock embed response missing 'embedding'")
-            return embedding
+            return parse_embed_response(family=family, payload=payload)
         except ClientError:
             logger.exception("Bedrock embed failed for model %s", self._embed_model_id)
             raise
@@ -73,26 +86,22 @@ class BedrockConnector:
         temperature: float = 0.0,
     ) -> str:
         """Invoke the configured LLM and return the text response."""
-        body = json.dumps(
-            {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "messages": [{"role": "user", "content": prompt}],
-            }
+        family = detect_model_family(self._llm_model_id)
+        body = build_llm_request(
+            family=family,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
         )
         try:
             response = self._get_client().invoke_model(
                 modelId=self._llm_model_id,
-                body=body,
+                body=json.dumps(body),
                 contentType="application/json",
                 accept="application/json",
             )
             payload = json.loads(response["body"].read())
-            content = payload.get("content", [])
-            if content and isinstance(content, list):
-                return content[0].get("text", "")
-            return str(payload)
+            return parse_llm_response(family=family, payload=payload)
         except ClientError:
             logger.exception("Bedrock LLM invoke failed for model %s", self._llm_model_id)
             raise

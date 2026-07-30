@@ -5,7 +5,15 @@ from app.infrastructure.db.mongo import get_motor_db
 from app.infrastructure.db.redis import get_redis
 from app.infrastructure.db.repositories.mongo.agent_repository import AgentRepository
 from app.infrastructure.db.repositories.mongo.channel_repository import ChannelRepository
+from app.infrastructure.db.repositories.mongo.connector_repository import ConnectorRepository
+from app.infrastructure.db.repositories.mongo.eval_dataset_repository import EvalDatasetRepository
+from app.infrastructure.db.repositories.mongo.eval_run_repository import EvalRunRepository
+from app.infrastructure.db.repositories.mongo.job_log_repository import JobLogRepository
+from app.infrastructure.db.repositories.mongo.knowledgebase_repository import KnowledgebaseRepository
 from app.infrastructure.db.repositories.mongo.organization_repository import OrganizationRepository
+from app.infrastructure.db.repositories.mongo.sub_agent_repository import SubAgentRepository
+from app.infrastructure.db.repositories.mongo.tool_repository import ToolRepository
+from app.infrastructure.db.repositories.mongo.workflow_repository import WorkflowRepository
 from app.infrastructure.db.repositories.mongo.tracker_repository import TrackerRepository
 from app.infrastructure.db.repositories.mongo.user_repository import UserRepository
 from app.infrastructure.db.repositories.redis.tracker_session_store import TrackerSessionStore
@@ -33,3 +41,35 @@ def get_user_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> Use
 
 def get_organization_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> OrganizationRepository:
     return OrganizationRepository(db=db)
+
+
+def get_knowledgebase_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> KnowledgebaseRepository:
+    return KnowledgebaseRepository(db=db)
+
+
+def get_job_log_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> JobLogRepository:
+    return JobLogRepository(db=db)
+
+
+def get_connector_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> ConnectorRepository:
+    return ConnectorRepository(db=db)
+
+
+def get_tool_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> ToolRepository:
+    return ToolRepository(db=db)
+
+
+def get_workflow_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> WorkflowRepository:
+    return WorkflowRepository(db=db)
+
+
+def get_sub_agent_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> SubAgentRepository:
+    return SubAgentRepository(db=db)
+
+
+def get_eval_run_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> EvalRunRepository:
+    return EvalRunRepository(db=db)
+
+
+def get_eval_dataset_repository(db: AsyncIOMotorDatabase = Depends(get_motor_db)) -> EvalDatasetRepository:
+    return EvalDatasetRepository(db=db)
