@@ -19,7 +19,7 @@ import httpx
 
 from app.config import settings
 
-DEFAULT_SESSION_ID = "sess_3G6R1apw8ifrkHaN8Mib3r1PItd"
+DEFAULT_SESSION_ID = "sess_3HD9NE9OA00ZjJkMA5PXKwKHa0U"
 CLERK_API = "https://api.clerk.com/v1"
 
 

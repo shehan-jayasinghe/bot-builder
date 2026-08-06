@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from dataclasses import dataclass, field
@@ -90,22 +91,39 @@ class RagasRunner:
         if ground_truth:
             metrics.extend([context_precision, context_recall])
 
-        result = await aevaluate(
-            dataset=dataset,
-            metrics=metrics,
-            llm=self._llm(),
-            embeddings=self._embeddings(),
-            show_progress=False,
-            raise_exceptions=False,
-        )
+        try:
+            result = await asyncio.wait_for(
+                aevaluate(
+                    dataset=dataset,
+                    metrics=metrics,
+                    llm=self._llm(),
+                    embeddings=self._embeddings(),
+                    show_progress=False,
+                    raise_exceptions=False,
+                ),
+                timeout=240.0,
+            )
+        except TimeoutError:
+            logger.warning("Ragas aevaluate timed out; returning null scores")
+            return RagasRunResult(
+                scores={name: None for name in METRIC_NAMES},
+                faithfulness_detail={"claims": [], "score": None},
+            )
 
         scores = _scores_from_result(result)
-        faithfulness_detail = await self._build_faithfulness_detail(
-            question=question,
-            answer=answer,
-            contexts=contexts,
-            score=scores.get("faithfulness"),
-        )
+        try:
+            faithfulness_detail = await asyncio.wait_for(
+                self._build_faithfulness_detail(
+                    question=question,
+                    answer=answer,
+                    contexts=contexts,
+                    score=scores.get("faithfulness"),
+                ),
+                timeout=90.0,
+            )
+        except TimeoutError:
+            logger.warning("Faithfulness detail timed out; continuing without claim breakdown")
+            faithfulness_detail = {"claims": [], "score": scores.get("faithfulness")}
         return RagasRunResult(
             scores=scores,
             traces=list(result.traces or []),

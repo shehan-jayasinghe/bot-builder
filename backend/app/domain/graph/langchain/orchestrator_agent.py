@@ -96,14 +96,20 @@ async def run_tool_agent_turn(
             return AgentTurnResult(replies=[PII_BLOCKED_USER_MESSAGE])
         raise
 
+    messages = result.get("messages", [])
     if router.delegation is not None:
         return AgentTurnResult(replies=[], delegation=router.delegation)
     if router.workflow_enter is not None:
         return AgentTurnResult(replies=[], workflow_enter=router.workflow_enter)
     if router.orchestrator_return:
-        return AgentTurnResult(replies=[], orchestrator_return=True)
+        # Preserve any user-facing text on the same turn as return_to_orchestrator.
+        reply = _extract_final_reply(messages, allow_tool_call_text=True)
+        return AgentTurnResult(
+            replies=[reply] if reply else [],
+            orchestrator_return=True,
+        )
 
-    reply = _extract_final_reply(result.get("messages", []))
+    reply = _extract_final_reply(messages)
     if not reply:
         return AgentTurnResult(replies=[FALLBACK_REPLY])
     return AgentTurnResult(replies=[reply])
@@ -121,15 +127,51 @@ def _history_to_messages(history: list[dict[str, Any]]) -> list[HumanMessage | A
     return messages
 
 
-def _extract_final_reply(messages: list[Any]) -> str:
+def _content_to_text(content: Any) -> str:
+    """Normalize Bedrock/Nova message content into plain text."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                text = block.strip()
+                if text:
+                    parts.append(text)
+                continue
+            if not isinstance(block, dict):
+                continue
+            block_type = block.get("type")
+            if block_type in {"text", "output_text"}:
+                text = str(block.get("text") or "").strip()
+                if text:
+                    parts.append(text)
+            elif block_type == "reasoning_content":
+                # Prefer final answer text; ignore model thinking blocks.
+                continue
+            else:
+                text = str(block.get("text") or "").strip()
+                if text:
+                    parts.append(text)
+        return "\n".join(parts).strip()
+    return str(content).strip()
+
+
+def _extract_final_reply(
+    messages: list[Any],
+    *,
+    allow_tool_call_text: bool = False,
+) -> str:
     for message in reversed(messages):
         if not isinstance(message, AIMessage):
             continue
-        if message.tool_calls:
+        if message.tool_calls and not allow_tool_call_text:
             continue
-        content = message.content
-        if content:
-            return str(content)
+        text = _content_to_text(message.content)
+        if text:
+            return text
     return ""
 
 

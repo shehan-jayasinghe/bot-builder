@@ -99,7 +99,21 @@ class OrchestratorRunner:
             turn_evidence=turn_evidence,
         )
         if sub_result.orchestrator_return:
-            return sub_result
+            # Sub-agent asked to hand back; keep any answer it already produced.
+            if sub_result.replies:
+                return AgentTurnResult(
+                    replies=sub_result.replies,
+                    routing={
+                        "mode": "orchestrator",
+                        "returned_from_sub_agent": True,
+                        "sub_agent_id": delegation.sub_agent.id,
+                        "sub_agent_name": delegation.sub_agent.name,
+                    },
+                )
+            # Empty hand-back on the same turn as delegation — treat as no answer.
+            from app.domain.graph.langchain.agent_factory import FALLBACK_REPLY
+
+            return AgentTurnResult(replies=[FALLBACK_REPLY])
         routing = {
             "mode": "delegate",
             "type": "delegate",

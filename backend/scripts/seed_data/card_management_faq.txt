@@ -1,4 +1,4 @@
-ABC Bank — Card Management FAQ
+Nova Trust Bank — Card Management FAQ
 
 Activate card: Use the mobile app or call the number on the card sticker. Activation completes within 2 minutes.
 
@@ -10,8 +10,13 @@ PIN reset: App > Card Management > Reset PIN. OTP sent to registered mobile.
 
 International usage: Enable travel notice in app before departure to avoid declines.
 
-Cash advance fee: 3% of amount or USD 10 minimum.
+Cash advance fee: 3% of amount or ₹250 minimum.
 
-Statement due date: 21 days after statement close. Minimum payment is 2% of balance or USD 25, whichever is greater.
+Statement due date: 21 days after statement close. Minimum payment is 2% of balance or ₹500, whichever is greater.
+
+Auto-debit / Auto Pay for credit cards:
+- Enable auto-debit in the mobile app under Cards > Auto Pay.
+- Choose either minimum due or full statement balance.
+- Auto Pay runs on the statement due date from the linked savings or current account.
 
 Dispute a charge: Card Management > Transactions > Dispute within 60 days of posting.
