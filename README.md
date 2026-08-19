@@ -1,76 +1,113 @@
 # Bot Builder
 
-Conversational AI platform backend for ShoutOUT (FastAPI + AWS Bedrock + MongoDB).
+A conversational AI backend platform built with **FastAPI**, **AWS Bedrock**, **MongoDB**, and an agent/workflow-oriented runtime.
 
-## Structure
+## Overview
 
-```text
-bot-builder/
-├── backend/
-│   └── app/
-│       ├── api/v1/           # handlers
-│       ├── di/               # dependency injection
-│       ├── services/         # application services
-│       ├── domain/           # models, graph, workflow, pipeline
-│       ├── infrastructure/   # db (mongo/redis/repos), ai
-│       └── schemas/
-├── docker-compose.yml
-└── README.md
-```
+Bot Builder provides the runtime for processing user messages through guardrails, retrieval, workflow routing, sub-agent delegation, tool execution, and LLM response generation. The current repository is centered on the chat inference flow while the broader product is being developed toward a visual bot-building platform.
 
-## Current scope — chat flow only
-
-Wired today:
+## Runtime Architecture
 
 ```text
 POST /api/v1/chat/webhook/{webhook_id}
-  → chat.py
-  → ChatCompletionService
-      → AssistantLoader.try_resolve()
-      → RuntimeBundleLoader.load()
-      → GuardrailRunner
-      → RAGRetriever
-      → ChatGraph (workflow / orchestrator routing)
-      → OrchestratorRunner → Bedrock LLM + tool execution
-  → ChatResponse (text + optional buttons)
+              |
+              v
+          Chat Handler
+              |
+              v
+     ChatCompletionService
+              |
+       +------+-------+----------------+
+       |              |                |
+       v              v                v
+ Assistant Loader  Guardrails       RAG Retriever
+       |              |                |
+       +--------------+----------------+
+                      |
+                      v
+                 ChatGraph
+                      |
+          +-----------+-----------+
+          |                       |
+          v                       v
+     Workflow                Orchestrator
+                                  |
+                                  v
+                       Bedrock LLM + Tools
+                                  |
+                                  v
+                       Rich Chat Response
+                                  |
+                                  v
+                           Trace Persistence
 ```
 
-## Target platform (later — see UI designs)
+## Current Runtime Pipeline
 
-Full product includes: applications, onboarding, agent config (personality/tone), sub-agents, skills, visual workflows, data sources, channels, trace view, preview, publish.
+1. Receive the chat message.
+2. Resolve the assistant configuration from MongoDB.
+3. Load the runtime bundle.
+4. Run guardrails.
+5. Retrieve relevant knowledge through the RAG layer when applicable.
+6. Route the message through `ChatGraph`.
+7. Execute workflows, orchestrator logic, or sub-agent delegation.
+8. Call AWS Bedrock and tools when required.
+9. Return text and optional rich UI actions such as buttons/cards.
+10. Persist trace events.
 
-| Module | Status |
-|--------|--------|
-| Chat inference + graph routing | Done |
-| Assistant loader from MongoDB | Done |
+## Main Components
+
+```text
+backend/app/
+├── api/v1/           # API handlers
+├── di/               # Dependency injection
+├── services/         # Application services
+├── domain/           # Domain models and workflow/graph concepts
+├── infrastructure/   # MongoDB, Redis, repositories and AI integrations
+└── schemas/          # Request/response schemas
+```
+
+## AI Capabilities
+
+The repository includes the following runtime capabilities:
+
+- AWS Bedrock LLM integration
+- Guardrails
+- Retrieval-augmented generation (RAG)
+- LlamaIndex-based retrieval
+- Vector, keyword and graph retrieval approaches
+- Tool execution
+- Workflow runtime
+- Sub-agent delegation
+- Trace events
+
+## Product Roadmap
+
+| Capability | Status |
+|---|---|
+| Chat inference and graph routing | Done |
+| MongoDB assistant loading | Done |
 | Guardrails | Done |
-| RAG (Qdrant + keyword + graph) | Done — LlamaIndex (`infrastructure/ai/llamaindex/`) |
-| Tool execution via orchestrator | Done |
+| RAG | Done |
+| Tool execution | Done |
 | Trace events | Done |
-| Workflows runtime | Done |
+| Workflow runtime | Done |
 | Sub-agent delegation | Done |
 | Admin / builder APIs | In progress |
 | Frontend | In progress |
 
-### Runtime pipeline (per message — target)
+## Technology Stack
 
-1. Input message
-2. Guardrails (`guardrail_complete`)
-3. RAG (`rag_complete`) — skipped during active workflow
-4. ChatGraph routing (workflow / orchestrator / sub-agent)
-5. OrchestratorRunner / Bedrock LLM + tool calls
-6. Rich response (text, buttons, cards)
-7. Trace persisted
+- Python
+- FastAPI
+- AWS Bedrock
+- LlamaIndex
+- MongoDB
+- Redis
+- Docker
+- Poetry
 
-### Phases
-
-- **Phase 1:** Chat flow + pipeline stubs + Mongo assistant loader
-- **Phase 2:** Guardrails, RAG, skills, trace persistence
-- **Phase 3:** Workflows, sub-agents, rich UI responses
-- **Phase 4:** Admin APIs, data sources, channels, publish
-- **Phase 5:** Frontend
-
-## Quick start
+## Quick Start
 
 ```bash
 cd backend
@@ -79,7 +116,7 @@ cp .env.example .env
 poetry run uvicorn app.main:app --reload
 ```
 
-Test:
+Test the chat endpoint:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/chat/webhook/demo-webhook-id \
@@ -87,10 +124,15 @@ curl -X POST http://localhost:8000/api/v1/chat/webhook/demo-webhook-id \
   -d '{"sender_id":"user-1","message":"Hello"}'
 ```
 
-- Swagger: http://localhost:8000/docs
-- Health: http://localhost:8000/api/v1/health
+Useful endpoints:
+
+- Swagger UI: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/api/v1/health`
 
 ## Documentation
 
-- Agentic system (API + runtime migration): [backend/document/agentic/00-overview.md](backend/document/agentic/00-overview.md)
-- LlamaIndex RAG migration: [backend/document/agentic/updets/migration-llamaindex-rag.md](backend/document/agentic/updets/migration-llamaindex-rag.md) — **Done**
+Additional architecture and migration documentation lives under `backend/document/`, including the agentic runtime and LlamaIndex RAG migration.
+
+## Development Status
+
+The repository is actively evolving from a chat-runtime implementation toward a complete bot-builder platform with application management, agent configuration, skills, workflows, data sources, channels, tracing, preview, publishing, and a frontend builder.
