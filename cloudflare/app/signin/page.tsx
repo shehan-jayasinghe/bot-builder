@@ -1,8 +1,19 @@
+import { signIn } from "@/auth";
+
 export default function SignInPage() {
   return (
     <main>
       <h1>Sign in</h1>
-      <form>
+      <form
+        action={async (formData) => {
+          "use server";
+          await signIn("credentials", {
+            email: String(formData.get("email") ?? ""),
+            password: String(formData.get("password") ?? ""),
+            redirectTo: "/",
+          });
+        }}
+      >
         <label>
           Email
           <input name="email" type="email" required />

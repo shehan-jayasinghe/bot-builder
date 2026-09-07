@@ -2,6 +2,10 @@ import { desc } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { knowledgebases } from "@/db/schema";
+import {
+  KnowledgebaseStatus,
+  KnowledgebaseStorageType,
+} from "@/lib/constants/knowledgebases";
 
 export async function GET() {
   const db = await getDb();
@@ -27,11 +31,14 @@ export async function POST(request: Request) {
     organization_id: string;
     agent_id?: string;
     name: string;
-    storage_type?: "vector" | "keyword";
+    storage_type?: KnowledgebaseStorageType;
   };
 
-  const storageType = body.storage_type ?? "vector";
-  if (storageType !== "vector" && storageType !== "keyword") {
+  const storageType = body.storage_type ?? KnowledgebaseStorageType.Vector;
+  if (
+    storageType !== KnowledgebaseStorageType.Vector &&
+    storageType !== KnowledgebaseStorageType.Keyword
+  ) {
     return Response.json({ error: "storage_type must be vector or keyword" }, { status: 400 });
   }
 
@@ -45,7 +52,7 @@ export async function POST(request: Request) {
     agentId: body.agent_id ?? null,
     name: body.name,
     storageType,
-    status: "pending",
+    status: KnowledgebaseStatus.Pending,
     createdAt: now,
   });
 
