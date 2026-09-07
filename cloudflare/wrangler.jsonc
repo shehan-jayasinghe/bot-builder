@@ -11,20 +11,20 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "bot-builder",
-      "database_id": "4c451cd2-c3f3-4b3e-b64a-4dd8f49f664f"
+      "database_name": "__D1_DATABASE_NAME__",
+      "database_id": "__D1_DATABASE_ID__"
     }
   ],
   "r2_buckets": [
     {
       "binding": "KB_BUCKET",
-      "bucket_name": "bot-builder-kb"
+      "bucket_name": "__R2_BUCKET_NAME__"
     }
   ],
   "vectorize": [
     {
       "binding": "VECTORIZE",
-      "index_name": "bot-builder-kb"
+      "index_name": "__VECTORIZE_INDEX__"
     }
   ],
   "ai": {
