@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { tools } from "@/db/schema";
+import { ToolStatus } from "@/lib/constants/tools";
 
 export async function GET() {
   const db = await getDb();
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     name: body.name,
     executor: body.executor,
     config: body.config ?? null,
-    status: "active",
+    status: ToolStatus.Active,
     createdAt: now,
   });
 

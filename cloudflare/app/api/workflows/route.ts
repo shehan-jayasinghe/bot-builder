@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { workflows } from "@/db/schema";
+import { WorkflowStatus } from "@/lib/constants/workflows";
 
 export async function GET() {
   const db = await getDb();
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     agentId: body.agent_id ?? null,
     name: body.name,
     graph: body.graph ?? null,
-    status: "draft",
+    status: WorkflowStatus.Draft,
     createdAt: now,
     updatedAt: now,
   });

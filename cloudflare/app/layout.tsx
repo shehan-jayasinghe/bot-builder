@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Bot Builder",
-  description: "Bot Builder on Cloudflare Workers",
+  title: "AgentForge",
+  description: "Build smarter teams with AI",
+  icons: {
+    icon: "/landing/agentforge-icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { channels } from "@/db/schema";
+import { ChannelStatus } from "@/lib/constants/channels";
 
 export async function POST(
   request: Request,
@@ -17,7 +18,7 @@ export async function POST(
   const channel = await db
     .select()
     .from(channels)
-    .where(and(eq(channels.webhookId, webhookId), eq(channels.status, "active")))
+    .where(and(eq(channels.webhookId, webhookId), eq(channels.status, ChannelStatus.Active)))
     .get();
 
   if (!channel) {

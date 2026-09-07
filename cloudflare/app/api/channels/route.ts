@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { channels } from "@/db/schema";
+import { ChannelStatus } from "@/lib/constants/channels";
 
 export async function GET() {
   const db = await getDb();
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     organizationId: body.organization_id,
     agentId: body.agent_id,
     webhookId,
-    status: "active",
+    status: ChannelStatus.Active,
     createdAt: now,
   });
 
