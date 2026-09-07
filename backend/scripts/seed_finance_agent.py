@@ -9,7 +9,9 @@ Usage:
 Optional:
   API_BASE=http://localhost:8000/api/v1 poetry run python scripts/seed_finance_agent.py
   poetry run python scripts/seed_finance_agent.py --sync-ingest
+  poetry run python scripts/seed_finance_agent.py --bank-name "Nova Trust Bank"
   poetry run python scripts/seed_finance_agent.py --agent-id <id> --sync-ingest
+  poetry run python scripts/seed_finance_agent.py --sync-ingest --run-eval
 """
 
 from __future__ import annotations
@@ -208,6 +210,67 @@ def create_knowledgebase(
     return _check_response(response, f"create_kb:{name}")
 
 
+DEFAULT_BANK_NAME = "Nova Trust Bank"
+
+EVAL_CASES = [
+    {
+        "question": "What is the minimum balance for urban savings?",
+        "ground_truth": "Urban minimum balance is ₹10,000; non-maintenance fee ₹350 + GST.",
+    },
+    {
+        "question": "What happens if I miss a loan EMI payment?",
+        "ground_truth": (
+            "A late fee of 2% applies after a 5-day grace period; "
+            "contact collections for hardship plans."
+        ),
+    },
+    {
+        "question": "How can I set up auto-debit for my credit card?",
+        "ground_truth": (
+            "Enable auto-debit in the mobile app under Cards > Auto Pay; "
+            "minimum due or full balance."
+        ),
+    },
+]
+
+
+def _run_dummy_evals(
+    client: httpx.Client,
+    *,
+    token: str,
+    agent_id: str,
+) -> None:
+    print("\nRunning dummy evaluations...")
+    for index, case in enumerate(EVAL_CASES, start=1):
+        question = case["question"]
+        sender_id = f"seed-eval-user-{index}-{os.getpid()}"
+        print(f"  eval: {question}")
+        result = _check_response(
+            client.post(
+                f"{_api_base()}/agents/{agent_id}/evaluations/run",
+                headers={**_headers(token), "Content-Type": "application/json"},
+                json={
+                    "question": question,
+                    "ground_truth": case["ground_truth"],
+                    "mode": "full_bot",
+                    "sender_id": sender_id,
+                },
+                timeout=httpx.Timeout(600.0, connect=30.0),
+            ),
+            f"eval:{question[:40]}",
+        )
+        scores = result.get("scores") or {}
+        print(
+            f"    run_id={result.get('run_id')} passed={result.get('passed')} "
+            f"status={result.get('status')} "
+            f"faithfulness={scores.get('faithfulness')} "
+            f"answer_relevancy={scores.get('answer_relevancy')}"
+        )
+        answer = (result.get("answer") or "")[:160]
+        if answer:
+            print(f"    answer: {answer}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed finance/card agentic demo")
     parser.add_argument(
@@ -219,8 +282,20 @@ def main() -> None:
         "--agent-id",
         help="Resume an existing agent (skip agent/KB create; finish ingest + workflow + sub-agents)",
     )
+    parser.add_argument(
+        "--bank-name",
+        default=DEFAULT_BANK_NAME,
+        help=f'Bank / brand name used in agent + sub-agent copy (default: "{DEFAULT_BANK_NAME}")',
+    )
+    parser.add_argument(
+        "--run-eval",
+        action="store_true",
+        help="After seed, run builtin payment_collections eval cases against the new agent",
+    )
     args = parser.parse_args()
     token = _require_token()
+    bank_name = args.bank_name.strip() or DEFAULT_BANK_NAME
+    agent_display_name = f"{bank_name} Assistant"
 
     finance_file = DATA_DIR / "finance_policies.txt"
     card_file = DATA_DIR / "card_management_faq.txt"
@@ -238,14 +313,17 @@ def main() -> None:
             print(f"  vector_kb_id={vector_kb['id']} status={vector_kb['status']}")
             print(f"  keyword_kb_id={keyword_kb['id']} status={keyword_kb['status']}")
         else:
-            print("Creating orchestrator agent...")
+            print(f"Creating orchestrator agent ({agent_display_name})...")
             agent = _check_response(
                 client.post(
                     f"{_api_base()}/agents",
                     headers={**_headers(token), "Content-Type": "application/json"},
                     json={
-                        "name": "ABC Bank Assistant",
-                        "description": "Payment, finance, and card management assistant with RAG and workflows.",
+                        "name": agent_display_name,
+                        "description": (
+                            f"{bank_name} payment, finance, and card management assistant "
+                            "with RAG and workflows."
+                        ),
                         "industry": "financial_services",
                         "agent_type": "payment_collections",
                     },
@@ -275,7 +353,7 @@ def main() -> None:
                 name="Card Management FAQ",
                 storage_type="keyword",
                 file_path=card_file,
-                routing_hint="Search for card activation, blocking, limits, PIN, and disputes",
+                routing_hint="Search for card activation, blocking, limits, PIN, auto-debit, and disputes",
             )
             print(f"  keyword_kb_id={keyword_kb['id']} status={keyword_kb['status']}")
 
@@ -326,9 +404,9 @@ def main() -> None:
                     "name": "finance_management",
                     "description": "Handles balances, EMIs, payment plans, and savings questions",
                     "instructions": (
-                        "You are the finance specialist for ABC Bank. Answer questions about "
+                        f"You are the finance specialist for {bank_name}. Answer questions about "
                         "loan EMIs, late fees, payment plans, savings interest, overdraft, and "
-                        "refunds. Use search_knowledge on Finance Policies before answering. "
+                        "refunds. Always call search_knowledge on Finance Policies before answering. "
                         "Never ask for full card numbers or passwords."
                     ),
                     "knowledge_base_ids": [vector_kb["id"]],
@@ -348,13 +426,13 @@ def main() -> None:
                     "name": "card_management",
                     "description": "Handles debit/credit card activation, blocking, limits, and disputes",
                     "instructions": (
-                        "You are the card management specialist for ABC Bank. Help with card "
+                        f"You are the card management specialist for {bank_name}. Help with card "
                         "activation, lost/stolen blocking, credit limits, PIN reset, international "
-                        "travel notices, and charge disputes. Use search_knowledge on Card "
-                        "Management FAQ before answering."
+                        "travel notices, auto-debit, and charge disputes. Always call "
+                        "search_knowledge on Card Management FAQ before answering."
                     ),
                     "knowledge_base_ids": [keyword_kb["id"]],
-                    "routing_hint": "Delegate for card activation, block, PIN, limit, or dispute questions",
+                    "routing_hint": "Delegate for card activation, block, PIN, limit, auto-debit, or dispute questions",
                 },
             ),
             "create_card_sub_agent",
@@ -362,6 +440,7 @@ def main() -> None:
         print(f"  card_sub_agent_id={card_sub['id']}")
 
         print("\n--- Seed complete ---")
+        print(f"Bank:         {bank_name}")
         print(f"Agent ID:     {agent_id}")
         print(f"Vector KB:    {vector_kb['id']} (finance)")
         print(f"Keyword KB:   {keyword_kb['id']} (card)")
@@ -371,6 +450,15 @@ def main() -> None:
         print('Body: {"sender_id":"demo-user","message":"What is the late payment fee on my loan?"}')
         if not args.sync_ingest:
             print("\nNote: KB ingest runs via Celery. Re-run with --sync-ingest or wait for worker.")
+
+        if args.run_eval:
+            if not args.sync_ingest and vector_kb.get("status") != "ready":
+                print(
+                    "Skipping eval: KBs not ready. Re-run with --sync-ingest --run-eval.",
+                    file=sys.stderr,
+                )
+            else:
+                _run_dummy_evals(client, token=token, agent_id=agent_id)
 
 
 if __name__ == "__main__":

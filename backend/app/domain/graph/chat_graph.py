@@ -243,10 +243,13 @@ class ChatGraph:
 
         if sub_result.orchestrator_return:
             tracker.reset_to_orchestrator()
-            return ChatGraphResult(
-                replies=[WorkflowReply(text=reply) for reply in sub_result.replies],
-                routing=sub_result.routing,
-            )
+            if sub_result.replies:
+                return ChatGraphResult(
+                    replies=[WorkflowReply(text=reply) for reply in sub_result.replies],
+                    routing=sub_result.routing,
+                )
+            # Empty hand-back: fall through so orchestrator can answer this turn.
+            return None
 
         routing = {
             "mode": "delegate",

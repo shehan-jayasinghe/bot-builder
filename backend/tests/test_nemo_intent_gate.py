@@ -35,7 +35,7 @@ def test_nemo_default_profile_loads() -> None:
     assert config_path.is_dir()
     assert (config_path / "scripted_intents.yml").is_file()
     config = RailsConfig.from_path(str(config_path))
-    assert config.models[0].engine == "amazon_bedrock"
+    assert config.models[0].engine == "bedrock_converse"
     assert "self check input" in (config.rails.input.flows or [])
     assert "self check output" in (config.rails.output.flows or [])
 
