@@ -4,7 +4,7 @@ export const metadata = {
   title: "AgentForge",
   description: "Build smarter teams with AI",
   icons: {
-    icon: "/landing/agentforge-icon.svg",
+    icon: "/brand/agentforge-icon.svg",
   },
 };
 

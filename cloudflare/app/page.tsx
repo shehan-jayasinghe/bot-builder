@@ -1,4 +1,4 @@
-import "./landing.css";
+import "./landing-page.css";
 
 const features = [
   ["✣", "Visual Agent Builder", "Design agents with reusable capabilities, prompts and tools."],
@@ -23,7 +23,7 @@ export default function HomePage() {
     <div className="landing">
       <header className="nav shell">
         <a href="#top" className="brand">
-          <img src="/landing/agentforge-logo.svg" alt="AgentForge" />
+          <img src="/brand/agentforge-logo.svg" alt="AgentForge" />
         </a>
         <nav>
           <a href="#platform">Product</a>
@@ -70,7 +70,7 @@ export default function HomePage() {
           </div>
           <div className="heroVisual">
             <div className="glow" />
-            <img src="/landing/agent-hero.svg" alt="AI agent illustration" />
+            <img src="/brand/agent-hero.svg" alt="AI agent illustration" />
           </div>
         </section>
 
@@ -285,7 +285,7 @@ export default function HomePage() {
 
       <footer className="shell footer">
         <div>
-          <img src="/landing/agentforge-logo.svg" alt="AgentForge" />
+          <img src="/brand/agentforge-logo.svg" alt="AgentForge" />
           <p>Empowering organizations to build smarter teams with AI.</p>
         </div>
         <div>
