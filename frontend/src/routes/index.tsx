@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "../auth/ProtectedRoute";
 import { PublicAuthRoute } from "../auth/PublicAuthRoute";
 import { AppShell } from "../layouts/AppShell";
+import { LandingPage } from "../landing-page/LandingPage";
 import { AddKnowledgeBasePage } from "../pages/agent/AddKnowledgeBasePage";
 import { AddToolPage } from "../pages/agent/AddToolPage";
 import { AgentPage } from "../pages/agent/AgentPage";
@@ -26,6 +27,7 @@ import { WorkflowEditorPage } from "../pages/workflows/WorkflowEditorPage";
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route element={<PublicAuthRoute />}>
@@ -35,7 +37,7 @@ export function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route index element={<HomePage />} />
+          <Route path="app" element={<HomePage />} />
           <Route path="agent" element={<AgentPage />} />
           <Route path="agent/new" element={<CreateAgentPage />} />
           <Route path="agent/:agentId/knowledgebases/new" element={<AddKnowledgeBasePage />} />
