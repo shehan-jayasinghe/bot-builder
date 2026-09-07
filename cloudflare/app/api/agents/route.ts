@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { agents } from "@/db/schema";
+import { AgentStatus } from "@/lib/constants/agents";
 
 export async function GET() {
   const db = await getDb();
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     id,
     organizationId: body.organization_id,
     name: body.name,
-    status: "draft",
+    status: AgentStatus.Draft,
     personality: body.personality ?? null,
     createdAt: now,
     updatedAt: now,

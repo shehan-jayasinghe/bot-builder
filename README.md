@@ -1,76 +1,39 @@
 # Bot Builder
 
-Conversational AI platform backend for ShoutOUT (FastAPI + AWS Bedrock + MongoDB).
+A conversational AI backend platform built around FastAPI, AWS Bedrock, retrieval, workflows, tools, and traceable chat execution.
 
-## Structure
-
-```text
-bot-builder/
-├── backend/
-│   └── app/
-│       ├── api/v1/           # handlers
-│       ├── di/               # dependency injection
-│       ├── services/         # application services
-│       ├── domain/           # models, graph, workflow, pipeline
-│       ├── infrastructure/   # db (mongo/redis/repos), ai
-│       └── schemas/
-├── docker-compose.yml
-└── README.md
-```
-
-## Current scope — chat flow only
-
-Wired today:
+## Runtime Flow
 
 ```text
-POST /api/v1/chat/webhook/{webhook_id}
-  → chat.py
-  → ChatCompletionService
-      → AssistantLoader.try_resolve()
-      → RuntimeBundleLoader.load()
-      → GuardrailRunner
-      → RAGRetriever
-      → ChatGraph (workflow / orchestrator routing)
-      → OrchestratorRunner → Bedrock LLM + tool execution
-  → ChatResponse (text + optional buttons)
+Chat Request
+    |
+    v
+Chat Handler -> Guardrails -> RAG Retrieval
+    |                         |
+    +-----------+-------------+
+                v
+            Chat Graph
+                |
+        Workflow / Agents
+                |
+          Bedrock + Tools
+                |
+          Chat Response
+                |
+          Trace Persistence
 ```
 
-## Target platform (later — see UI designs)
+## Technology
 
-Full product includes: applications, onboarding, agent config (personality/tone), sub-agents, skills, visual workflows, data sources, channels, trace view, preview, publish.
+- Python / FastAPI
+- AWS Bedrock
+- LlamaIndex
+- MongoDB
+- Redis
+- Docker
+- Poetry
 
-| Module | Status |
-|--------|--------|
-| Chat inference + graph routing | Done |
-| Assistant loader from MongoDB | Done |
-| Guardrails | Done |
-| RAG (Qdrant + keyword + graph) | Done — LlamaIndex (`infrastructure/ai/llamaindex/`) |
-| Tool execution via orchestrator | Done |
-| Trace events | Done |
-| Workflows runtime | Done |
-| Sub-agent delegation | Done |
-| Admin / builder APIs | In progress |
-| Frontend | In progress |
-
-### Runtime pipeline (per message — target)
-
-1. Input message
-2. Guardrails (`guardrail_complete`)
-3. RAG (`rag_complete`) — skipped during active workflow
-4. ChatGraph routing (workflow / orchestrator / sub-agent)
-5. OrchestratorRunner / Bedrock LLM + tool calls
-6. Rich response (text, buttons, cards)
-7. Trace persisted
-
-### Phases
-
-- **Phase 1:** Chat flow + pipeline stubs + Mongo assistant loader
-- **Phase 2:** Guardrails, RAG, skills, trace persistence
-- **Phase 3:** Workflows, sub-agents, rich UI responses
-- **Phase 4:** Admin APIs, data sources, channels, publish
-- **Phase 5:** Frontend
-
-## Quick start
+## Quick Start
 
 ```bash
 cd backend
@@ -79,18 +42,22 @@ cp .env.example .env
 poetry run uvicorn app.main:app --reload
 ```
 
-Test:
+Swagger is normally available at `http://localhost:8000/docs`.
 
-```bash
-curl -X POST http://localhost:8000/api/v1/chat/webhook/demo-webhook-id \
-  -H "Content-Type: application/json" \
-  -d '{"sender_id":"user-1","message":"Hello"}'
-```
+## Main Capabilities
 
-- Swagger: http://localhost:8000/docs
-- Health: http://localhost:8000/api/v1/health
+- LLM-powered chat inference
+- Guardrails and validation
+- RAG retrieval
+- Workflow and graph routing
+- Tool execution
+- Sub-agent delegation
+- Trace and runtime events
 
-## Documentation
+## Security
 
-- Agentic system (API + runtime migration): [backend/document/agentic/00-overview.md](backend/document/agentic/00-overview.md)
-- LlamaIndex RAG migration: [backend/document/agentic/updets/migration-llamaindex-rag.md](backend/document/agentic/updets/migration-llamaindex-rag.md) — **Done**
+Store model credentials, database credentials, tokens, and other secrets in environment variables or a secret manager. Never commit production credentials.
+
+## Status
+
+The project is evolving toward a broader visual bot-building platform with configuration, workflows, skills, channels, tracing, publishing, and frontend tooling.
