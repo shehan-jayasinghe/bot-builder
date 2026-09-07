@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bot-builder",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bot-builder",
+      "database_id": "local-dev"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KB_BUCKET",
+      "bucket_name": "bot-builder-kb"
+    }
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "bot-builder-kb"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  }
+}
