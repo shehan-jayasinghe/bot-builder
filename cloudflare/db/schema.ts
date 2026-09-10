@@ -1,3 +1,5 @@
+import "server-only";
+
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const organizations = sqliteTable("organizations", {
