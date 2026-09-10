@@ -17,7 +17,7 @@ export function Sidebar({
   userEmail = "",
 }: SidebarProps) {
   const pathname = usePathname();
-  const avatarLetter = userName.charAt(0).toUpperCase() || "?";
+  const avatarLetter = userName?.charAt(0)?.toUpperCase() || "?";
 
   return (
     <aside className="sidebar">
