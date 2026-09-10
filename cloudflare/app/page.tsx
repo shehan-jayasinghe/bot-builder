@@ -35,7 +35,7 @@ export default function HomePage() {
           <a className="textBtn" href="/signin">
             Sign in
           </a>
-          <a className="button small" href="/signin">
+          <a className="button small" href="/signup">
             Get started →
           </a>
         </div>
@@ -55,7 +55,7 @@ export default function HomePage() {
               tools, and deliver real impact — all in one platform.
             </p>
             <div className="heroActions">
-              <a className="button" href="/signin">
+              <a className="button" href="/signup">
                 Get started →
               </a>
               <a className="secondary" href="#platform">
@@ -96,7 +96,7 @@ export default function HomePage() {
               automate workflows, evaluate behavior and deploy to the channels your customers
               already use.
             </p>
-            <a className="button" href="/signin">
+            <a className="button" href="/signup">
               Explore the platform →
             </a>
           </div>
@@ -198,7 +198,7 @@ export default function HomePage() {
                 <div className="caseIcon">{icon}</div>
                 <h3>{title}</h3>
                 <p>{text}</p>
-                <a href="/signin">Learn more →</a>
+                <a href="/signup">Learn more →</a>
               </article>
             ))}
           </div>
@@ -273,7 +273,7 @@ export default function HomePage() {
             <p>Build AI agents around your organization&apos;s knowledge, workflows and tools.</p>
           </div>
           <div>
-            <a className="button white" href="/signin">
+            <a className="button white" href="/signup">
               Get started →
             </a>
             <a className="outline" href="mailto:hello@agentforge.ai">
@@ -303,7 +303,7 @@ export default function HomePage() {
         <div>
           <b>Get started</b>
           <a href="/signin">Sign in</a>
-          <a href="/signin">Create account</a>
+          <a href="/signup">Create account</a>
           <small>© 2026 AgentForge.</small>
         </div>
       </footer>
