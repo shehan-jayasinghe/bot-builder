@@ -35,6 +35,6 @@ export async function createAccount(formData: FormData) {
   await signIn("credentials", {
     email,
     password,
-    redirectTo: "/",
+    redirectTo: "/app",
   });
 }
