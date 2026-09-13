@@ -7,17 +7,10 @@ import { MAIN_NAV } from "@/lib/constants/navigation";
 
 type SidebarProps = {
   organizationName?: string | null;
-  userName?: string | null;
-  userEmail?: string | null;
 };
 
-export function Sidebar({
-  organizationName = "Organization",
-  userName = "User",
-  userEmail = "",
-}: SidebarProps) {
+export function Sidebar({ organizationName = "Organization" }: SidebarProps) {
   const pathname = usePathname();
-  const avatarLetter = userName?.charAt(0)?.toUpperCase() || "?";
 
   return (
     <aside className="sidebar">
@@ -53,16 +46,6 @@ export function Sidebar({
             );
           })}
         </nav>
-      </div>
-
-      <div className="sidebar__footer">
-        <div className="sidebar__user">
-          <span className="sidebar__user-avatar">{avatarLetter}</span>
-          <div>
-            <div className="sidebar__user-name">{userName}</div>
-            {userEmail ? <div className="sidebar__user-email">{userEmail}</div> : null}
-          </div>
-        </div>
       </div>
     </aside>
   );
