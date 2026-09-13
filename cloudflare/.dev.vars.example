@@ -1,1 +1,7 @@
 AUTH_SECRET=replace-with-a-long-random-string
+
+# Used by `npm run deploy` / `npm run cf:inject` (also set these in GitHub Actions)
+CLOUDFLARE_D1_DATABASE_ID=your-d1-uuid
+CLOUDFLARE_D1_DATABASE_NAME=bot-builder
+CLOUDFLARE_R2_BUCKET_NAME=bot-builder-kb
+CLOUDFLARE_VECTORIZE_INDEX=bot-builder-kb
