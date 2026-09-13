@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bot-builder",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "__CLOUDFLARE_D1_DATABASE_NAME__",
+      "database_id": "__CLOUDFLARE_D1_DATABASE_ID__"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KB_BUCKET",
+      "bucket_name": "__CLOUDFLARE_R2_BUCKET_NAME__"
+    }
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "__CLOUDFLARE_VECTORIZE_INDEX__"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  }
+}

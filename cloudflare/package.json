@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf:inject": "node scripts/inject-wrangler-config.mjs",
+    "preview": "npm run cf:inject && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "node scripts/inject-wrangler-config.mjs --strict && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply bot-builder --local"
+    "db:migrate:local": "wrangler d1 execute bot-builder --local --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute bot-builder --remote --file=./schema.sql"
   },
   "dependencies": {
     "drizzle-orm": "^0.44.0",

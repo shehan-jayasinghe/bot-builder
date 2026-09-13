@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -25,6 +29,7 @@ jobs:
       CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
       CLOUDFLARE_R2_BUCKET_NAME: ${{ vars.CLOUDFLARE_R2_BUCKET_NAME }}
       CLOUDFLARE_VECTORIZE_INDEX: ${{ vars.CLOUDFLARE_VECTORIZE_INDEX }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
 
     steps:
       - name: Checkout repository
@@ -40,17 +45,15 @@ jobs:
 
       - name: Validate Cloudflare resource variables
         run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo "Missing CLOUDFLARE_ACCOUNT_ID" && exit 1)
           test -n "$CLOUDFLARE_D1_DATABASE_ID" || (echo "Missing CLOUDFLARE_D1_DATABASE_ID" && exit 1)
           test -n "$CLOUDFLARE_D1_DATABASE_NAME" || (echo "Missing CLOUDFLARE_D1_DATABASE_NAME" && exit 1)
           test -n "$CLOUDFLARE_R2_BUCKET_NAME" || (echo "Missing CLOUDFLARE_R2_BUCKET_NAME" && exit 1)
           test -n "$CLOUDFLARE_VECTORIZE_INDEX" || (echo "Missing CLOUDFLARE_VECTORIZE_INDEX" && exit 1)
 
       - name: Inject Cloudflare resource configuration
-        run: |
-          sed -i "s|__D1_DATABASE_ID__|$CLOUDFLARE_D1_DATABASE_ID|g" wrangler.jsonc
-          sed -i "s|__D1_DATABASE_NAME__|$CLOUDFLARE_D1_DATABASE_NAME|g" wrangler.jsonc
-          sed -i "s|__R2_BUCKET_NAME__|$CLOUDFLARE_R2_BUCKET_NAME|g" wrangler.jsonc
-          sed -i "s|__VECTORIZE_INDEX__|$CLOUDFLARE_VECTORIZE_INDEX|g" wrangler.jsonc
+        run: node scripts/inject-wrangler-config.mjs --strict
 
       - name: Ensure Vectorize index exists
         run: |
@@ -61,5 +64,12 @@ jobs:
             npx wrangler vectorize create "$CLOUDFLARE_VECTORIZE_INDEX" --dimensions=768 --metric=cosine
           fi
 
+      - name: Apply D1 schema (remote)
+        run: npm run db:migrate:remote
+
+      - name: Sync AUTH_SECRET
+        if: ${{ env.AUTH_SECRET != '' }}
+        run: printf '%s' "$AUTH_SECRET" | npx wrangler secret put AUTH_SECRET
+
       - name: Deploy to Cloudflare
-        run: npm run deploy
+        run: npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy
