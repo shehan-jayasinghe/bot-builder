@@ -16,13 +16,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="app-shell">
-      <Sidebar
-        organizationName="Organization"
-        userName={session.user.name ?? "User"}
-        userEmail={session.user.email ?? ""}
-      />
+      <Sidebar organizationName="Organization" />
       <div className="app-shell__main">
-        <Header />
+        <Header
+          userName={session.user.name ?? "User"}
+          userEmail={session.user.email ?? ""}
+        />
         <main className="app-shell__content">{children}</main>
       </div>
     </div>
